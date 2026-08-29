@@ -1,0 +1,19 @@
+{
+  "name": "ferreplast",
+  "version": "0.1.0",
+  "description": "Sistema de gestion e inventario para ferreteria y plastiqueria",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "node db/test-esquema.mjs",
+    "db:test": "node db/test-esquema.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8"
+  }
+}

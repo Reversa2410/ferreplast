@@ -1,0 +1,37 @@
+# Dependencias
+node_modules/
+.pnp
+.pnp.js
+
+# Variables de entorno -- NUNCA subir credenciales al repositorio.
+# La cadena de conexion de la base va aca, no en el codigo.
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Compilados
+dist/
+build/
+.next/
+out/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-error.log*
+
+# Sistema operativo
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Editores
+.vscode/
+.idea/
+*.swp
+
+# Volcados y respaldos locales de la base
+*.dump
+*.backup
+/db/local/
