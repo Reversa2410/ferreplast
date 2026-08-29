@@ -6,14 +6,23 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "node db/test-esquema.mjs",
-    "db:test": "node db/test-esquema.mjs"
+    "test": "node db/test-esquema.mjs && node src/test-api.mjs",
+    "db:test": "node db/test-esquema.mjs",
+    "test:api": "node src/test-api.mjs",
+    "dev": "node --env-file=.env src/servidor.mjs"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "module",
   "devDependencies": {
-    "@electric-sql/pglite": "^0.5.8"
+    "@electric-sql/pglite": "^0.5.8",
+    "@types/node": "^26.4.0"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.3.0",
+    "fastify": "^5.12.1",
+    "pg": "^8.23.0",
+    "zod": "^4.5.2"
   }
 }
