@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="300" viewBox="0 0 420 300" role="img" aria-label="La entidad categoría se relaciona consigo misma mediante la relación contiene, con los roles padre e hija.">
+  <title>Relacion recursiva de CATEGORIA</title>
+  <rect x="0" y="0" width="420" height="300" fill="#FFFFFF"/>
+            <defs>
+              <marker id="ia" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" fill="#A8551F"/>
+              </marker>
+            </defs>
+            <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="110" y="190" width="200" height="26"/>
+            <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="110" y="216" width="200" height="60"/>
+            <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="210" y="209" text-anchor="middle">CATEGORIA</text>
+            <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="124" y="235">id</text>
+            <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="124" y="251">nombre</text>
+            <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="124" y="267">padre_id (FK)</text>
+
+            <polygon fill="#F6E8DC" stroke="#A8551F" stroke-width="1.5" points="210,40 290,76 210,112 130,76"/>
+            <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="500" fill="#66727E" x="210" y="74" text-anchor="middle" font-size="11">CONTIENE</text>
+            <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-weight="600" fill="#A8551F" x="210" y="90" text-anchor="middle" font-size="10">1 : N</text>
+
+            <path stroke="#A8551F" stroke-width="1.6" fill="none" d="M130,76 H60 V190"/>
+            <path stroke="#A8551F" stroke-width="1.6" fill="none" d="M290,76 H360 V190" marker-end="url(#ia)"/>
+
+            <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="46" y="140" text-anchor="end">padre</text>
+            <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="374" y="140">hija</text>
+            <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="210" y="150" text-anchor="middle">(0,1) &mdash; (0,N)</text>
+          </svg>

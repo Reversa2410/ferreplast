@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="300" viewBox="0 0 900 300" role="img" aria-label="El stock se deriva sumando las cantidades de todos los movimientos de inventario; entradas y devoluciones suman, ventas y mermas restan, y los ajustes corrigen.">
+  <title>El stock como atributo derivado de los movimientos</title>
+  <rect x="0" y="0" width="900" height="300" fill="#FFFFFF"/>
+        <defs>
+          <marker id="ja" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#2F6B4F"/>
+          </marker>
+        </defs>
+
+        <rect fill="#E7EBEF" stroke="#C9D2DA" stroke-width="1" x="20" y="34" width="330" height="228"/>
+        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="34" y="56">Movimientos registrados</text>
+
+        <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="44" y="72" width="282" height="30"/>
+        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="58" y="91">entrada</text>
+        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="300" y="91" text-anchor="end">+1500</text>
+
+        <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="44" y="110" width="282" height="30"/>
+        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="58" y="129">venta</text>
+        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="300" y="129" text-anchor="end">&minus;50</text>
+
+        <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="44" y="148" width="282" height="30"/>
+        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="58" y="167">venta (offline, tablet)</text>
+        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="300" y="167" text-anchor="end">&minus;8</text>
+
+        <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="44" y="186" width="282" height="30"/>
+        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="58" y="205">merma</text>
+        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="300" y="205" text-anchor="end">&minus;2</text>
+
+        <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="44" y="224" width="282" height="30"/>
+        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="58" y="243">ajuste (conteo físico)</text>
+        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="300" y="243" text-anchor="end">+2</text>
+
+        <line x1="350" y1="148" x2="430" y2="148" stroke="#2F6B4F" stroke-width="1.4" fill="none"/>
+        <circle cx="460" cy="148" r="30" fill="#E1EFE7" stroke="#2F6B4F" stroke-width="1.5"/>
+        <text x="460" y="156" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="22" font-weight="600" fill="#2F6B4F">&Sigma;</text>
+        <line x1="490" y1="148" x2="580" y2="148" stroke="#2F6B4F" stroke-width="1.4" marker-end="url(#ja)" fill="none"/>
+
+        <ellipse fill="#E1EFE7" stroke="#2F6B4F" stroke-width="1.3" stroke-dasharray="5 3" cx="716" cy="148" rx="130" ry="34"/>
+        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" fill="#2F6B4F" font-style="italic" x="716" y="143" text-anchor="middle" font-size="12">stock.cantidad</text>
+        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" fill="#2F6B4F" font-style="italic" x="716" y="163" text-anchor="middle" font-size="14">= 1442</text>
+
+        <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="716" y="212" text-anchor="middle">atributo derivado</text>
+        <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="716" y="230" text-anchor="middle">materializado por trigger para consulta rápida</text>
+        <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="716" y="248" text-anchor="middle">reconciliable con fn_recalcular_stock()</text>
+      </svg>
