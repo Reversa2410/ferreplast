@@ -37,5 +37,5 @@
         <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="430" y="212" text-anchor="middle">relación identificadora</text>
         <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="740" y="212" text-anchor="middle">entidad débil</text>
 
-        <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="430" y="240" text-anchor="middle">borrar la venta borra sus líneas &mdash; ON DELETE CASCADE</text>
+        <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="430" y="240" text-anchor="middle">borrar la venta borra sus líneas — ON DELETE CASCADE</text>
       </svg>

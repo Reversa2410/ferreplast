@@ -48,7 +48,7 @@
         <line stroke="#A8551F" stroke-width="1.6" fill="none" x1="1010" y1="314" x2="1010" y2="344"/>
         <polygon points="1010,344 1042,382 978,382" fill="#F6E8DC" stroke="#A8551F" stroke-width="1.5"/>
         <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-weight="600" fill="#A8551F" x="1010" y="371" text-anchor="middle" font-size="10">ISA</text>
-        <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="1010" y="400" text-anchor="middle">especialización &rarr; Fig. 3</text>
+        <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="1010" y="400" text-anchor="middle">especialización → Fig. 3</text>
 
         <!-- PRODUCTO -->
         <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="60" y="414" width="200" height="26"/>

@@ -72,6 +72,13 @@ const CLASES = {
   'elip':     { fill: C.papelAlto, stroke: C.azul, 'stroke-width': '1.3' },
   'elip-der': { fill: C.verdeTenue, stroke: C.verde, 'stroke-width': '1.3', 'stroke-dasharray': '5 3' },
   'fondo-z':  { fill: C.papelHund, stroke: C.linea, 'stroke-width': '1' },
+
+  // Diagrama del proceso de venta
+  'paso':      { fill: C.papelHund, stroke: C.tintaBaja, 'stroke-width': '1.3' },
+  'paso-nada': { fill: 'none', stroke: C.tintaBaja, 'stroke-width': '1.2', 'stroke-dasharray': '4 3' },
+  'flujo':     { stroke: C.tintaBaja, 'stroke-width': '1.4', fill: 'none' },
+  'escribe':   { stroke: C.azul, 'stroke-width': '1.4', fill: 'none', 'stroke-dasharray': '5 4' },
+  'rotulo-p':  { 'font-family': F_DISPLAY, 'font-weight': '600', 'font-size': '13', fill: C.tinta },
 };
 
 const VARS = {
@@ -105,6 +112,35 @@ function resolverVars(svg) {
   return svg.replace(/var\((--[a-z-]+)\)/g, (todo, v) => VARS[v] ?? todo);
 }
 
+/**
+ * Sustituye las entidades con nombre de HTML por su caracter Unicode.
+ *
+ * XML solo predefine cinco entidades: amp, lt, gt, quot y apos. Las demas
+ * -- &mdash;, &rarr;, &minus;... -- funcionan dentro de una pagina HTML pero
+ * hacen fallar el analisis de un SVG suelto, que es XML estricto. El navegador
+ * las toleraba porque el SVG venia incrustado en HTML; Inkscape, Illustrator y
+ * cualquier rasterizador rechazan el archivo.
+ *
+ * Se emite el caracter literal, que en UTF-8 es portable a todas partes.
+ */
+const ENTIDADES = {
+  '&mdash;': '—', '&ndash;': '–', '&minus;': '−',
+  '&rarr;': '→',  '&larr;': '←',  '&harr;': '↔',
+  '&Sigma;': 'Σ', '&hellip;': '…', '&nbsp;': ' ',
+  '&laquo;': '«', '&raquo;': '»', '&times;': '×',
+  '&le;': '≤',    '&ge;': '≥',    '&deg;': '°',
+};
+const XML_PREDEFINIDAS = ['&amp;', '&lt;', '&gt;', '&quot;', '&apos;'];
+
+function resolverEntidades(svg) {
+  return svg.replace(/&[a-zA-Z][a-zA-Z0-9]*;/g, (e) => {
+    if (XML_PREDEFINIDAS.includes(e)) return e;
+    const caracter = ENTIDADES[e];
+    if (!caracter) throw new Error(`Entidad sin equivalente para un SVG suelto: ${e}`);
+    return caracter;
+  });
+}
+
 /** Envuelve el SVG para que funcione como archivo independiente. */
 function empaquetar(svg, titulo) {
   const vb = svg.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/);
@@ -119,7 +155,7 @@ function empaquetar(svg, titulo) {
   const fondo = `\n  <title>${titulo}</title>\n  <rect x="0" y="0" width="${w}" height="${h}" fill="${C.papelAlto}"/>`;
   salida = salida.replace(/(<svg[^>]*>)/, `$1${fondo}`);
 
-  return salida.trimStart() + '\n';
+  return resolverEntidades(salida.trimStart()) + '\n';
 }
 
 // -----------------------------------------------------------------------------
@@ -148,10 +184,12 @@ if (figuras.length !== NOMBRES.length) {
 
 const generados = [];
 
-// Diagrama maestro
-{
-  const svg = empaquetar(resolverVars(aplicarClases(maestro)), 'Modelo E-R extendido completo');
-  const archivo = '00-modelo-completo.svg';
+// Diagramas con fuente propia
+for (const [fuente, archivo, titulo] of [
+  ['_fuente-maestro.svgsrc',       '00-modelo-completo.svg', 'Modelo E-R extendido completo'],
+  ['_fuente-proceso-venta.svgsrc', '08-proceso-venta.svg',   'El proceso de venta sobre el modelo de datos'],
+]) {
+  const svg = empaquetar(resolverVars(aplicarClases(readFileSync(join(aqui, fuente), 'utf8').trim())), titulo);
   writeFileSync(join(aqui, archivo), svg, 'utf8');
   generados.push([archivo, svg.length]);
 }

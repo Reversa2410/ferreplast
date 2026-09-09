@@ -69,7 +69,7 @@
         <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="195" y="489" text-anchor="middle">MOVIMIENTO_INVENTARIO</text>
         <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="74" y="515">id</text>
         <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="74" y="531">tipo</text>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="74" y="547">cantidad (+/&minus;)</text>
+        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="74" y="547">cantidad (+/−)</text>
         <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="74" y="563">costo_unitario</text>
         <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="74" y="579">motivo</text>
         <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="74" y="595">ocurrido_en</text>
