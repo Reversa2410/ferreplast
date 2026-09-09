@@ -26,6 +26,16 @@ for (const archivo of archivos) {
 
   if (/class="/.test(svg))            problemas.push('quedan atributos class');
   if (/var\(--/.test(svg))            problemas.push('quedan variables CSS sin resolver');
+
+  // Entidades con nombre de HTML. XML solo predefine cinco; el resto hace
+  // fallar el analisis de un SVG suelto aunque el navegador lo tolere dentro
+  // de una pagina HTML. Es el fallo que dejaba los archivos inservibles en
+  // Inkscape, Illustrator y cualquier rasterizador.
+  const entidades = [...new Set((svg.match(/&[a-zA-Z][a-zA-Z0-9]*;/g) ?? [])
+    .filter((e) => !['&amp;', '&lt;', '&gt;', '&quot;', '&apos;'].includes(e)))];
+  if (entidades.length) {
+    problemas.push(`entidades no validas en XML: ${entidades.join(', ')}`);
+  }
   if (!/xmlns="http/.test(svg))       problemas.push('falta el xmlns');
   if (!/<title>/.test(svg))           problemas.push('falta el titulo accesible');
   if (!/aria-label=/.test(svg))       problemas.push('falta aria-label');
