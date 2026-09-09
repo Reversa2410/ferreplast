@@ -1,0 +1,106 @@
+<svg class="dg" viewBox="0 0 1140 500" role="img"
+           aria-label="El proceso de venta paso a paso y las entidades que cada paso lee o escribe: identificarse lee usuario, buscar lee producto y stock, armar el pedido no guarda nada todavia, cobrar escribe venta y sus lineas, y confirmar escribe los movimientos de inventario que actualizan el stock.">
+        <defs>
+          <marker id="pf" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--tinta-baja)"/>
+          </marker>
+          <marker id="pe" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--azul)"/>
+          </marker>
+        </defs>
+
+        <text class="zona" x="20" y="28">EL PROCESO, PASO A PASO</text>
+
+        <rect class="paso" x="20" y="46" width="196" height="52"/>
+        <text class="rotulo-p" x="118" y="70" text-anchor="middle">1. Identificarse</text>
+        <text class="verb" x="118" y="87" text-anchor="middle">PIN en la tablet</text>
+
+        <rect class="paso" x="236" y="46" width="196" height="52"/>
+        <text class="rotulo-p" x="334" y="70" text-anchor="middle">2. Buscar producto</text>
+        <text class="verb" x="334" y="87" text-anchor="middle">precio y existencias</text>
+
+        <rect class="paso" x="452" y="46" width="196" height="52"/>
+        <text class="rotulo-p" x="550" y="70" text-anchor="middle">3. Armar el pedido</text>
+        <text class="verb" x="550" y="87" text-anchor="middle">cantidad por artículo</text>
+
+        <rect class="paso" x="668" y="46" width="196" height="52"/>
+        <text class="rotulo-p" x="766" y="70" text-anchor="middle">4. Cobrar</text>
+        <text class="verb" x="766" y="87" text-anchor="middle">forma de pago</text>
+
+        <rect class="paso" x="884" y="46" width="236" height="52"/>
+        <text class="rotulo-p" x="1002" y="70" text-anchor="middle">5. Confirmar</text>
+        <text class="verb" x="1002" y="87" text-anchor="middle">todo junto, o nada</text>
+
+        <line class="flujo" x1="216" y1="72" x2="232" y2="72" marker-end="url(#pf)"/>
+        <line class="flujo" x1="432" y1="72" x2="448" y2="72" marker-end="url(#pf)"/>
+        <line class="flujo" x1="648" y1="72" x2="664" y2="72" marker-end="url(#pf)"/>
+        <line class="flujo" x1="864" y1="72" x2="880" y2="72" marker-end="url(#pf)"/>
+
+        <line class="sep" x1="20" y1="138" x2="1120" y2="138"/>
+        <text class="zona" x="20" y="164">LO QUE QUEDA EN EL MODELO</text>
+
+        <line class="escribe" x1="118" y1="98" x2="118" y2="196" marker-end="url(#pe)"/>
+        <text class="card" x="126" y="126">lee</text>
+        <line class="escribe" x1="334" y1="98" x2="334" y2="196" marker-end="url(#pe)"/>
+        <text class="card" x="342" y="126">lee</text>
+        <line class="escribe" x1="550" y1="98" x2="550" y2="196" marker-end="url(#pe)"/>
+        <line class="escribe" x1="766" y1="98" x2="766" y2="196" marker-end="url(#pe)"/>
+        <text class="card" x="774" y="126">escribe</text>
+        <line class="escribe" x1="1002" y1="98" x2="1002" y2="196" marker-end="url(#pe)"/>
+        <text class="card" x="1010" y="126">escribe</text>
+
+        <rect class="cab-ent" x="20" y="196" width="196" height="24"/>
+        <rect class="ent" x="20" y="220" width="196" height="44"/>
+        <text class="nom" x="118" y="213" text-anchor="middle">USUARIO</text>
+        <text class="atr" x="32" y="239">rol, tienda_id</text>
+        <text class="atr" x="32" y="255">pin_hash</text>
+
+        <rect class="cab-ent" x="236" y="196" width="196" height="24"/>
+        <rect class="ent" x="236" y="220" width="196" height="44"/>
+        <text class="nom" x="334" y="213" text-anchor="middle">PRODUCTO</text>
+        <text class="atr" x="248" y="239">codigo, nombre</text>
+        <text class="atr" x="248" y="255">precio_venta</text>
+
+        <rect class="cab-ent" x="236" y="288" width="196" height="24"/>
+        <rect class="ent-aso" x="236" y="312" width="196" height="34"/>
+        <text class="nom" x="334" y="305" text-anchor="middle">STOCK</text>
+        <text class="der" x="248" y="333">cantidad</text>
+
+        <rect class="paso-nada" x="452" y="196" width="196" height="68"/>
+        <text class="verb" x="550" y="226" text-anchor="middle">todavía no se</text>
+        <text class="verb" x="550" y="243" text-anchor="middle">guarda nada:</text>
+        <text class="verb" x="550" y="260" text-anchor="middle">el pedido está en curso</text>
+
+        <rect class="cab-ent" x="668" y="196" width="196" height="24"/>
+        <rect class="ent" x="668" y="220" width="196" height="60"/>
+        <text class="nom" x="766" y="213" text-anchor="middle">VENTA</text>
+        <text class="atr" x="680" y="239">numero, total</text>
+        <text class="atr" x="680" y="255">metodo_pago</text>
+        <text class="atr" x="680" y="271">caja_id</text>
+
+        <rect class="cab-deb" x="668" y="304" width="196" height="24"/>
+        <rect class="ent-deb" x="668" y="328" width="196" height="48"/>
+        <rect class="ent-deb-int" x="672" y="332" width="188" height="40"/>
+        <text class="nom" x="766" y="321" text-anchor="middle">VENTA_LINEA</text>
+        <text class="atr" x="682" y="347">cantidad, precio *</text>
+        <text class="atr" x="682" y="363">costo *</text>
+
+        <rect class="cab-ent" x="884" y="196" width="236" height="24"/>
+        <rect class="ent" x="884" y="220" width="236" height="60"/>
+        <text class="nom" x="1002" y="213" text-anchor="middle">MOVIMIENTO_INVENTARIO</text>
+        <text class="atr" x="896" y="239">tipo = 'venta'</text>
+        <text class="atr" x="896" y="255">cantidad negativa</text>
+        <text class="atr" x="896" y="271">venta_id</text>
+
+        <path class="rel-amb" d="M762,280 V304"/>
+        <path class="rel-amb" d="M770,280 V304"/>
+        <text class="card-amb" x="782" y="297">1 : N</text>
+
+        <path class="rel" d="M884,250 H864" marker-end="url(#pe)"/>
+        <text class="verb" x="874" y="242" text-anchor="middle">deriva de</text>
+
+        <path class="rel" d="M1002,280 V420 H334 V346" marker-end="url(#pe)"/>
+        <text class="card" x="660" y="412">recalcula el stock por disparador</text>
+
+        <text class="zona" x="682" y="392">* congelado al vender</text>
+      </svg>
