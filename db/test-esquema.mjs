@@ -208,10 +208,16 @@ console.log('\n=== 7. Vistas del panel ===');
 {
   // Segunda venta, de una sola linea, el mismo dia y en la misma tienda:
   // confirma que la agregacion sigue bien al acumular varias ventas.
+  //
+  // La fecha se toma de la venta del seed en lugar de usar NOW(). Con NOW() la
+  // prueba fallaba entre medianoche y las dos de la madrugada: el seed carga su
+  // venta con NOW() - 2 horas, que a esa hora cae en el dia anterior, y como
+  // v_ventas_diarias agrupa por fecha, las dos ventas se separaban en dos filas.
   await db.exec(`
     INSERT INTO ventas (id, tienda_id, usuario_id, numero, subtotal, descuento, total, ocurrido_en)
     VALUES ('99999999-0000-0000-0000-000000000002','22222222-0000-0000-0000-000000000001',
-            '33333333-0000-0000-0000-000000000002','FER-2026-000002', 26, 0, 26, NOW());
+            '33333333-0000-0000-0000-000000000002','FER-2026-000002', 26, 0, 26,
+            (SELECT ocurrido_en FROM ventas WHERE id='99999999-0000-0000-0000-000000000001'));
     INSERT INTO venta_lineas (venta_id, producto_id, cantidad, precio_unitario, costo_unitario, subtotal)
     VALUES ('99999999-0000-0000-0000-000000000002','55555555-0000-0000-0000-000000000002',
             1, 26.00, 18.00, 26.00);`);

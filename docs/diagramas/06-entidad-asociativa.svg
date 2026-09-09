@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="300" viewBox="0 0 420 300" role="img" aria-label="Tienda y producto se relacionan de muchos a muchos mediante almacena, que lleva los atributos cantidad y cantidad mínima y se convierte en la entidad asociativa stock.">
+  <title>Entidad asociativa STOCK que resuelve el M:N</title>
+  <rect x="0" y="0" width="420" height="300" fill="#FFFFFF"/>
+            <rect fill="none" stroke="#66727E" stroke-width="1.3" stroke-dasharray="5 3" x="20" y="30" width="150" height="24"/>
+            <rect fill="#E7EBEF" stroke="#66727E" stroke-width="1.3" stroke-dasharray="5 3" x="20" y="54" width="150" height="34"/>
+            <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="600" font-size="13" fill="#66727E" letter-spacing="0.6" x="95" y="47" text-anchor="middle">TIENDA</text>
+            <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="34" y="74">id (PK)</text>
+
+            <rect fill="none" stroke="#66727E" stroke-width="1.3" stroke-dasharray="5 3" x="250" y="30" width="150" height="24"/>
+            <rect fill="#E7EBEF" stroke="#66727E" stroke-width="1.3" stroke-dasharray="5 3" x="250" y="54" width="150" height="34"/>
+            <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="600" font-size="13" fill="#66727E" letter-spacing="0.6" x="325" y="47" text-anchor="middle">PRODUCTO</text>
+            <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="264" y="74">id (PK)</text>
+
+            <line stroke="#A8551F" stroke-width="1.6" fill="none" x1="95" y1="88" x2="95" y2="152"/>
+            <line stroke="#A8551F" stroke-width="1.6" fill="none" x1="325" y1="88" x2="325" y2="152"/>
+            <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#A8551F" x="104" y="124">M</text>
+            <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#A8551F" x="334" y="124">N</text>
+
+            <polygon fill="#F6E8DC" stroke="#A8551F" stroke-width="1.5" points="210,152 300,190 210,228 120,190"/>
+            <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="500" fill="#66727E" x="210" y="188" text-anchor="middle" font-size="11">ALMACENA</text>
+            <line stroke="#A8551F" stroke-width="1.6" fill="none" x1="120" y1="190" x2="95" y2="190"/>
+            <line stroke="#A8551F" stroke-width="1.6" fill="none" x1="300" y1="190" x2="325" y2="190"/>
+            <line stroke="#A8551F" stroke-width="1.6" fill="none" x1="95" y1="152" x2="95" y2="190"/>
+            <line stroke="#A8551F" stroke-width="1.6" fill="none" x1="325" y1="152" x2="325" y2="190"/>
+
+            <ellipse fill="#E1EFE7" stroke="#2F6B4F" stroke-width="1.3" stroke-dasharray="5 3" cx="126" cy="264" rx="66" ry="19"/>
+            <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#2F6B4F" font-style="italic" x="126" y="268" text-anchor="middle">cantidad</text>
+            <line stroke="#A8551F" stroke-width="1.6" fill="none" x1="180" y1="228" x2="150" y2="248"/>
+
+            <ellipse fill="#FFFFFF" stroke="#1F5673" stroke-width="1.3" cx="300" cy="264" rx="76" ry="19"/>
+            <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="300" y="268" text-anchor="middle">cantidad_minima</text>
+            <line stroke="#A8551F" stroke-width="1.6" fill="none" x1="242" y1="228" x2="278" y2="248"/>
+          </svg>
