@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="420" viewBox="0 0 900 420" role="img" aria-label="La entidad usuario se especializa, de forma total y disjunta, en administrador, encargado y empleado, cada uno con credenciales y alcance distintos.">
+  <title>Especializacion total y disjunta de USUARIO</title>
+  <rect x="0" y="0" width="900" height="420" fill="#FFFFFF"/>
+        <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="340" y="24" width="220" height="26"/>
+        <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="340" y="50" width="220" height="60"/>
+        <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="450" y="43" text-anchor="middle">USUARIO</text>
+        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="354" y="69">id</text>
+        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="354" y="85">nombre, activo</text>
+        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="354" y="101">negocio_id (FK)</text>
+
+        <!-- doble línea = participación total -->
+        <line stroke="#A8551F" stroke-width="1.6" fill="none" x1="446" y1="110" x2="446" y2="158"/>
+        <line stroke="#A8551F" stroke-width="1.6" fill="none" x1="454" y1="110" x2="454" y2="158"/>
+
+        <circle cx="450" cy="176" r="18" fill="#F6E8DC" stroke="#A8551F" stroke-width="1.5"/>
+        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-weight="600" fill="#A8551F" x="450" y="181" text-anchor="middle" font-size="13">d</text>
+
+        <line stroke="#A8551F" stroke-width="1.6" fill="none" x1="450" y1="194" x2="450" y2="216"/>
+        <polygon points="450,216 486,254 414,254" fill="#F6E8DC" stroke="#A8551F" stroke-width="1.5"/>
+        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-weight="600" fill="#A8551F" x="450" y="245" text-anchor="middle" font-size="10">ISA</text>
+
+        <path stroke="#A8551F" stroke-width="1.6" fill="none" d="M450,254 V282 H130 V310"/>
+        <path stroke="#A8551F" stroke-width="1.6" fill="none" d="M450,254 V310"/>
+        <path stroke="#A8551F" stroke-width="1.6" fill="none" d="M450,254 V282 H770 V310"/>
+
+        <!-- ADMINISTRADOR -->
+        <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="30" y="310" width="200" height="26"/>
+        <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="30" y="336" width="200" height="60"/>
+        <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="130" y="329" text-anchor="middle">ADMINISTRADOR</text>
+        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="44" y="355">email</text>
+        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="44" y="371">password_hash</text>
+        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="44" y="387">alcance: 2 tiendas</text>
+
+        <!-- ENCARGADO -->
+        <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="350" y="310" width="200" height="26"/>
+        <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="350" y="336" width="200" height="60"/>
+        <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="450" y="329" text-anchor="middle">ENCARGADO</text>
+        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="364" y="355">pin_hash</text>
+        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="364" y="371">tienda_id (obligatorio)</text>
+        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="364" y="387">alcance: su tienda</text>
+
+        <!-- EMPLEADO -->
+        <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="670" y="310" width="200" height="26"/>
+        <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="670" y="336" width="200" height="60"/>
+        <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="770" y="329" text-anchor="middle">EMPLEADO</text>
+        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="684" y="355">pin_hash</text>
+        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="684" y="371">tienda_id (obligatorio)</text>
+        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="684" y="387">alcance: vender</text>
+
+        <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="480" y="140">doble línea = participación total</text>
+        <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="480" y="182">d = subtipos disjuntos</text>
+      </svg>

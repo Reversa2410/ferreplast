@@ -9,7 +9,8 @@
     "test": "node db/test-esquema.mjs && node src/test-api.mjs",
     "db:test": "node db/test-esquema.mjs",
     "test:api": "node src/test-api.mjs",
-    "dev": "node --env-file=.env src/servidor.mjs"
+    "dev": "node --env-file=.env src/servidor.mjs",
+    "diagramas": "node docs/diagramas/_generar.mjs && node docs/diagramas/_verificar.mjs"
   },
   "keywords": [],
   "author": "",
