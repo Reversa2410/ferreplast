@@ -1,67 +1,69 @@
-<title>MER Extendido Ferreplast</title>
+<title>Proyecto Ferreplast</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&display=swap">
 
 <style>
-  /* ---- Sistema de tokens: paleta clara completa en :root ---- */
   :root {
-    --papel:      #F1F3F5;
-    --papel-alto: #FFFFFF;
-    --papel-hund: #E7EBEF;
-    --tinta:      #12181F;
-    --tinta-med:  #3D4954;
-    --tinta-baja: #66727E;
-    --linea:      #C9D2DA;
-    --linea-tenue:#DDE3E9;
-    --azul:       #1F5673;
-    --azul-tenue: #E2EDF3;
-    --ambar:      #A8551F;
-    --ambar-tenue:#F6E8DC;
-    --verde:      #2F6B4F;
-    --verde-tenue:#E1EFE7;
-    --sombra:     0 1px 2px rgba(18,24,31,.06), 0 8px 24px -12px rgba(18,24,31,.14);
+    --papel:       #F1F3F5;
+    --papel-alto:  #FFFFFF;
+    --papel-hund:  #E7EBEF;
+    --tinta:       #12181F;
+    --tinta-med:   #3D4954;
+    --tinta-baja:  #66727E;
+    --linea:       #C9D2DA;
+    --linea-tenue: #DDE3E9;
+    --azul:        #1F5673;
+    --azul-tenue:  #E2EDF3;
+    --ambar:       #A8551F;
+    --ambar-tenue: #F6E8DC;
+    --verde:       #2F6B4F;
+    --verde-tenue: #E1EFE7;
+    --ciruela:     #6D4B7C;
+    --ciruela-tenue:#EFE7F3;
 
-    --f-display: "IBM Plex Sans Condensed", "Segoe UI", system-ui, sans-serif;
+    --f-display: "IBM Plex Sans Condensed", "Arial Narrow", "Segoe UI", sans-serif;
     --f-texto:   "Spectral", Georgia, "Times New Roman", serif;
-    --f-mono:    "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+    --f-mono:    "IBM Plex Mono", ui-monospace, Consolas, monospace;
   }
 
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --papel:      #11161B;
-      --papel-alto: #191F26;
-      --papel-hund: #0C1116;
-      --tinta:      #E4EAF0;
-      --tinta-med:  #AAB6C2;
-      --tinta-baja: #8593A0;
-      --linea:      #2B363F;
-      --linea-tenue:#212A32;
-      --azul:       #74AECD;
-      --azul-tenue: #16303E;
-      --ambar:      #DD9257;
-      --ambar-tenue:#3A2415;
-      --verde:      #74BE97;
-      --verde-tenue:#152C21;
-      --sombra:     0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+      --papel:       #11161B;
+      --papel-alto:  #191F26;
+      --papel-hund:  #0C1116;
+      --tinta:       #E4EAF0;
+      --tinta-med:   #AAB6C2;
+      --tinta-baja:  #8593A0;
+      --linea:       #2B363F;
+      --linea-tenue: #212A32;
+      --azul:        #74AECD;
+      --azul-tenue:  #16303E;
+      --ambar:       #DD9257;
+      --ambar-tenue: #3A2415;
+      --verde:       #74BE97;
+      --verde-tenue: #152C21;
+      --ciruela:     #BD9BCC;
+      --ciruela-tenue:#2A1E31;
     }
   }
   :root[data-theme="dark"] {
-    --papel:      #11161B;
-    --papel-alto: #191F26;
-    --papel-hund: #0C1116;
-    --tinta:      #E4EAF0;
-    --tinta-med:  #AAB6C2;
-    --tinta-baja: #8593A0;
-    --linea:      #2B363F;
-    --linea-tenue:#212A32;
-    --azul:       #74AECD;
-    --azul-tenue: #16303E;
-    --ambar:      #DD9257;
-    --ambar-tenue:#3A2415;
-    --verde:      #74BE97;
-    --verde-tenue:#152C21;
-    --sombra:     0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+    --papel:       #11161B;
+    --papel-alto:  #191F26;
+    --papel-hund:  #0C1116;
+    --tinta:       #E4EAF0;
+    --tinta-med:   #AAB6C2;
+    --tinta-baja:  #8593A0;
+    --linea:       #2B363F;
+    --linea-tenue: #212A32;
+    --azul:        #74AECD;
+    --azul-tenue:  #16303E;
+    --ambar:       #DD9257;
+    --ambar-tenue: #3A2415;
+    --verde:       #74BE97;
+    --verde-tenue: #152C21;
+    --ciruela:     #BD9BCC;
+    --ciruela-tenue:#2A1E31;
   }
 
   * { box-sizing: border-box; }
@@ -72,296 +74,1058 @@
     color: var(--tinta);
     font-family: var(--f-texto);
     font-size: 17px;
-    line-height: 1.65;
+    line-height: 1.68;
     -webkit-font-smoothing: antialiased;
   }
 
-  .env { max-width: 1120px; margin: 0 auto; padding: 0 28px; }
+  .env { max-width: 1100px; margin: 0 auto; padding: 0 30px; }
 
-  /* ---------- Cabecera ---------- */
-  header {
-    border-bottom: 1px solid var(--linea);
-    background: var(--papel-alto);
-  }
-  .cab { padding: 54px 0 40px; display: flex; flex-direction: column; gap: 22px; }
+  /* ═══ Portada ═══ */
+  header { background: var(--papel-alto); border-bottom: 1px solid var(--linea); }
+  .portada { padding: 60px 0 44px; display: flex; flex-direction: column; gap: 20px; }
   .eyebrow {
-    font-family: var(--f-mono);
-    font-size: 12px;
-    letter-spacing: .13em;
-    text-transform: uppercase;
-    color: var(--azul);
-    font-weight: 500;
+    font-family: var(--f-mono); font-size: 12px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--azul); font-weight: 500;
   }
   h1 {
-    font-family: var(--f-display);
-    font-weight: 700;
-    font-size: clamp(2.4rem, 6vw, 3.9rem);
-    line-height: 1.02;
-    letter-spacing: -.02em;
-    margin: 0;
-    text-wrap: balance;
+    font-family: var(--f-display); font-weight: 700;
+    font-size: clamp(2.5rem, 6.5vw, 4.1rem); line-height: 1.0;
+    letter-spacing: -.022em; margin: 0; text-wrap: balance;
   }
-  .bajada {
-    font-size: 1.16rem;
-    color: var(--tinta-med);
-    max-width: 60ch;
-    margin: 0;
+  .lema { font-size: 1.18rem; color: var(--tinta-med); max-width: 58ch; margin: 0; }
+
+  .datos {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1px; background: var(--linea); border: 1px solid var(--linea); margin-top: 8px;
   }
-  .ficha {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
-    gap: 1px;
-    background: var(--linea);
-    border: 1px solid var(--linea);
-    margin-top: 6px;
-  }
-  .ficha div { background: var(--papel-alto); padding: 13px 16px; }
-  .ficha dt {
+  .datos > div { background: var(--papel-alto); padding: 13px 16px; }
+  .datos dt {
     font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .1em;
     text-transform: uppercase; color: var(--tinta-baja); margin: 0 0 4px;
   }
-  .ficha dd {
-    margin: 0; font-family: var(--f-display); font-weight: 600;
-    font-size: 15px; color: var(--tinta);
-  }
+  .datos dd { margin: 0; font-family: var(--f-display); font-weight: 600; font-size: 15px; }
 
-  /* ---------- Secciones ---------- */
-  section { padding: 62px 0 8px; }
-  .num {
+  /* ═══ Índice ═══ */
+  .indice { background: var(--papel-hund); border-bottom: 1px solid var(--linea); padding: 34px 0; }
+  .indice h2 {
+    font-family: var(--f-mono); font-size: 11.5px; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--tinta-baja); margin: 0 0 18px; font-weight: 500;
+  }
+  .indice ol {
+    list-style: none; margin: 0; padding: 0; max-width: none;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(285px, 1fr)); gap: 2px 30px;
+  }
+  .indice li { margin: 0; border-bottom: 1px solid var(--linea-tenue); }
+  .indice a {
+    display: flex; gap: 14px; align-items: baseline; padding: 9px 2px;
+    color: var(--tinta); text-decoration: none;
+  }
+  .indice a:hover { color: var(--azul); }
+  .indice a:focus-visible { outline: 2px solid var(--azul); outline-offset: 2px; }
+  .indice .n {
+    font-family: var(--f-mono); font-size: 12px; color: var(--azul);
+    font-weight: 600; font-variant-numeric: tabular-nums; flex-shrink: 0;
+  }
+  .indice .t { font-family: var(--f-display); font-weight: 600; font-size: 15.5px; }
+  .indice .d { font-size: 13px; color: var(--tinta-baja); margin-left: auto; text-align: right; }
+
+  /* ═══ Secciones ═══ */
+  section { padding: 64px 0 10px; scroll-margin-top: 20px; }
+  .rotulo {
     font-family: var(--f-mono); font-size: 12px; font-weight: 600;
-    color: var(--ambar); letter-spacing: .08em;
+    color: var(--azul); letter-spacing: .1em;
   }
   h2 {
     font-family: var(--f-display); font-weight: 700;
-    font-size: clamp(1.7rem, 3.4vw, 2.3rem); line-height: 1.12;
-    letter-spacing: -.015em; margin: 8px 0 14px; text-wrap: balance;
+    font-size: clamp(1.75rem, 3.6vw, 2.4rem); line-height: 1.1;
+    letter-spacing: -.018em; margin: 8px 0 16px; text-wrap: balance;
   }
   h3 {
-    font-family: var(--f-display); font-weight: 600;
-    font-size: 1.28rem; margin: 34px 0 10px; letter-spacing: -.005em;
+    font-family: var(--f-display); font-weight: 600; font-size: 1.32rem;
+    margin: 38px 0 10px; letter-spacing: -.006em; text-wrap: balance;
   }
   h4 {
     font-family: var(--f-mono); font-weight: 600; font-size: 12.5px;
     letter-spacing: .09em; text-transform: uppercase;
-    color: var(--tinta-baja); margin: 26px 0 8px;
+    color: var(--tinta-baja); margin: 28px 0 8px;
   }
-  p { margin: 0 0 15px; max-width: 66ch; }
-  .intro { font-size: 1.08rem; color: var(--tinta-med); max-width: 64ch; }
+  p { margin: 0 0 16px; max-width: 66ch; }
+  .guia { font-size: 1.09rem; color: var(--tinta-med); max-width: 64ch; }
+  ul, ol.lista { max-width: 66ch; padding-left: 21px; margin: 0 0 16px; }
+  li { margin-bottom: 8px; }
   strong { font-weight: 600; }
-  em { font-style: italic; }
   code {
-    font-family: var(--f-mono); font-size: .855em;
-    background: var(--papel-hund); padding: 1.5px 5px;
-    border-radius: 2px; color: var(--tinta);
+    font-family: var(--f-mono); font-size: .85em; background: var(--papel-hund);
+    padding: 1.5px 5px; border-radius: 2px;
   }
 
-  ul { max-width: 66ch; padding-left: 20px; margin: 0 0 15px; }
-  li { margin-bottom: 7px; }
-
-  /* ---------- Figuras ---------- */
-  figure { margin: 26px 0 34px; }
-  .lienzo {
-    background: var(--papel-alto);
-    border: 1px solid var(--linea);
-    overflow-x: auto;
-    padding: 22px;
+  /* ═══ Distintivos ═══ */
+  .chip {
+    display: inline-block; font-family: var(--f-mono); font-size: 10px;
+    font-weight: 600; letter-spacing: .07em; text-transform: uppercase;
+    padding: 2.5px 7px; border: 1px solid currentColor; white-space: nowrap;
+    vertical-align: middle;
   }
-  .lienzo svg { display: block; min-width: 640px; max-width: 100%; height: auto; margin: 0 auto; }
-  figcaption {
-    font-size: .92rem; color: var(--tinta-baja);
-    margin-top: 11px; max-width: 72ch;
-    border-left: 2px solid var(--azul); padding-left: 12px;
+  .chip-prop { color: var(--ciruela); background: var(--ciruela-tenue); }
+  .chip-bd   { color: var(--azul);    background: var(--azul-tenue); }
+  .chip-api  { color: var(--ambar);   background: var(--ambar-tenue); }
+  .chip-no   { color: var(--tinta-baja); background: var(--papel-hund); }
+
+  /* ═══ Pendiente del levantamiento ═══ */
+  .pendiente {
+    background: var(--papel-alto); border: 1px solid var(--ciruela);
+    border-left-width: 4px; padding: 20px 24px; margin: 24px 0;
   }
-  figcaption b { color: var(--tinta-med); font-weight: 600; }
-
-  /* Estilos compartidos de los diagramas */
-  .dg .ent      { fill: var(--papel-alto); stroke: var(--azul); stroke-width: 1.6; }
-  .dg .ent-ctx  { fill: var(--papel-hund); stroke: var(--tinta-baja); stroke-width: 1.3; stroke-dasharray: 5 3; }
-  .dg .ent-deb  { fill: var(--papel-alto); stroke: var(--ambar); stroke-width: 1.6; }
-  .dg .ent-aso  { fill: var(--ambar-tenue); stroke: var(--ambar); stroke-width: 1.6; }
-  .dg .cab-ent  { fill: var(--azul-tenue); stroke: var(--azul); stroke-width: 1.6; }
-  .dg .cab-deb  { fill: var(--ambar-tenue); stroke: var(--ambar); stroke-width: 1.6; }
-  .dg .cab-ctx  { fill: transparent; stroke: var(--tinta-baja); stroke-width: 1.3; stroke-dasharray: 5 3; }
-  .dg .nom      { font-family: var(--f-display); font-weight: 700; font-size: 14px; fill: var(--tinta); letter-spacing: .04em; }
-  .dg .nom-ctx  { font-family: var(--f-display); font-weight: 600; font-size: 13px; fill: var(--tinta-baja); letter-spacing: .04em; }
-  .dg .atr      { font-family: var(--f-mono); font-size: 11px; fill: var(--tinta-med); }
-  .dg .pk       { font-family: var(--f-mono); font-size: 11px; fill: var(--tinta); font-weight: 600; text-decoration: underline; }
-  .dg .der      { font-family: var(--f-mono); font-size: 11px; fill: var(--verde); font-style: italic; }
-  .dg .rel      { stroke: var(--azul); stroke-width: 1.4; fill: none; }
-  .dg .rel-amb  { stroke: var(--ambar); stroke-width: 1.6; fill: none; }
-  .dg .rel-ctx  { stroke: var(--tinta-baja); stroke-width: 1.2; fill: none; stroke-dasharray: 4 3; }
-  .dg .card     { font-family: var(--f-mono); font-size: 11px; font-weight: 600; fill: var(--azul); }
-  .dg .card-amb { font-family: var(--f-mono); font-size: 11px; font-weight: 600; fill: var(--ambar); }
-  .dg .verb     { font-family: var(--f-display); font-size: 11.5px; fill: var(--tinta-baja); font-weight: 500; }
-  .dg .rombo    { fill: var(--papel-alto); stroke: var(--azul); stroke-width: 1.5; }
-  .dg .rombo-id { fill: var(--ambar-tenue); stroke: var(--ambar); stroke-width: 1.5; }
-  .dg .elip     { fill: var(--papel-alto); stroke: var(--azul); stroke-width: 1.3; }
-  .dg .elip-der { fill: var(--verde-tenue); stroke: var(--verde); stroke-width: 1.3; stroke-dasharray: 5 3; }
-  .dg .fondo-z  { fill: var(--papel-hund); stroke: var(--linea); stroke-width: 1; }
-  .dg .zona     { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .1em; fill: var(--tinta-baja); text-transform: uppercase; }
-
-
-  .dg .ent-deb-int { fill: none; stroke: var(--ambar); stroke-width: 1; }
-  .dg .circ-d   { fill: var(--ambar-tenue); stroke: var(--ambar); stroke-width: 1.5; }
-  .dg .tri-isa  { fill: var(--ambar-tenue); stroke: var(--ambar); stroke-width: 1.5; }
-  .dg .sep      { stroke: var(--linea); stroke-width: 1; }
-  .dg .leg      { font-family: var(--f-display); font-size: 12.5px; font-weight: 500; fill: var(--tinta-med); }
-  .dg .titulo   { font-family: var(--f-display); font-size: 28px; font-weight: 700; fill: var(--tinta); letter-spacing: .03em; }
-  .dg .subtitulo{ font-family: var(--f-display); font-size: 16px; font-weight: 500; fill: var(--tinta-med); }
-
-  /* El maestro es demasiado ancho para encogerlo: si se ajustara al ancho del
-     contenedor el texto quedaria en 6px. Se deja a tamanio real y se desplaza. */
-  .lienzo-ancho svg { min-width: 1500px; max-width: none; }
-
-  /* ---------- Leyenda ---------- */
-  .leyenda {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 1px; background: var(--linea); border: 1px solid var(--linea);
-    margin: 24px 0 34px;
+  .pendiente > .rot {
+    font-family: var(--f-mono); font-size: 11px; font-weight: 600;
+    letter-spacing: .12em; text-transform: uppercase; color: var(--ciruela);
+    display: block; margin-bottom: 10px;
   }
-  .leyenda > div {
-    background: var(--papel-alto); padding: 14px 16px;
-    display: flex; gap: 12px; align-items: flex-start;
+  .pendiente p:last-child, .pendiente ul:last-child { margin-bottom: 0; }
+  .pendiente ul { padding-left: 19px; }
+  .pendiente li { margin-bottom: 5px; font-size: .96rem; }
+
+  .nota {
+    background: var(--papel-alto); border: 1px solid var(--linea);
+    border-left: 3px solid var(--ambar); padding: 20px 24px; margin: 24px 0;
   }
-  .leyenda svg { flex-shrink: 0; margin-top: 2px; }
-  .leyenda p { margin: 0; font-size: .88rem; line-height: 1.45; }
-  .leyenda b {
-    display: block; font-family: var(--f-display); font-weight: 600;
-    font-size: .95rem; color: var(--tinta); margin-bottom: 1px;
+  .nota > .rot {
+    font-family: var(--f-mono); font-size: 11px; font-weight: 600;
+    letter-spacing: .12em; text-transform: uppercase; color: var(--ambar);
+    display: block; margin-bottom: 10px;
+  }
+  .nota p:last-child { margin-bottom: 0; }
+
+  /* ═══ Fichas de proceso ═══ */
+  .procesos { display: grid; gap: 20px; margin: 26px 0 34px; }
+  .proc {
+    background: var(--papel-alto); border: 1px solid var(--linea);
+    display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  }
+  .proc > div { padding: 20px 24px; min-width: 0; }
+  .proc > div + div { border-left: 1px solid var(--linea-tenue); background: var(--papel-hund); }
+  .proc h5 {
+    font-family: var(--f-display); font-weight: 700; font-size: 1.1rem;
+    margin: 0 0 3px; letter-spacing: -.004em;
+  }
+  .proc .cod {
+    font-family: var(--f-mono); font-size: 11px; color: var(--azul);
+    font-weight: 600; letter-spacing: .06em;
+  }
+  .proc .disp {
+    font-size: .92rem; color: var(--tinta-baja); margin: 0 0 14px; max-width: none;
+  }
+  .proc ol { margin: 0; padding-left: 19px; max-width: none; }
+  .proc ol li { font-size: .95rem; margin-bottom: 6px; }
+  .proc h6 {
+    font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--tinta-baja); margin: 0 0 9px; font-weight: 600;
+  }
+  .proc ul { margin: 0; padding-left: 0; list-style: none; max-width: none; }
+  .proc ul li {
+    font-size: .92rem; margin-bottom: 8px; padding-left: 15px; position: relative;
+    line-height: 1.5;
+  }
+  .proc ul li::before {
+    content: ""; position: absolute; left: 0; top: .62em;
+    width: 6px; height: 1.5px; background: var(--azul);
+  }
+  .proc ul li b { font-family: var(--f-mono); font-size: .95em; font-weight: 600; }
+
+  @media (max-width: 720px) {
+    .proc { grid-template-columns: 1fr; }
+    .proc > div + div { border-left: none; border-top: 1px solid var(--linea-tenue); }
   }
 
-  /* ---------- Tablas ---------- */
+  /* ═══ Tablas ═══ */
   .tabla-env {
     overflow-x: auto; border: 1px solid var(--linea);
-    background: var(--papel-alto); margin: 22px 0 12px;
+    background: var(--papel-alto); margin: 22px 0 14px;
   }
-  table { border-collapse: collapse; width: 100%; min-width: 860px; }
+  table { border-collapse: collapse; width: 100%; min-width: 820px; }
   caption {
     text-align: left; font-family: var(--f-mono); font-size: 11px;
     letter-spacing: .1em; text-transform: uppercase; color: var(--tinta-baja);
-    padding: 13px 16px; border-bottom: 1px solid var(--linea);
-    background: var(--papel-hund);
+    padding: 13px 16px; border-bottom: 1px solid var(--linea); background: var(--papel-hund);
   }
   th {
     text-align: left; font-family: var(--f-display); font-weight: 600;
     font-size: 12.5px; letter-spacing: .04em; text-transform: uppercase;
     color: var(--tinta-med); padding: 11px 14px;
-    border-bottom: 1px solid var(--linea); white-space: nowrap;
-    background: var(--papel-alto); position: sticky; top: 0;
+    border-bottom: 1px solid var(--linea); white-space: nowrap; background: var(--papel-alto);
   }
   td {
     padding: 10px 14px; border-bottom: 1px solid var(--linea-tenue);
     font-size: 13.5px; vertical-align: top; line-height: 1.5;
   }
   tbody tr:last-child td { border-bottom: none; }
-  td.n { font-family: var(--f-mono); color: var(--tinta-baja); font-size: 12px; font-variant-numeric: tabular-nums; }
-  td.m { font-family: var(--f-mono); font-size: 12.5px; }
-  td.c { font-family: var(--f-mono); font-size: 12.5px; font-weight: 600; color: var(--azul); white-space: nowrap; }
-  td.v { font-family: var(--f-display); font-weight: 600; font-size: 13.5px; }
-  .marca {
-    display: inline-block; font-family: var(--f-mono); font-size: 10px;
-    font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
-    padding: 2px 6px; border: 1px solid var(--ambar); color: var(--ambar);
-    background: var(--ambar-tenue); margin-left: 6px; white-space: nowrap;
-  }
+  td.cod { font-family: var(--f-mono); font-size: 12px; color: var(--azul); font-weight: 600; white-space: nowrap; }
+  td.mono { font-family: var(--f-mono); font-size: 12px; }
+  td.forte { font-family: var(--f-display); font-weight: 600; font-size: 13.5px; }
 
-  /* ---------- Nota destacada ---------- */
-  .nota {
+  /* ═══ Figuras ═══ */
+  figure { margin: 26px 0 34px; }
+  .lienzo {
     background: var(--papel-alto); border: 1px solid var(--linea);
-    border-left: 3px solid var(--ambar);
-    padding: 20px 24px; margin: 26px 0;
+    overflow-x: auto; padding: 22px;
   }
-  .nota p:last-child { margin-bottom: 0; }
-  .nota h4 { margin-top: 0; color: var(--ambar); }
+  .lienzo svg { display: block; min-width: 660px; max-width: 100%; height: auto; margin: 0 auto; }
+  .lienzo-ancho svg { min-width: 1500px; max-width: none; }
+  figcaption {
+    font-size: .92rem; color: var(--tinta-baja); margin-top: 11px;
+    max-width: 72ch; border-left: 2px solid var(--azul); padding-left: 12px;
+  }
+  figcaption b { color: var(--tinta-med); font-weight: 600; }
 
-  .rejilla-2 {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 26px; margin: 22px 0;
-  }
-  .rejilla-2 > div { min-width: 0; }
-  .rejilla-2 p { max-width: none; }
+  /* Diagramas */
+  .dg .ent      { fill: var(--papel-alto); stroke: var(--azul); stroke-width: 1.6; }
+  .dg .ent-deb  { fill: var(--papel-alto); stroke: var(--ambar); stroke-width: 1.6; }
+  .dg .ent-deb-int { fill: none; stroke: var(--ambar); stroke-width: 1; }
+  .dg .ent-aso  { fill: var(--ambar-tenue); stroke: var(--ambar); stroke-width: 1.6; }
+  .dg .cab-ent  { fill: var(--azul-tenue); stroke: var(--azul); stroke-width: 1.6; }
+  .dg .cab-deb  { fill: var(--ambar-tenue); stroke: var(--ambar); stroke-width: 1.6; }
+  .dg .paso     { fill: var(--papel-hund); stroke: var(--tinta-baja); stroke-width: 1.3; }
+  .dg .paso-nada{ fill: none; stroke: var(--tinta-baja); stroke-width: 1.2; stroke-dasharray: 4 3; }
+  .dg .nom      { font-family: var(--f-display); font-weight: 700; font-size: 14px; fill: var(--tinta); letter-spacing: .04em; }
+  .dg .atr      { font-family: var(--f-mono); font-size: 11px; fill: var(--tinta-med); }
+  .dg .pk       { font-family: var(--f-mono); font-size: 11px; fill: var(--tinta); font-weight: 600; text-decoration: underline; }
+  .dg .der      { font-family: var(--f-mono); font-size: 11px; fill: var(--verde); font-style: italic; }
+  .dg .rel      { stroke: var(--azul); stroke-width: 1.4; fill: none; }
+  .dg .rel-amb  { stroke: var(--ambar); stroke-width: 1.6; fill: none; }
+  .dg .flujo    { stroke: var(--tinta-baja); stroke-width: 1.4; fill: none; }
+  .dg .escribe  { stroke: var(--azul); stroke-width: 1.4; fill: none; stroke-dasharray: 5 4; }
+  .dg .card     { font-family: var(--f-mono); font-size: 11px; font-weight: 600; fill: var(--azul); }
+  .dg .card-amb { font-family: var(--f-mono); font-size: 11px; font-weight: 600; fill: var(--ambar); }
+  .dg .verb     { font-family: var(--f-display); font-size: 11.5px; fill: var(--tinta-baja); font-weight: 500; }
+  .dg .zona     { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .1em; fill: var(--tinta-baja); }
+  .dg .leg      { font-family: var(--f-display); font-size: 12.5px; font-weight: 500; fill: var(--tinta-med); }
+  .dg .titulo   { font-family: var(--f-display); font-size: 28px; font-weight: 700; fill: var(--tinta); letter-spacing: .03em; }
+  .dg .subtitulo{ font-family: var(--f-display); font-size: 16px; font-weight: 500; fill: var(--tinta-med); }
+  .dg .circ-d   { fill: var(--ambar-tenue); stroke: var(--ambar); stroke-width: 1.5; }
+  .dg .tri-isa  { fill: var(--ambar-tenue); stroke: var(--ambar); stroke-width: 1.5; }
+  .dg .sep      { stroke: var(--linea); stroke-width: 1; }
+  .dg .rotulo-p { font-family: var(--f-display); font-weight: 600; font-size: 13px; fill: var(--tinta); }
+
+  .enlace { color: var(--azul); text-underline-offset: 3px; }
+  .enlace:focus-visible { outline: 2px solid var(--azul); outline-offset: 2px; }
 
   footer {
-    border-top: 1px solid var(--linea); margin-top: 64px;
-    padding: 30px 0 54px; color: var(--tinta-baja); font-size: .9rem;
+    border-top: 1px solid var(--linea); margin-top: 66px;
+    padding: 32px 0 56px; color: var(--tinta-baja); font-size: .9rem;
   }
   footer p { max-width: 70ch; }
 
   @media (max-width: 640px) {
     body { font-size: 16px; }
     .env { padding: 0 18px; }
-    .cab { padding: 38px 0 30px; }
-    section { padding: 46px 0 4px; }
+    .portada { padding: 40px 0 32px; }
+    section { padding: 46px 0 6px; }
+    .indice .d { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
   }
 </style>
 
 <header>
-  <div class="env cab">
-    <div class="eyebrow">Proyecto Ferreplast &middot; Modelo conceptual</div>
-    <h1>Modelo Entidad&#8209;Relación Extendido</h1>
-    <p class="bajada">
-      Sistema de gestión, inventario y supervisión financiera para dos tiendas de un mismo
-      dueño &mdash; una ferretería y una plastiquería &mdash; que operan con conexión
-      intermitente y sincronizan cuando vuelve la señal.
+  <div class="env portada">
+    <div class="eyebrow">Documento de presentación de proyecto</div>
+    <h1>Ferreplast</h1>
+    <p class="lema">
+      Sistema de gestión, inventario y supervisión financiera para una ferretería y una
+      plastiquería de la misma familia, que trabajan con conexión intermitente y llevan
+      todo a lápiz y papel.
     </p>
-    <dl class="ficha">
-      <div><dt>Entidades</dt><dd>12</dd></div>
-      <div><dt>Relaciones</dt><dd>22 + 1 ISA</dd></div>
-      <div><dt>Notación</dt><dd>Chen extendida</dd></div>
-      <div><dt>Motor destino</dt><dd>PostgreSQL 15+</dd></div>
-      <div><dt>Cardinalidad</dt><dd>(mín, máx)</dd></div>
+    <dl class="datos">
+      <div><dt>Tiendas</dt><dd>2</dd></div>
+      <div><dt>Entidades del modelo</dt><dd>12</dd></div>
+      <div><dt>Procesos definidos</dt><dd>11</dd></div>
+      <div><dt>Reglas de negocio</dt><dd>22</dd></div>
+      <div><dt>Estado</dt><dd>Base y API listas</dd></div>
     </dl>
   </div>
 </header>
 
+<nav class="indice">
+  <div class="env">
+    <h2>Contenido del documento</h2>
+    <ol>
+      <li><a href="#s1"><span class="n">1</span><span class="t">Introducción</span><span class="d">qué contiene</span></a></li>
+      <li><a href="#s2"><span class="n">2</span><span class="t">Antecedentes</span><span class="d">la situación</span></a></li>
+      <li><a href="#s3"><span class="n">3</span><span class="t">Justificación</span><span class="d">por qué el proyecto</span></a></li>
+      <li><a href="#s4"><span class="n">4</span><span class="t">Objetivos</span><span class="d">qué se busca</span></a></li>
+      <li><a href="#s5"><span class="n">5</span><span class="t">Alcance y limitaciones</span><span class="d">qué entra y qué no</span></a></li>
+      <li><a href="#s6"><span class="n">6</span><span class="t">Modelo conceptual</span><span class="d">procesos y reglas</span></a></li>
+      <li><a href="#s7"><span class="n">7</span><span class="t">Modelo entidad-relación</span><span class="d">el modelo de datos</span></a></li>
+      <li><a href="#s8"><span class="n">8</span><span class="t">Estado y plan de trabajo</span><span class="d">qué falta</span></a></li>
+    </ol>
+  </div>
+</nav>
+
 <main class="env">
 
-<!-- ══════════════════════════════════════════════════════════ -->
-<section>
-  <div class="num">01</div>
-  <h2>Qué modela este esquema</h2>
-  <p class="intro">
-    Dos tiendas de la misma familia, en esquinas opuestas de la misma calle, que hoy llevan
-    inventario y caja en cuadernos. El modelo tiene que sostener tres cosas a la vez: que cada
-    tienda opere <em>sin internet</em> y sincronice después sin pisar los datos de la otra, que
-    el dueño vea las dos tiendas consolidadas, y que cada peso que entra o sale quede auditado.
-  </p>
-  <p>
-    Esas tres exigencias son las que explican las decisiones del modelo. La más importante es que
-    <strong>el inventario no se guarda como un número que sube y baja</strong>, sino como un
-    registro de los hechos que lo modificaron; el stock es la suma de esos hechos. Sin esa
-    decisión, dos tablets desconectadas se sobrescribirían mutuamente al sincronizar.
+<!-- ═══════════════════ 1 ═══════════════════ -->
+<section id="s1">
+  <div class="rotulo">SECCIÓN 1</div>
+  <h2>Introducción</h2>
+  <p class="guia">
+    Este documento presenta el proyecto <strong>Ferreplast</strong>: un sistema de gestión para
+    dos tiendas de una misma familia. Recorre de dónde parte el negocio, por qué el sistema
+    está justificado, qué procesos hay que definir para que exista y cómo esos procesos se
+    convierten en un modelo de datos concreto.
   </p>
 
-  <h4>Construcciones extendidas presentes</h4>
-  <p>
-    El modelo no usa las construcciones del MER extendido como adorno: cada una resuelve un
-    problema concreto del negocio. Aparecen cinco.
-  </p>
+  <h4>Qué va a encontrar en cada sección</h4>
   <ul>
-    <li><strong>Especialización / generalización</strong> &mdash; <code>USUARIO</code> se especializa en administrador, encargado y empleado, con atributos y credenciales distintas.</li>
-    <li><strong>Entidad débil</strong> con relación identificadora &mdash; <code>VENTA_LINEA</code> no existe sin su venta.</li>
-    <li><strong>Relación recursiva</strong> &mdash; <code>CATEGORIA</code> se contiene a sí misma para formar jerarquías.</li>
-    <li><strong>Entidad asociativa</strong> &mdash; <code>STOCK</code> resuelve el M:N entre tienda y producto y además carga atributos propios.</li>
-    <li><strong>Atributos derivados</strong> &mdash; <code>stock.cantidad</code> y <code>caja.diferencia</code> se calculan, no se capturan.</li>
+    <li><strong>Antecedentes</strong> — cómo nació el negocio y cómo se trabaja hoy: dos tiendas, dos cuadernos y ningún dato en común.</li>
+    <li><strong>Justificación</strong> — los cinco problemas concretos que genera esa forma de trabajar, y por qué este sistema los resuelve en lugar de sólo digitalizarlos.</li>
+    <li><strong>Objetivos</strong> y <strong>alcance</strong> — qué se propone lograr y, sobre todo, qué queda deliberadamente fuera de esta etapa.</li>
+    <li><strong>Modelo conceptual</strong> — el núcleo del documento. El negocio no tiene procesos definidos, así que primero se identifican los que faltan, después se definen formalmente, y de cada uno se derivan las reglas de negocio.</li>
+    <li><strong>Modelo entidad-relación</strong> — el modelo de datos, con una tabla de trazabilidad que muestra que cada regla del modelo conceptual tiene su correspondencia en el MER.</li>
+    <li><strong>Estado y plan de trabajo</strong> — qué está construido y verificado, y qué falta.</li>
   </ul>
-  <p>
-    A eso se suma un caso de <strong>roles múltiples</strong>: la misma entidad
-    <code>USUARIO</code> participa dos veces en la relación con <code>CAJA</code>, una vez como
-    quien la abre y otra como quien la cierra.
-  </p>
+
+  <h4>Cómo leer las marcas del documento</h4>
+  <p>Tres distintivos aparecen a lo largo del texto:</p>
+  <ul>
+    <li><span class="chip chip-prop">Pendiente</span> — dato que debe confirmarse en el levantamiento de requerimientos con los dueños. <strong>No es información verificada</strong> y no debe presentarse como tal.</li>
+    <li><span class="chip chip-bd">Base de datos</span> — regla que la base impone por sí misma, con restricciones o disparadores.</li>
+    <li><span class="chip chip-api">Aplicación</span> — regla que se valida en el programa, no en la base.</li>
+  </ul>
+
+  <div class="pendiente">
+    <span class="rot">Advertencia sobre el estado del documento</span>
+    <p>
+      El levantamiento de requerimientos <strong>ya se realizó</strong> y sus resultados están
+      incorporados en la sección 2. Confirmó buena parte del diseño, cerró una duda abierta y
+      reveló tres cosas que el modelo todavía no resuelve; esas tres se detallan en el
+      apartado 7.4. Lo que sigue marcado en ciruela es lo que la visita dejó sin responder.
+    </p>
+  </div>
 </section>
 
-<!-- ══════════════════════════════════════════════════════════ -->
-<section>
-  <div class="num">02</div>
-  <h2>Diagrama general</h2>
-  <p class="intro">
-    Con 12 entidades y 22 relaciones, un único diagrama resultaría ilegible: las líneas se cruzarían
-    tantas veces que dejaría de comunicar. Se presenta en dos vistas que comparten las entidades
-    centrales &mdash; <code>TIENDA</code>, <code>PRODUCTO</code> y <code>USUARIO</code> &mdash;
-    dibujadas con borde punteado allí donde aparecen como contexto. El cuadro de la sección 04
-    es la especificación completa.
+<!-- ═══════════════════ 2 ═══════════════════ -->
+<section id="s2">
+  <div class="rotulo">SECCIÓN 2</div>
+  <h2>Antecedentes</h2>
+  <p class="guia">
+    La situación de partida: qué es el negocio, cómo funciona y qué lo trajo hasta acá.
+  </p>
+
+  <h3>El negocio</h3>
+  <p>
+    Una familia del pueblo administra dos tiendas. Una es una <strong>ferretería</strong>;
+    la otra es una <strong>plastiquería</strong>, donde se vende de todo en plástico, desde
+    cucharas descartables hasta barriles de doscientos litros. Ambas están sobre la misma
+    calle, en <strong>esquinas opuestas</strong>.
+  </p>
+  <p>
+    Los rubros son distintos pero el modo de operar es el mismo, y el dueño es el mismo. Esa
+    combinación —dos puntos de venta independientes bajo una sola administración— es la que
+    define el problema: cada tienda funciona bien por separado, pero no existe ningún lugar
+    donde las dos se vean juntas.
+  </p>
+
+  <h3>Cómo se trabaja hoy</h3>
+  <p>
+    Toda la gestión es <strong>manual, en papel</strong>. Las ventas se anotan en un cuaderno,
+    el inventario se lleva en una libreta y el efectivo se cuenta al cerrar. No hay códigos de
+    producto: los artículos se nombran como cada quien los conoce. Los precios están en la
+    memoria de quien atiende.
+  </p>
+  <p>
+    Funciona porque la gente que trabaja ahí es cuidadosa y conoce su mercadería. Pero cada
+    tienda es una isla: para saber si un artículo hay en la otra esquina, alguien tiene que
+    cruzar la calle o llamar por teléfono. Y para saber cuánto se ganó en el mes hay que
+    sentarse a sumar comprobantes a mano.
+  </p>
+
+  <h4>Condiciones técnicas del entorno</h4>
+  <ul>
+    <li><strong>Conexión a internet intermitente.</strong> Hay señal, pero se corta. Un sistema que exija estar conectado para vender dejaría la tienda parada en cada corte.</li>
+    <li><strong>No hay equipos todavía.</strong> Ninguna de las dos tiendas tiene computadora ni tablet. Todo el hardware es inversión nueva, así que el sistema debe correr en dispositivos económicos.</li>
+    <li><strong>Dos poblaciones de usuarios distintas.</strong> Los empleados atienden el mostrador; la familia supervisa. Necesitan accesos y vistas diferentes.</li>
+  </ul>
+
+  <h3>Resultados del levantamiento</h3>
+  <p>
+    Se visitó a los dueños con una guía de preguntas. Lo que sigue es lo que respondieron y lo
+    que cada respuesta implica para el sistema. Cinco respuestas confirman decisiones de diseño
+    ya tomadas; tres obligan a modificar el modelo.
+  </p>
+
+  <div class="tabla-env">
+    <table>
+      <caption>Respuestas del levantamiento y su efecto sobre el sistema</caption>
+      <thead><tr><th>Tema</th><th>Lo que respondieron</th><th>Qué implica</th></tr></thead>
+      <tbody>
+        <tr><td class="v">Cantidad de productos</td><td>No la conocen. Nunca se contó cuántos artículos distintos manejan entre las dos tiendas.</td><td>La carga inicial del catálogo pasa a ser el mayor riesgo del proyecto: no se puede planificar sin saber el tamaño.</td></tr>
+        <tr><td class="v">Códigos de producto</td><td>Ninguno tiene código. Todo se maneja en papel y los artículos se nombran como se los conoce.</td><td>Hay que crear la codificación desde cero. Confirma el proceso PR-03 como trabajo previo obligatorio.</td></tr>
+        <tr><td class="v">Unidades de venta</td><td>Sí venden por medida: tubos, cuerdas y otros artículos por metro.</td><td>Confirma la unidad de medida del producto, ya presente en el modelo.</td></tr>
+        <tr><td class="v">Productos comunes</td><td>Sí hay artículos que se venden igual en la ferretería y en la plastiquería.</td><td>Confirma el catálogo único del negocio con existencias separadas por tienda.</td></tr>
+        <tr><td class="v">Precios</td><td>Iguales en las dos tiendas, pero varían según cómo esté el precio en el mercado.</td><td>Valida congelar precio y costo en cada venta (RN-10): si cambian seguido, sin eso los reportes del pasado se recalcularían solos.</td></tr>
+        <tr><td class="v">Descuentos</td><td>Sí acostumbran hacer rebajas por mayoreo.</td><td>No estaba modelado. El descuento existe como monto suelto en la venta, sin regla por cantidad.</td></tr>
+        <tr><td class="v">Crédito a clientes</td><td>Sí, los negocios dan fiado.</td><td>No estaba modelado. Es el cambio más grande que exige el levantamiento.</td></tr>
+        <tr><td class="v">Formas de pago</td><td>Sólo efectivo.</td><td>Simplifica el modelo. El fiado no es otra forma de pago: es una venta que se cobra después, también en efectivo.</td></tr>
+        <tr><td class="v">Cierre de caja</td><td>Cuentan el dinero a mano y lo verifican contra el cuaderno.</td><td>Confirma el proceso PR-05 tal como se definió, incluido el contraste entre lo esperado y lo contado.</td></tr>
+        <tr><td class="v">Empleados</td><td>No saben cuántos son. Cada tienda tiene los suyos, pero algunos trabajan en las dos.</td><td>Rompe el modelo actual, que ata cada empleado a una sola tienda.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h4>Lo que pidió el dueño</h4>
+  <ul>
+    <li><strong>Los dos negocios separados, en un solo sistema.</strong> Quiere manejar la ferretería y la plastiquería por separado pero desde la misma plataforma. El modelo ya lo permite: son dos tiendas de un mismo negocio, con existencias independientes.</li>
+    <li><strong>Sin límite de productos.</strong> Una base de datos relacional no impone ese límite; el catálogo puede crecer sin tocar el modelo.</li>
+    <li><strong>Que funcione también en computadora.</strong> La aplicación web instalable cubre computadora, tablet y teléfono con el mismo código.</li>
+  </ul>
+
+  <div class="pendiente">
+    <span class="rot">Lo que quedó sin responder</span>
+    <p>La ficha de datos de la visita no se completó. Falta para poder poner el sistema en marcha:</p>
+    <ul>
+      <li>Nombre, dirección y horario de cada tienda.</li>
+      <li>Cuántos empleados hay exactamente, y cuáles trabajan en las dos tiendas.</li>
+      <li>Cómo llevan hoy la cuenta de quién debe, que es justamente lo que hay que reemplazar.</li>
+      <li>Datos de contacto del responsable.</li>
+      <li>Con qué frecuencia hacen conteo físico y qué diferencias suelen aparecer.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ═══════════════════ 3 ═══════════════════ -->
+<section id="s3">
+  <div class="rotulo">SECCIÓN 3</div>
+  <h2>Justificación</h2>
+  <p class="guia">
+    Por qué este proyecto debe aceptarse: qué problemas concretos existen, por qué el papel
+    no puede resolverlos, y por qué la solución propuesta responde a esas necesidades y no a
+    otras.
+  </p>
+
+  <h3>Los problemas que genera trabajar en papel</h3>
+  <p>
+    No son molestias: son pérdidas medibles. Cada uno se traduce en dinero o en decisiones
+    tomadas a ciegas.
+  </p>
+
+  <div class="tabla-env">
+    <table>
+      <caption>Problemas identificados y su costo real</caption>
+      <thead>
+        <tr><th>N.º</th><th>Problema</th><th>Qué provoca</th><th>Cómo lo resuelve el sistema</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="cod">P1</td>
+          <td class="forte">Las tiendas no comparten información</td>
+          <td>Para saber si hay un artículo en la otra tienda hay que cruzar la calle o llamar. El dato siempre llega tarde.</td>
+          <td>Catálogo único con stock por tienda, consultable desde cualquiera de las dos y desde el panel del dueño.</td>
+        </tr>
+        <tr>
+          <td class="cod">P2</td>
+          <td class="forte">El inventario se descuadra sin explicación</td>
+          <td>En el conteo aparecen diferencias, pero no se sabe si fueron error de anotación, rotura o faltante. No hay forma de averiguarlo.</td>
+          <td>Cada cambio de stock queda registrado con tipo, cantidad, responsable y momento. El historial es inalterable.</td>
+        </tr>
+        <tr>
+          <td class="cod">P3</td>
+          <td class="forte">No se sabe cuánto se gana</td>
+          <td>Se conoce lo que se vendió, no lo que se ganó. Sin el costo de lo vendido, la utilidad es una impresión.</td>
+          <td>Cada línea de venta guarda el precio y el costo del momento. La ganancia se calcula sola, por tienda y por período.</td>
+        </tr>
+        <tr>
+          <td class="cod">P4</td>
+          <td class="forte">Todo depende de las personas</td>
+          <td>Los precios y el stock viven en la memoria de quien atiende. Si falta, la tienda opera a ciegas.</td>
+          <td>Precios y existencias en el sistema. Cualquiera puede atender siguiendo la pantalla.</td>
+        </tr>
+        <tr>
+          <td class="cod">P5</td>
+          <td class="forte">No se puede anticipar el desabastecimiento</td>
+          <td>Se descubre que faltó un artículo cuando el cliente ya se fue. La compra de urgencia sale más cara.</td>
+          <td>Umbral mínimo por producto y por tienda, con aviso de reposición antes de que se agote.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Por qué un sistema, y por qué este</h3>
+  <p>
+    Los cinco problemas comparten una causa: <strong>el papel registra hechos sueltos pero no
+    los relaciona</strong>. Un cuaderno puede decir que se vendieron cincuenta tornillos; no
+    puede decir cuánto costaron, cuántos quedan, quién los vendió ni cómo se compara eso con la
+    otra tienda. Digitalizar el cuaderno —pasarlo a una planilla— no arregla nada: sigue siendo
+    información suelta, ahora en pantalla.
+  </p>
+  <p>
+    Lo que hace falta es un <strong>modelo de datos relacionado</strong>, donde cada venta esté
+    unida a sus productos, a su tienda, a su vendedor y a su caja. Ahí es donde una base de
+    datos deja de ser un archivo y pasa a responder preguntas que hoy nadie puede contestar.
+  </p>
+
+  <h3>Por qué la arquitectura tiene que ser así</h3>
+  <p>
+    La conexión intermitente no es un detalle de implementación: <strong>condiciona el modelo de
+    datos entero</strong>. Un sistema convencional guarda el stock como un número que sube y
+    baja. Con dos tiendas trabajando desconectadas, ese número se pisa: la última en
+    sincronizar borra lo que hizo la otra, y la mercadería desaparece de los registros.
+  </p>
+  <p>
+    Por eso el inventario no se guarda como un total, sino como el <strong>registro de los
+    hechos que lo modificaron</strong>. Sumar movimientos independientes da el mismo resultado
+    sin importar en qué orden lleguen. Esa decisión es la que hace viable trabajar sin conexión,
+    y es la que explica buena parte de la forma del modelo entidad-relación.
+  </p>
+
+  <h3>Viabilidad</h3>
+  <ul>
+    <li><strong>Técnica.</strong> El esquema de base de datos y la interfaz de sincronización ya están construidos y verificados con 66 pruebas automatizadas. No es una propuesta teórica.</li>
+    <li><strong>Económica.</strong> El hardware necesario son dos tablets de gama básica. La base de datos y el alojamiento tienen capa gratuita suficiente para dos tiendas.</li>
+    <li><strong>Operativa.</strong> La pantalla de venta tiene tres pasos: buscar, agregar, cobrar. No exige capacitación técnica ni cambiar la forma de atender.</li>
+  </ul>
+
+  <h3>El sistema tiene competencia</h3>
+  <p>
+    En el levantamiento, la dueña mencionó que está considerando comprar un gestor de inventario
+    ya existente, <strong>Akasia</strong>, con licencia permanente de alrededor de doscientos
+    dólares. Conviene decirlo con claridad en lugar de omitirlo, porque cambia los términos de la
+    discusión.
+  </p>
+  <p>
+    Un producto establecido tiene ventajas reales que este proyecto no puede igualar en el corto
+    plazo: está probado por muchos negocios, tiene soporte, y no arrastra los errores que todo
+    desarrollo nuevo va encontrando por el camino. A ese precio, <strong>la comparación no se gana
+    por costo</strong>.
+  </p>
+  <p>
+    Lo que sí distingue a este sistema es que se construye sobre los procesos reales de estas dos
+    tiendas, que el levantamiento ya documentó: el fiado tal como lo llevan, dos locales con
+    catálogo compartido y existencias separadas, y operación sin conexión para la señal
+    intermitente que tienen. Un producto genérico puede resolver esos casos o no; es lo primero
+    que habría que verificar antes de comprarlo.
+  </p>
+
+  <div class="nota">
+    <h4>Conclusión honesta sobre la venta</h4>
+    <p>
+      La decisión de compra es del cliente y hay una alternativa más barata sobre la mesa. Este
+      documento no pretende argumentar lo contrario. Lo que sí queda establecido es que los dueños
+      autorizaron usar el negocio como caso de estudio, de modo que <strong>el proyecto académico
+      se sostiene con independencia de si el sistema termina vendiéndose</strong>.
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════════════ 4 ═══════════════════ -->
+<section id="s4">
+  <div class="rotulo">SECCIÓN 4 <span class="chip chip-prop" style="margin-left:8px">Añadido</span></div>
+  <h2>Objetivos</h2>
+  <p class="guia">
+    Esta sección no figuraba en las indicaciones recibidas, pero casi toda rúbrica de proyecto
+    la exige y se desprende sola de la justificación. Si no hace falta, se quita sin afectar al
+    resto.
+  </p>
+
+  <h3>Objetivo general</h3>
+  <p>
+    Desarrollar un sistema de gestión de inventario, ventas y supervisión financiera para las
+    dos tiendas de la familia, capaz de operar sin conexión permanente a internet y de
+    consolidar la información de ambas en un único panel de administración.
+  </p>
+
+  <h3>Objetivos específicos</h3>
+  <ol class="lista">
+    <li>Definir formalmente los procesos de negocio que hoy se ejecutan de manera informal, y derivar de ellos las reglas que el sistema debe hacer cumplir.</li>
+    <li>Diseñar un modelo de datos relacional que soporte esas reglas y permita auditar todo cambio de inventario.</li>
+    <li>Implementar un mecanismo de sincronización que permita a cada tienda operar desconectada sin perder ni duplicar operaciones al reconectarse.</li>
+    <li>Construir un punto de venta que un empleado pueda usar sin conocimientos técnicos.</li>
+    <li>Proveer al dueño un panel con ventas, inventario valorizado, ganancia real y avisos de reposición de ambas tiendas.</li>
+    <li>Verificar el sistema con pruebas automatizadas que comprueben las reglas de negocio, no sólo el funcionamiento del código.</li>
+  </ol>
+</section>
+
+<!-- ═══════════════════ 5 ═══════════════════ -->
+<section id="s5">
+  <div class="rotulo">SECCIÓN 5 <span class="chip chip-prop" style="margin-left:8px">Añadido</span></div>
+  <h2>Alcance y limitaciones</h2>
+  <p class="guia">
+    Decir con precisión qué no hace el sistema evita la discusión más incómoda: la que ocurre
+    en la entrega, cuando el cliente esperaba algo que nunca estuvo acordado.
+  </p>
+
+  <div class="tabla-env">
+    <table>
+      <caption>Delimitación del proyecto</caption>
+      <thead><tr><th>Entra en esta etapa</th><th>Queda fuera</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Catálogo de productos con categorías y precios</td>
+          <td>Facturación fiscal y emisión de comprobantes con validez tributaria</td>
+        </tr>
+        <tr>
+          <td>Inventario por tienda con historial auditable</td>
+          <td>Gestión de proveedores y órdenes de compra</td>
+        </tr>
+        <tr>
+          <td>Punto de venta con funcionamiento sin conexión</td>
+          <td>Facturación electrónica</td>
+        </tr>
+        <tr>
+          <td>Cierre de caja con detección de descuadre</td>
+          <td>Nómina, sueldos y comisiones de empleados</td>
+        </tr>
+        <tr>
+          <td>Panel consolidado de las dos tiendas</td>
+          <td>Contabilidad general y balances</td>
+        </tr>
+        <tr>
+          <td>Avisos de stock bajo</td>
+          <td>Venta por internet o catálogo público</td>
+        </tr>
+        <tr>
+          <td>Roles diferenciados de empleado y administrador</td>
+          <td>Lector de código de barras (previsto, no incluido)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h4>Limitaciones conocidas</h4>
+  <ul>
+    <li><strong>El crédito a clientes está confirmado pero no construido.</strong> Los dueños dan fiado, así que el sistema lo necesita. Hoy puede registrar que una venta fue a crédito, pero no quién debe ni cuánto.</li>
+    <li><strong>Las rebajas por mayoreo no tienen regla.</strong> Se hacen, y el sistema admite un descuento en la venta, pero no la regla por cantidad que lo justifica.</li>
+    <li><strong>Un empleado sólo puede estar en una tienda.</strong> El levantamiento reveló que algunos trabajan en las dos. El modelo actual no lo permite.</li>
+    <li><strong>Traspasos entre tiendas sin vínculo.</strong> Mover mercadería de una esquina a la otra se registra hoy como dos movimientos sueltos, sin relación entre ellos.</li>
+    <li><strong>Sin conexión no hay panel.</strong> El punto de venta funciona desconectado; la supervisión consolidada requiere internet, por definición.</li>
+    <li><strong>La sincronización tiene demora.</strong> Si una tablet pasa horas sin señal, el panel muestra datos con esa antigüedad. El sistema informa cuánto hace que cada dispositivo no sincroniza.</li>
+  </ul>
+</section>
+
+<!-- ═══════════════════ 6 ═══════════════════ -->
+<section id="s6">
+  <div class="rotulo">SECCIÓN 6</div>
+  <h2>Modelo conceptual</h2>
+  <p class="guia">
+    El punto de partida real de este proyecto: <strong>el negocio no tiene procesos
+    definidos</strong>. Nadie escribió nunca cómo se registra una venta o qué se hace cuando
+    llega mercadería. Antes de modelar datos hay que definir esos procesos, porque son ellos
+    los que dictan las reglas, y las reglas las que dictan el modelo.
+  </p>
+
+  <h3>6.1 Qué significa que no haya procesos definidos</h3>
+  <p>
+    Las tiendas funcionan, así que algo se hace. Pero lo que se hace es <strong>práctica
+    heredada, no procedimiento</strong>: cada persona lo ejecuta a su manera, no está escrito,
+    y no produce un registro consultable. Un proceso definido tiene disparador, pasos, un
+    responsable y un rastro que queda. Nada de eso existe hoy.
+  </p>
+  <p>
+    La consecuencia práctica es que <strong>no se puede automatizar lo que no está
+    definido</strong>. Si dos empleados anotan la venta de manera distinta, no hay forma de
+    programar el registro de una venta. Por eso el primer trabajo del proyecto no fue técnico:
+    fue proponer los procesos que faltaban.
+  </p>
+
+  <h3>6.2 Inventario de procesos</h3>
+  <p>
+    Se identificaron once procesos necesarios para operar las dos tiendas. Ninguno estaba
+    formalizado; nueve existen como práctica informal y dos directamente no existen.
+  </p>
+
+  <div class="tabla-env">
+    <table>
+      <caption>Estado de cada proceso antes del proyecto</caption>
+      <thead>
+        <tr><th>N.º</th><th>Proceso</th><th>Cómo está hoy</th><th>Qué falta</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="cod">PR-01</td><td class="forte">Registro de venta</td><td>Se anota en un cuaderno, sin formato fijo</td><td>Formato único, cálculo del total, descuento del stock</td></tr>
+        <tr><td class="cod">PR-02</td><td class="forte">Recepción de mercadería</td><td>Se guarda y se recuerda; no siempre se anota</td><td>Registro de entrada con costo, para valorizar el inventario</td></tr>
+        <tr><td class="cod">PR-03</td><td class="forte">Alta y codificación de producto</td><td>Cada artículo se nombra como se lo conoce</td><td>Código único, unidad de medida, categoría y precio</td></tr>
+        <tr><td class="cod">PR-04</td><td class="forte">Fijación y cambio de precio</td><td>El precio vive en la memoria del dueño</td><td>Precio registrado, y precio histórico de cada venta</td></tr>
+        <tr><td class="cod">PR-05</td><td class="forte">Cierre de caja</td><td>Se cuenta el efectivo, sin compararlo contra lo esperado</td><td>Monto esperado calculado y descuadre detectado</td></tr>
+        <tr><td class="cod">PR-06</td><td class="forte">Conteo físico y ajuste</td><td>Esporádico; las diferencias se asumen sin explicación</td><td>Ajuste registrado como movimiento, con motivo</td></tr>
+        <tr><td class="cod">PR-07</td><td class="forte">Registro de merma</td><td><span class="chip chip-no">No existe</span> Lo roto o vencido se descarta sin registro</td><td>Distinguir la pérdida de la venta: una es costo, la otra ingreso</td></tr>
+        <tr><td class="cod">PR-08</td><td class="forte">Reposición de inventario</td><td>Se compra cuando se nota que falta</td><td>Umbral mínimo por producto y aviso anticipado</td></tr>
+        <tr><td class="cod">PR-09</td><td class="forte">Control de acceso del personal</td><td><span class="chip chip-no">No existe</span> Cualquiera anota en el cuaderno</td><td>Identificación del responsable de cada operación</td></tr>
+        <tr><td class="cod">PR-10</td><td class="forte">Supervisión consolidada</td><td>Visitando ambas tiendas o llamando por teléfono</td><td>Vista única de las dos tiendas con ganancia real</td></tr>
+        <tr><td class="cod">PR-11</td><td class="forte">Sincronización entre tiendas</td><td><span class="chip chip-no">No aplica</span> No hay nada que sincronizar en papel</td><td>Proceso nuevo que introduce el sistema</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>6.3 Procesos definidos</h3>
+  <p>
+    Definición formal de los cinco procesos centrales. Cada ficha indica qué lo dispara, los
+    pasos que lo componen y las reglas de negocio que genera. Los seis restantes siguen la
+    misma estructura y se resumen en la tabla de reglas de la sección 6.4.
+  </p>
+
+  <div class="procesos">
+
+    <article class="proc">
+      <div>
+        <div class="cod">PR-01</div>
+        <h5>Registro de venta</h5>
+        <p class="disp">Se dispara cuando un cliente decide llevar mercadería.</p>
+        <ol>
+          <li>El empleado se identifica con su PIN en la tablet de su tienda.</li>
+          <li>Busca cada producto por nombre o código y ve el precio y las existencias.</li>
+          <li>Arma el pedido indicando la cantidad de cada artículo.</li>
+          <li>Cobra y elige la forma de pago.</li>
+          <li>El sistema registra la venta, su detalle y la salida de stock, todo junto.</li>
+        </ol>
+      </div>
+      <div>
+        <h6>Reglas que genera</h6>
+        <ul>
+          <li><b>RN-08</b> Una venta necesita al menos una línea de detalle.</li>
+          <li><b>RN-09</b> El total es el subtotal menos el descuento, sin excepción.</li>
+          <li><b>RN-10</b> El precio y el costo se copian al vender y ya no cambian.</li>
+          <li><b>RN-11</b> El número de comprobante es único dentro de la tienda.</li>
+          <li><b>RN-06</b> Una venta descuenta stock: nunca lo aumenta.</li>
+          <li><b>RN-23</b> La venta, su detalle y el descuento de stock se guardan juntos o no se guarda nada.</li>
+        </ul>
+      </div>
+    </article>
+
+    <article class="proc">
+      <div>
+        <div class="cod">PR-02</div>
+        <h5>Recepción de mercadería</h5>
+        <p class="disp">Se dispara cuando llega una compra del proveedor.</p>
+        <ol>
+          <li>El encargado verifica lo recibido contra lo pedido.</li>
+          <li>Registra una entrada por cada producto, con su cantidad.</li>
+          <li>Indica el costo unitario pagado en esta compra.</li>
+          <li>Anota el motivo, que identifica al proveedor o la remisión.</li>
+          <li>El stock de esa tienda sube automáticamente.</li>
+        </ol>
+      </div>
+      <div>
+        <h6>Reglas que genera</h6>
+        <ul>
+          <li><b>RN-05</b> Toda entrada o salida queda registrada con tipo, cantidad, responsable y momento.</li>
+          <li><b>RN-06</b> Una entrada debe tener cantidad positiva.</li>
+          <li><b>RN-24</b> El costo se guarda en el momento de la entrada, para poder valorizar el inventario histórico.</li>
+          <li><b>RN-03</b> La entrada afecta el stock de una tienda concreta, no del negocio.</li>
+        </ul>
+      </div>
+    </article>
+
+    <article class="proc">
+      <div>
+        <div class="cod">PR-05</div>
+        <h5>Cierre de caja</h5>
+        <p class="disp">Se dispara al terminar el turno o la jornada.</p>
+        <ol>
+          <li>Al abrir, se registra el monto inicial que queda en el cajón.</li>
+          <li>Durante el turno, las ventas en efectivo se asocian a esa caja.</li>
+          <li>Al cerrar, el sistema calcula cuánto efectivo debería haber.</li>
+          <li>El empleado cuenta el dinero real y lo ingresa.</li>
+          <li>El sistema registra la diferencia entre lo esperado y lo contado.</li>
+        </ol>
+      </div>
+      <div>
+        <h6>Reglas que genera</h6>
+        <ul>
+          <li><b>RN-12</b> Una tienda no puede tener dos cajas abiertas al mismo tiempo.</li>
+          <li><b>RN-13</b> El descuadre se calcula, nunca se escribe a mano.</li>
+          <li><b>RN-14</b> Una caja no puede cerrarse sin declarar el efectivo contado.</li>
+          <li><b>RN-25</b> Se conservan por separado lo esperado y lo contado, para poder auditar cuál de los dos estaba mal.</li>
+        </ul>
+      </div>
+    </article>
+
+    <article class="proc">
+      <div>
+        <div class="cod">PR-06</div>
+        <h5>Conteo físico y ajuste</h5>
+        <p class="disp">Se dispara al hacer inventario, o ante una diferencia detectada.</p>
+        <ol>
+          <li>Se cuenta físicamente la existencia de cada producto.</li>
+          <li>Se compara contra lo que el sistema indica.</li>
+          <li>Ante una diferencia, se registra un ajuste con la cantidad que corrige.</li>
+          <li>Se anota el motivo del ajuste.</li>
+          <li>El registro anterior <strong>no se modifica</strong>: el ajuste se suma al historial.</li>
+        </ol>
+      </div>
+      <div>
+        <h6>Reglas que genera</h6>
+        <ul>
+          <li><b>RN-07</b> El historial de inventario no se puede alterar ni borrar.</li>
+          <li><b>RN-26</b> Todo error se corrige agregando un ajuste, nunca reescribiendo el pasado.</li>
+          <li><b>RN-04</b> El stock es el resultado de sumar los movimientos, no un número que se edita.</li>
+          <li><b>RN-27</b> Un movimiento de cantidad cero no se admite: no significa nada.</li>
+        </ul>
+      </div>
+    </article>
+
+    <article class="proc">
+      <div>
+        <div class="cod">PR-11</div>
+        <h5>Sincronización entre tiendas</h5>
+        <p class="disp">Se dispara automáticamente cuando vuelve la señal de internet.</p>
+        <ol>
+          <li>Mientras no hay conexión, la tablet acumula las operaciones en una cola local.</li>
+          <li>Cada operación lleva un identificador propio generado en el dispositivo.</li>
+          <li>Al reconectarse, la tablet envía la cola al servidor.</li>
+          <li>El servidor descarta lo que ya tenía y acepta lo nuevo.</li>
+          <li>Informa qué aceptó, qué era repetido y qué rechazó, con el motivo.</li>
+        </ol>
+      </div>
+      <div>
+        <h6>Reglas que genera</h6>
+        <ul>
+          <li><b>RN-20</b> Reenviar una operación no la duplica: el identificador lo impide.</li>
+          <li><b>RN-28</b> Un registro con error no bloquea al resto del envío.</li>
+          <li><b>RN-04</b> Los movimientos se suman, así que el orden de llegada no altera el resultado.</li>
+          <li><b>RN-29</b> Se registra cuándo sincronizó cada dispositivo por última vez.</li>
+        </ul>
+      </div>
+    </article>
+
+  </div>
+
+  <h3>6.4 Reglas de negocio</h3>
+  <p>
+    Las reglas derivadas de los procesos anteriores, con el lugar donde cada una se hace
+    cumplir. Que una regla esté en la <strong>base de datos</strong> significa que se cumple
+    aunque el programa tenga un error o alguien se conecte directamente a la base; que esté en
+    la <strong>aplicación</strong> significa que depende del programa.
+  </p>
+
+  <div class="tabla-env">
+    <table>
+      <caption>Reglas de negocio y dónde se imponen</caption>
+      <thead>
+        <tr><th>N.º</th><th>Regla</th><th>Proceso</th><th>Dónde</th><th>Mecanismo</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="cod">RN-01</td><td>Un producto pertenece al negocio, no a una tienda</td><td class="mono">PR-03</td><td><span class="chip chip-bd">BD</span></td><td class="mono">productos.negocio_id</td></tr>
+        <tr><td class="cod">RN-02</td><td>El código de producto es único en el negocio</td><td class="mono">PR-03</td><td><span class="chip chip-bd">BD</span></td><td class="mono">uq_productos_codigo</td></tr>
+        <tr><td class="cod">RN-03</td><td>El stock es por tienda: una sola fila por par</td><td class="mono">PR-02</td><td><span class="chip chip-bd">BD</span></td><td class="mono">PK (tienda_id, producto_id)</td></tr>
+        <tr><td class="cod">RN-04</td><td>El stock se deduce sumando movimientos</td><td class="mono">PR-06</td><td><span class="chip chip-bd">BD</span></td><td class="mono">trigger de stock</td></tr>
+        <tr><td class="cod">RN-05</td><td>Todo cambio de stock queda registrado con responsable y momento</td><td class="mono">PR-02</td><td><span class="chip chip-bd">BD</span></td><td class="mono">movimientos_inventario</td></tr>
+        <tr><td class="cod">RN-06</td><td>Una venta o merma resta; una entrada o devolución suma</td><td class="mono">PR-01</td><td><span class="chip chip-bd">BD</span></td><td class="mono">chk_signo_segun_tipo</td></tr>
+        <tr><td class="cod">RN-07</td><td>El historial de inventario es inalterable</td><td class="mono">PR-06</td><td><span class="chip chip-bd">BD</span></td><td class="mono">trg_movimientos_inmutables</td></tr>
+        <tr><td class="cod">RN-08</td><td>Una venta necesita al menos una línea</td><td class="mono">PR-01</td><td><span class="chip chip-api">App</span></td><td class="mono">validación de la API</td></tr>
+        <tr><td class="cod">RN-09</td><td>Total = subtotal − descuento</td><td class="mono">PR-01</td><td><span class="chip chip-bd">BD</span></td><td class="mono">chk_total_coherente</td></tr>
+        <tr><td class="cod">RN-10</td><td>El precio y el costo se congelan al vender</td><td class="mono">PR-04</td><td><span class="chip chip-bd">BD</span></td><td class="mono">venta_lineas</td></tr>
+        <tr><td class="cod">RN-11</td><td>El número de venta es único dentro de la tienda</td><td class="mono">PR-01</td><td><span class="chip chip-bd">BD</span></td><td class="mono">uq_ventas_numero</td></tr>
+        <tr><td class="cod">RN-12</td><td>Una tienda no puede tener dos cajas abiertas</td><td class="mono">PR-05</td><td><span class="chip chip-bd">BD</span></td><td class="mono">uq_caja_abierta_por_tienda</td></tr>
+        <tr><td class="cod">RN-13</td><td>El descuadre de caja se calcula, no se captura</td><td class="mono">PR-05</td><td><span class="chip chip-bd">BD</span></td><td class="mono">columna generada</td></tr>
+        <tr><td class="cod">RN-14</td><td>No se cierra caja sin declarar el efectivo contado</td><td class="mono">PR-05</td><td><span class="chip chip-bd">BD</span></td><td class="mono">chk_cierre_completo</td></tr>
+        <tr><td class="cod">RN-15</td><td>El empleado opera su tienda; el administrador ve ambas</td><td class="mono">PR-09</td><td><span class="chip chip-bd">BD</span></td><td class="mono">usuarios.rol, tienda_id</td></tr>
+        <tr><td class="cod">RN-16</td><td>Las credenciales dependen del rol</td><td class="mono">PR-09</td><td><span class="chip chip-bd">BD</span></td><td class="mono">chk_credenciales</td></tr>
+        <tr><td class="cod">RN-17</td><td>No se borra un producto con historial</td><td class="mono">PR-03</td><td><span class="chip chip-bd">BD</span></td><td class="mono">FK RESTRICT</td></tr>
+        <tr><td class="cod">RN-18</td><td>Borrar una venta borra su detalle</td><td class="mono">PR-01</td><td><span class="chip chip-bd">BD</span></td><td class="mono">FK CASCADE</td></tr>
+        <tr><td class="cod">RN-19</td><td>El dato histórico sobrevive a la baja del empleado</td><td class="mono">PR-09</td><td><span class="chip chip-bd">BD</span></td><td class="mono">FK SET NULL</td></tr>
+        <tr><td class="cod">RN-20</td><td>Reenviar una operación no la duplica</td><td class="mono">PR-11</td><td><span class="chip chip-bd">BD</span></td><td class="mono">PK del dispositivo</td></tr>
+        <tr><td class="cod">RN-21</td><td>Las categorías forman jerarquía</td><td class="mono">PR-03</td><td><span class="chip chip-bd">BD</span></td><td class="mono">categorias.padre_id</td></tr>
+        <tr><td class="cod">RN-22</td><td>Se avisa cuando el stock baja del mínimo</td><td class="mono">PR-08</td><td><span class="chip chip-bd">BD</span></td><td class="mono">v_alertas_stock</td></tr>
+        <tr><td class="cod">RN-23</td><td>Venta, detalle y stock se guardan juntos o nada</td><td class="mono">PR-01</td><td><span class="chip chip-api">App</span></td><td class="mono">transacción</td></tr>
+        <tr><td class="cod">RN-24</td><td>El costo se guarda al recibir la mercadería</td><td class="mono">PR-02</td><td><span class="chip chip-bd">BD</span></td><td class="mono">movimientos.costo_unitario</td></tr>
+        <tr><td class="cod">RN-25</td><td>Se conservan por separado lo esperado y lo contado</td><td class="mono">PR-05</td><td><span class="chip chip-bd">BD</span></td><td class="mono">cajas</td></tr>
+        <tr><td class="cod">RN-26</td><td>Los errores se corrigen con un ajuste, no reescribiendo</td><td class="mono">PR-06</td><td><span class="chip chip-bd">BD</span></td><td class="mono">tipo 'ajuste'</td></tr>
+        <tr><td class="cod">RN-27</td><td>Un movimiento de cantidad cero no se admite</td><td class="mono">PR-06</td><td><span class="chip chip-bd">BD</span></td><td class="mono">chk_cantidad_no_cero</td></tr>
+        <tr><td class="cod">RN-28</td><td>Un registro con error no bloquea el resto del envío</td><td class="mono">PR-11</td><td><span class="chip chip-api">App</span></td><td class="mono">proceso por elemento</td></tr>
+        <tr><td class="cod">RN-29</td><td>Se registra la última sincronización de cada dispositivo</td><td class="mono">PR-11</td><td><span class="chip chip-bd">BD</span></td><td class="mono">dispositivos, sync_log</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="nota">
+    <span class="rot">Sobre las tres reglas que vive la aplicación</span>
+    <p>
+      RN-08, RN-23 y RN-28 no las impone la base de datos. Es una debilidad conocida y vale
+      reconocerla antes de que la señalen: si alguien se conectara directamente a la base
+      podría insertar una venta sin líneas. Se podría cerrar con una restricción diferida, a
+      costa de complicar la carga inicial de datos. Se dejó así deliberadamente, y queda
+      anotado como una decisión, no como un descuido.
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════════════ 7 ═══════════════════ -->
+<section id="s7">
+  <div class="rotulo">SECCIÓN 7</div>
+  <h2>Modelo entidad-relación</h2>
+  <p class="guia">
+    Todo lo que dice el modelo conceptual tiene que estar en el modelo de datos. Esta sección
+    lo demuestra dos veces: primero mostrando cómo un proceso concreto se convierte en
+    escrituras sobre entidades, y después con una tabla que recorre proceso por proceso.
+  </p>
+
+  <h3>7.1 De un proceso a las entidades</h3>
+  <p>
+    El proceso de venta, paso a paso, con lo que cada paso lee o escribe en el modelo. Es la
+    forma más directa de ver que el modelo conceptual y el MER son la misma cosa contada de
+    dos maneras.
+  </p>
+
+  <figure>
+    <div class="lienzo">
+      <svg class="dg" viewBox="0 0 1140 500" role="img"
+           aria-label="El proceso de venta paso a paso y las entidades que cada paso lee o escribe: identificarse lee usuario, buscar lee producto y stock, armar el pedido no guarda nada todavia, cobrar escribe venta y sus lineas, y confirmar escribe los movimientos de inventario que actualizan el stock.">
+        <defs>
+          <marker id="pf" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--tinta-baja)"/>
+          </marker>
+          <marker id="pe" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--azul)"/>
+          </marker>
+        </defs>
+
+        <text class="zona" x="20" y="28">EL PROCESO, PASO A PASO</text>
+
+        <rect class="paso" x="20" y="46" width="196" height="52"/>
+        <text class="rotulo-p" x="118" y="70" text-anchor="middle">1. Identificarse</text>
+        <text class="verb" x="118" y="87" text-anchor="middle">PIN en la tablet</text>
+
+        <rect class="paso" x="236" y="46" width="196" height="52"/>
+        <text class="rotulo-p" x="334" y="70" text-anchor="middle">2. Buscar producto</text>
+        <text class="verb" x="334" y="87" text-anchor="middle">precio y existencias</text>
+
+        <rect class="paso" x="452" y="46" width="196" height="52"/>
+        <text class="rotulo-p" x="550" y="70" text-anchor="middle">3. Armar el pedido</text>
+        <text class="verb" x="550" y="87" text-anchor="middle">cantidad por artículo</text>
+
+        <rect class="paso" x="668" y="46" width="196" height="52"/>
+        <text class="rotulo-p" x="766" y="70" text-anchor="middle">4. Cobrar</text>
+        <text class="verb" x="766" y="87" text-anchor="middle">forma de pago</text>
+
+        <rect class="paso" x="884" y="46" width="236" height="52"/>
+        <text class="rotulo-p" x="1002" y="70" text-anchor="middle">5. Confirmar</text>
+        <text class="verb" x="1002" y="87" text-anchor="middle">todo junto, o nada</text>
+
+        <line class="flujo" x1="216" y1="72" x2="232" y2="72" marker-end="url(#pf)"/>
+        <line class="flujo" x1="432" y1="72" x2="448" y2="72" marker-end="url(#pf)"/>
+        <line class="flujo" x1="648" y1="72" x2="664" y2="72" marker-end="url(#pf)"/>
+        <line class="flujo" x1="864" y1="72" x2="880" y2="72" marker-end="url(#pf)"/>
+
+        <line class="sep" x1="20" y1="138" x2="1120" y2="138"/>
+        <text class="zona" x="20" y="164">LO QUE QUEDA EN EL MODELO</text>
+
+        <line class="escribe" x1="118" y1="98" x2="118" y2="196" marker-end="url(#pe)"/>
+        <text class="card" x="126" y="126">lee</text>
+        <line class="escribe" x1="334" y1="98" x2="334" y2="196" marker-end="url(#pe)"/>
+        <text class="card" x="342" y="126">lee</text>
+        <line class="escribe" x1="550" y1="98" x2="550" y2="196" marker-end="url(#pe)"/>
+        <line class="escribe" x1="766" y1="98" x2="766" y2="196" marker-end="url(#pe)"/>
+        <text class="card" x="774" y="126">escribe</text>
+        <line class="escribe" x1="1002" y1="98" x2="1002" y2="196" marker-end="url(#pe)"/>
+        <text class="card" x="1010" y="126">escribe</text>
+
+        <rect class="cab-ent" x="20" y="196" width="196" height="24"/>
+        <rect class="ent" x="20" y="220" width="196" height="44"/>
+        <text class="nom" x="118" y="213" text-anchor="middle">USUARIO</text>
+        <text class="atr" x="32" y="239">rol, tienda_id</text>
+        <text class="atr" x="32" y="255">pin_hash</text>
+
+        <rect class="cab-ent" x="236" y="196" width="196" height="24"/>
+        <rect class="ent" x="236" y="220" width="196" height="44"/>
+        <text class="nom" x="334" y="213" text-anchor="middle">PRODUCTO</text>
+        <text class="atr" x="248" y="239">codigo, nombre</text>
+        <text class="atr" x="248" y="255">precio_venta</text>
+
+        <rect class="cab-ent" x="236" y="288" width="196" height="24"/>
+        <rect class="ent-aso" x="236" y="312" width="196" height="34"/>
+        <text class="nom" x="334" y="305" text-anchor="middle">STOCK</text>
+        <text class="der" x="248" y="333">cantidad</text>
+
+        <rect class="paso-nada" x="452" y="196" width="196" height="68"/>
+        <text class="verb" x="550" y="226" text-anchor="middle">todavía no se</text>
+        <text class="verb" x="550" y="243" text-anchor="middle">guarda nada:</text>
+        <text class="verb" x="550" y="260" text-anchor="middle">el pedido está en curso</text>
+
+        <rect class="cab-ent" x="668" y="196" width="196" height="24"/>
+        <rect class="ent" x="668" y="220" width="196" height="60"/>
+        <text class="nom" x="766" y="213" text-anchor="middle">VENTA</text>
+        <text class="atr" x="680" y="239">numero, total</text>
+        <text class="atr" x="680" y="255">metodo_pago</text>
+        <text class="atr" x="680" y="271">caja_id</text>
+
+        <rect class="cab-deb" x="668" y="304" width="196" height="24"/>
+        <rect class="ent-deb" x="668" y="328" width="196" height="48"/>
+        <rect class="ent-deb-int" x="672" y="332" width="188" height="40"/>
+        <text class="nom" x="766" y="321" text-anchor="middle">VENTA_LINEA</text>
+        <text class="atr" x="682" y="347">cantidad, precio *</text>
+        <text class="atr" x="682" y="363">costo *</text>
+
+        <rect class="cab-ent" x="884" y="196" width="236" height="24"/>
+        <rect class="ent" x="884" y="220" width="236" height="60"/>
+        <text class="nom" x="1002" y="213" text-anchor="middle">MOVIMIENTO_INVENTARIO</text>
+        <text class="atr" x="896" y="239">tipo = 'venta'</text>
+        <text class="atr" x="896" y="255">cantidad negativa</text>
+        <text class="atr" x="896" y="271">venta_id</text>
+
+        <path class="rel-amb" d="M762,280 V304"/>
+        <path class="rel-amb" d="M770,280 V304"/>
+        <text class="card-amb" x="782" y="297">1 : N</text>
+
+        <path class="rel" d="M884,250 H864" marker-end="url(#pe)"/>
+        <text class="verb" x="874" y="242" text-anchor="middle">deriva de</text>
+
+        <path class="rel" d="M1002,280 V420 H334 V346" marker-end="url(#pe)"/>
+        <text class="card" x="660" y="412">recalcula el stock por disparador</text>
+
+        <text class="zona" x="682" y="392">* congelado al vender</text>
+      </svg>
+    </div>
+    <figcaption>
+      <b>Figura 1 &mdash; El proceso de venta sobre el modelo.</b> Los tres primeros pasos sólo
+      leen. El paso 3 no escribe nada: hasta que no se cobra, la venta no existe. Los pasos 4 y
+      5 escriben, y lo hacen en una sola operación indivisible &mdash; regla RN-23. Los
+      movimientos de inventario no los envía la tablet: los <b>deriva el servidor</b> de las
+      líneas de la venta, con lo que resulta imposible que exista una venta sin su descuento de
+      stock.
+    </figcaption>
+  </figure>
+
+  <h3>7.2 Trazabilidad del modelo conceptual al MER</h3>
+  <p>
+    Proceso por proceso, las entidades que lo sostienen. Ninguna entidad del modelo existe
+    porque sí: todas aparecen porque algún proceso las necesita.
+  </p>
+
+  <div class="tabla-env">
+    <table>
+      <caption>Correspondencia entre procesos y entidades del modelo</caption>
+      <thead>
+        <tr><th>Proceso</th><th>Entidades que interviene</th><th>Reglas</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="forte">PR-01 Registro de venta</td><td class="mono">VENTA, VENTA_LINEA, MOVIMIENTO_INVENTARIO, STOCK, PRODUCTO, USUARIO, TIENDA, CAJA</td><td class="mono">RN-06, 08, 09, 10, 11, 18, 23</td></tr>
+        <tr><td class="forte">PR-02 Recepción de mercadería</td><td class="mono">MOVIMIENTO_INVENTARIO, STOCK, PRODUCTO, TIENDA, USUARIO</td><td class="mono">RN-03, 05, 06, 24</td></tr>
+        <tr><td class="forte">PR-03 Alta de producto</td><td class="mono">PRODUCTO, CATEGORIA, NEGOCIO</td><td class="mono">RN-01, 02, 17, 21</td></tr>
+        <tr><td class="forte">PR-04 Fijación de precio</td><td class="mono">PRODUCTO, VENTA_LINEA</td><td class="mono">RN-10</td></tr>
+        <tr><td class="forte">PR-05 Cierre de caja</td><td class="mono">CAJA, VENTA, USUARIO, TIENDA</td><td class="mono">RN-12, 13, 14, 25</td></tr>
+        <tr><td class="forte">PR-06 Conteo y ajuste</td><td class="mono">MOVIMIENTO_INVENTARIO, STOCK</td><td class="mono">RN-04, 07, 26, 27</td></tr>
+        <tr><td class="forte">PR-07 Registro de merma</td><td class="mono">MOVIMIENTO_INVENTARIO, STOCK</td><td class="mono">RN-05, 06</td></tr>
+        <tr><td class="forte">PR-08 Reposición</td><td class="mono">STOCK, PRODUCTO, TIENDA</td><td class="mono">RN-22</td></tr>
+        <tr><td class="forte">PR-09 Control de acceso</td><td class="mono">USUARIO, TIENDA, NEGOCIO</td><td class="mono">RN-15, 16, 19</td></tr>
+        <tr><td class="forte">PR-10 Supervisión consolidada</td><td class="mono">VENTA, VENTA_LINEA, STOCK, PRODUCTO, TIENDA</td><td class="mono">RN-10, 22</td></tr>
+        <tr><td class="forte">PR-11 Sincronización</td><td class="mono">DISPOSITIVO, SYNC_LOG, MOVIMIENTO_INVENTARIO, VENTA</td><td class="mono">RN-04, 20, 28, 29</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>
+    La correspondencia se cumple en los dos sentidos. Las <strong>12 entidades</strong> del
+    modelo aparecen al menos una vez en la columna del medio: no hay ninguna que no responda a
+    un proceso. Y los <strong>11 procesos</strong> tienen entidades que los sostienen: ninguno
+    quedó sin modelar.
+  </p>
+
+  <h3>7.3 El modelo entidad-relación</h3>
+  <p>
+    El modelo completo. Las construcciones extendidas &mdash; la especialización de usuario, la
+    entidad débil, la relación recursiva, la entidad asociativa y los atributos derivados
+    &mdash; están explicadas figura por figura en el
+    <a class="enlace" href="https://claude.ai/code/artifact/f088adea-b9f0-4d02-9217-0d24e7957fd9">documento del modelo entidad-relación</a>,
+    junto con la tabla completa de cardinalidades de las 22 relaciones.
   </p>
 
   <figure>
@@ -683,935 +1447,119 @@
       </svg>
     </div>
     <figcaption>
-      <b>Figura 0 &mdash; Modelo completo.</b> Las 12 entidades y las 22 relaciones en un solo
-      lienzo, con la jerarquía de especialización desplegada. Es la vista para imprimir o proyectar;
-      las dos figuras siguientes la descomponen para leerla con comodidad. Algunas líneas se cruzan:
-      con 22 relaciones es inevitable, y los cruces se trazan en ángulo recto para que se distingan
-      de las uniones.
+      <b>Figura 2 &mdash; Modelo entidad-relación completo.</b> Las 12 entidades y las 22
+      relaciones. En ámbar, las construcciones del modelo extendido: la especialización de
+      <code>USUARIO</code>, la entidad débil <code>VENTA_LINEA</code>, la relación recursiva de
+      <code>CATEGORIA</code> y la entidad asociativa <code>STOCK</code>. En verde, los atributos
+      que se calculan en lugar de capturarse.
     </figcaption>
   </figure>
 
-  <div class="leyenda">
-    <div>
-      <svg width="34" height="22" viewBox="0 0 34 22" aria-hidden="true"><rect x="1.5" y="1.5" width="31" height="19" fill="none" stroke="var(--azul)" stroke-width="1.6"/></svg>
-      <p><b>Entidad fuerte</b>Existe por sí misma y tiene clave primaria propia.</p>
-    </div>
-    <div>
-      <svg width="34" height="22" viewBox="0 0 34 22" aria-hidden="true"><rect x="1.5" y="1.5" width="31" height="19" fill="none" stroke="var(--ambar)" stroke-width="1.6"/><rect x="4.5" y="4.5" width="25" height="13" fill="none" stroke="var(--ambar)" stroke-width="1.2"/></svg>
-      <p><b>Entidad débil</b>Depende existencialmente de otra entidad.</p>
-    </div>
-    <div>
-      <svg width="34" height="22" viewBox="0 0 34 22" aria-hidden="true"><rect x="1.5" y="1.5" width="31" height="19" fill="var(--ambar-tenue)" stroke="var(--ambar)" stroke-width="1.6"/></svg>
-      <p><b>Entidad asociativa</b>Resuelve un M:N y lleva atributos propios.</p>
-    </div>
-    <div>
-      <svg width="34" height="22" viewBox="0 0 34 22" aria-hidden="true"><rect x="1.5" y="1.5" width="31" height="19" fill="none" stroke="var(--tinta-baja)" stroke-width="1.3" stroke-dasharray="5 3"/></svg>
-      <p><b>Entidad compartida</b>Ya definida en la otra vista; aquí es contexto.</p>
-    </div>
-    <div>
-      <svg width="34" height="22" viewBox="0 0 34 22" aria-hidden="true"><ellipse cx="17" cy="11" rx="15.5" ry="9.5" fill="var(--verde-tenue)" stroke="var(--verde)" stroke-width="1.3" stroke-dasharray="5 3"/></svg>
-      <p><b>Atributo derivado</b>Se calcula a partir de otros datos.</p>
-    </div>
-    <div>
-      <svg width="34" height="22" viewBox="0 0 34 22" aria-hidden="true"><text x="17" y="15" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="var(--azul)">1 : N</text></svg>
-      <p><b>Cardinalidad</b>Se lee del lado 1 hacia el lado N.</p>
-    </div>
-  </div>
-
-  <!-- ─────────── FIGURA 1 ─────────── -->
-  <figure>
-    <div class="lienzo">
-      <svg class="dg" viewBox="0 0 1180 760" role="img"
-           aria-label="Vista de estructura: el negocio agrupa tiendas, usuarios, categorías y productos; el stock resuelve la relación muchos a muchos entre tienda y producto; cada tienda tiene dispositivos que registran bitácora de sincronización.">
-        <defs>
-          <marker id="fa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-            <path d="M0,0 L10,5 L0,10 z" fill="var(--azul)"/>
-          </marker>
-          <marker id="fb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-            <path d="M0,0 L10,5 L0,10 z" fill="var(--ambar)"/>
-          </marker>
-        </defs>
-
-        <!-- NEGOCIO -->
-        <rect class="cab-ent" x="470" y="26" width="220" height="26"/>
-        <rect class="ent" x="470" y="52" width="220" height="60"/>
-        <text class="nom" x="580" y="45" text-anchor="middle">NEGOCIO</text>
-        <text class="pk"  x="484" y="71">id</text>
-        <text class="atr" x="484" y="87">nombre, propietario</text>
-        <text class="atr" x="484" y="103">moneda, activo</text>
-
-        <!-- CATEGORIA -->
-        <rect class="cab-ent" x="60" y="212" width="200" height="26"/>
-        <rect class="ent" x="60" y="238" width="200" height="60"/>
-        <text class="nom" x="160" y="231" text-anchor="middle">CATEGORIA</text>
-        <text class="pk"  x="74" y="257">id</text>
-        <text class="atr" x="74" y="273">nombre</text>
-        <text class="atr" x="74" y="289">padre_id (FK)</text>
-
-        <!-- TIENDA -->
-        <rect class="cab-ent" x="470" y="212" width="220" height="26"/>
-        <rect class="ent" x="470" y="238" width="220" height="76"/>
-        <text class="nom" x="580" y="231" text-anchor="middle">TIENDA</text>
-        <text class="pk"  x="484" y="257">id</text>
-        <text class="atr" x="484" y="273">nombre, tipo</text>
-        <text class="atr" x="484" y="289">direccion, prefijo</text>
-        <text class="atr" x="484" y="305">negocio_id (FK)</text>
-
-        <!-- USUARIO -->
-        <rect class="cab-ent" x="900" y="212" width="220" height="26"/>
-        <rect class="ent" x="900" y="238" width="220" height="76"/>
-        <text class="nom" x="1010" y="231" text-anchor="middle">USUARIO</text>
-        <text class="pk"  x="914" y="257">id</text>
-        <text class="atr" x="914" y="273">nombre, rol</text>
-        <text class="atr" x="914" y="289">email, pin_hash</text>
-        <text class="atr" x="914" y="305">tienda_id (FK)</text>
-
-        <!-- ISA stub -->
-        <line class="rel-amb" x1="1010" y1="314" x2="1010" y2="344"/>
-        <polygon points="1010,344 1042,382 978,382" fill="var(--ambar-tenue)" stroke="var(--ambar)" stroke-width="1.5"/>
-        <text class="card-amb" x="1010" y="371" text-anchor="middle" font-size="10">ISA</text>
-        <text class="verb" x="1010" y="400" text-anchor="middle">especialización &rarr; Fig. 3</text>
-
-        <!-- PRODUCTO -->
-        <rect class="cab-ent" x="60" y="414" width="200" height="26"/>
-        <rect class="ent" x="60" y="440" width="200" height="76"/>
-        <text class="nom" x="160" y="433" text-anchor="middle">PRODUCTO</text>
-        <text class="pk"  x="74" y="459">id</text>
-        <text class="atr" x="74" y="475">codigo, nombre</text>
-        <text class="atr" x="74" y="491">precio_costo/venta</text>
-        <text class="atr" x="74" y="507">unidad_medida</text>
-
-        <!-- STOCK (asociativa) -->
-        <rect class="cab-deb" x="330" y="414" width="190" height="26"/>
-        <rect class="ent-aso" x="330" y="440" width="190" height="76"/>
-        <text class="nom" x="425" y="433" text-anchor="middle">STOCK</text>
-        <text class="pk"  x="344" y="459">tienda_id+producto_id</text>
-        <text class="der" x="344" y="475">cantidad (derivado)</text>
-        <text class="atr" x="344" y="491">cantidad_minima</text>
-        <text class="atr" x="344" y="507">updated_at</text>
-
-        <!-- DISPOSITIVO -->
-        <rect class="cab-ent" x="770" y="470" width="210" height="26"/>
-        <rect class="ent" x="770" y="496" width="210" height="60"/>
-        <text class="nom" x="875" y="489" text-anchor="middle">DISPOSITIVO</text>
-        <text class="pk"  x="784" y="515">id</text>
-        <text class="atr" x="784" y="531">nombre</text>
-        <text class="atr" x="784" y="547">ultimo_sync</text>
-
-        <!-- SYNC_LOG -->
-        <rect class="cab-ent" x="770" y="632" width="210" height="26"/>
-        <rect class="ent" x="770" y="658" width="210" height="60"/>
-        <text class="nom" x="875" y="651" text-anchor="middle">SYNC_LOG</text>
-        <text class="pk"  x="784" y="677">id</text>
-        <text class="atr" x="784" y="693">registros_enviados</text>
-        <text class="atr" x="784" y="709">registros_duplicados</text>
-
-        <!-- R1 NEGOCIO -> TIENDA -->
-        <path class="rel" d="M580,112 V212" marker-end="url(#fa)"/>
-        <text class="card" x="590" y="152">1 : N</text>
-        <text class="verb" x="590" y="168">posee</text>
-
-        <!-- R4 NEGOCIO -> CATEGORIA -->
-        <path class="rel" d="M470,66 H120 V212" marker-end="url(#fa)"/>
-        <text class="card" x="200" y="58">1 : N</text>
-        <text class="verb" x="248" y="58">clasifica</text>
-
-        <!-- R2 NEGOCIO -> USUARIO -->
-        <path class="rel" d="M690,66 H1010 V212" marker-end="url(#fa)"/>
-        <text class="card" x="800" y="58">1 : N</text>
-        <text class="verb" x="848" y="58">emplea</text>
-
-        <!-- R6 NEGOCIO -> PRODUCTO -->
-        <path class="rel" d="M470,96 H24 V478 H60" marker-end="url(#fa)"/>
-        <text class="card" x="30" y="256" transform="rotate(-90 30 256)">1 : N</text>
-        <text class="verb" x="30" y="322" transform="rotate(-90 30 322)">oferta</text>
-
-        <!-- R5 CATEGORIA recursiva -->
-        <path class="rel-amb" d="M260,254 H296 V196 H200 V212" marker-end="url(#fb)"/>
-        <text class="card-amb" x="304" y="230">1 : N</text>
-        <text class="verb" x="304" y="246">contiene</text>
-
-        <!-- R7 CATEGORIA -> PRODUCTO -->
-        <path class="rel" d="M160,298 V414" marker-end="url(#fa)"/>
-        <text class="card" x="170" y="348">0 : N</text>
-        <text class="verb" x="170" y="364">agrupa</text>
-
-        <!-- R8a PRODUCTO -> STOCK -->
-        <path class="rel-amb" d="M260,478 H330" marker-end="url(#fb)"/>
-        <text class="card-amb" x="272" y="470">1 : N</text>
-
-        <!-- R8b TIENDA -> STOCK -->
-        <path class="rel-amb" d="M530,314 V478 H520" marker-end="url(#fb)"/>
-        <text class="card-amb" x="540" y="400">1 : N</text>
-        <text class="verb" x="540" y="416">almacena</text>
-
-        <!-- R21 TIENDA -> DISPOSITIVO -->
-        <path class="rel" d="M690,272 H730 V526 H770" marker-end="url(#fa)"/>
-        <text class="card" x="700" y="264">1 : N</text>
-        <text class="verb" x="740" y="500">instala</text>
-
-        <!-- R22 DISPOSITIVO -> SYNC_LOG -->
-        <path class="rel" d="M875,556 V632" marker-end="url(#fa)"/>
-        <text class="card" x="885" y="588">1 : N</text>
-        <text class="verb" x="885" y="604">bitácora</text>
-      </svg>
-    </div>
-    <figcaption>
-      <b>Figura 1 &mdash; Vista de estructura.</b> El negocio es la raíz de la que cuelgan tiendas,
-      usuarios, categorías y productos. El catálogo es único para las dos tiendas: lo que varía por
-      tienda es el <code>STOCK</code>, que en ámbar resuelve la relación M:N entre tienda y producto.
-      La flecha que sale y vuelve a <code>CATEGORIA</code> es la relación recursiva que arma la
-      jerarquía de rubros.
-    </figcaption>
-  </figure>
-
-  <!-- ─────────── FIGURA 2 ─────────── -->
-  <figure>
-    <div class="lienzo">
-      <svg class="dg" viewBox="0 0 1180 720" role="img"
-           aria-label="Vista de operación: la tienda registra ventas y movimientos de inventario; cada venta se detalla en líneas que son entidad débil; la caja agrupa las ventas en efectivo del turno.">
-        <defs>
-          <marker id="ga" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-            <path d="M0,0 L10,5 L0,10 z" fill="var(--azul)"/>
-          </marker>
-          <marker id="gb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-            <path d="M0,0 L10,5 L0,10 z" fill="var(--ambar)"/>
-          </marker>
-        </defs>
-
-        <!-- TIENDA (contexto) -->
-        <rect class="cab-ctx" x="60" y="34" width="190" height="24"/>
-        <rect class="ent-ctx" x="60" y="58" width="190" height="42"/>
-        <text class="nom-ctx" x="155" y="51" text-anchor="middle">TIENDA</text>
-        <text class="atr" x="74" y="77">id (PK)</text>
-        <text class="atr" x="74" y="93">nombre, prefijo</text>
-
-        <!-- USUARIO (contexto) -->
-        <rect class="cab-ctx" x="930" y="34" width="190" height="24"/>
-        <rect class="ent-ctx" x="930" y="58" width="190" height="42"/>
-        <text class="nom-ctx" x="1025" y="51" text-anchor="middle">USUARIO</text>
-        <text class="atr" x="944" y="77">id (PK)</text>
-        <text class="atr" x="944" y="93">nombre, rol</text>
-
-        <!-- PRODUCTO (contexto) -->
-        <rect class="cab-ctx" x="60" y="296" width="190" height="24"/>
-        <rect class="ent-ctx" x="60" y="320" width="190" height="42"/>
-        <text class="nom-ctx" x="155" y="313" text-anchor="middle">PRODUCTO</text>
-        <text class="atr" x="74" y="339">id (PK)</text>
-        <text class="atr" x="74" y="355">precio_venta</text>
-
-        <!-- CAJA -->
-        <rect class="cab-ent" x="930" y="236" width="210" height="26"/>
-        <rect class="ent" x="930" y="262" width="210" height="92"/>
-        <text class="nom" x="1035" y="255" text-anchor="middle">CAJA</text>
-        <text class="pk"  x="944" y="281">id</text>
-        <text class="atr" x="944" y="297">monto_inicial</text>
-        <text class="atr" x="944" y="313">efectivo_esperado</text>
-        <text class="atr" x="944" y="329">efectivo_contado</text>
-        <text class="der" x="944" y="345">diferencia (derivado)</text>
-
-        <!-- VENTA -->
-        <rect class="cab-ent" x="470" y="236" width="250" height="26"/>
-        <rect class="ent" x="470" y="262" width="250" height="108"/>
-        <text class="nom" x="595" y="255" text-anchor="middle">VENTA</text>
-        <text class="pk"  x="484" y="281">id</text>
-        <text class="atr" x="484" y="297">numero, ocurrido_en</text>
-        <text class="atr" x="484" y="313">subtotal, descuento</text>
-        <text class="atr" x="484" y="329">total, metodo_pago</text>
-        <text class="atr" x="484" y="345">anulada</text>
-        <text class="atr" x="484" y="361">tienda_id, caja_id (FK)</text>
-
-        <!-- VENTA_LINEA (débil: doble borde) -->
-        <rect class="cab-deb" x="470" y="480" width="250" height="26"/>
-        <rect class="ent-deb" x="470" y="506" width="250" height="92"/>
-        <rect x="474" y="510" width="242" height="84" fill="none" stroke="var(--ambar)" stroke-width="1"/>
-        <text class="nom" x="595" y="499" text-anchor="middle">VENTA_LINEA</text>
-        <text class="pk"  x="486" y="529">venta_id + nro</text>
-        <text class="atr" x="486" y="545">cantidad</text>
-        <text class="atr" x="486" y="561">precio_unitario *</text>
-        <text class="atr" x="486" y="577">costo_unitario *</text>
-        <text class="atr" x="486" y="593">subtotal</text>
-
-        <!-- MOVIMIENTO_INVENTARIO -->
-        <rect class="cab-ent" x="60" y="470" width="270" height="26"/>
-        <rect class="ent" x="60" y="496" width="270" height="144"/>
-        <text class="nom" x="195" y="489" text-anchor="middle">MOVIMIENTO_INVENTARIO</text>
-        <text class="pk"  x="74" y="515">id</text>
-        <text class="atr" x="74" y="531">tipo</text>
-        <text class="atr" x="74" y="547">cantidad (+/&minus;)</text>
-        <text class="atr" x="74" y="563">costo_unitario</text>
-        <text class="atr" x="74" y="579">motivo</text>
-        <text class="atr" x="74" y="595">ocurrido_en</text>
-        <text class="atr" x="74" y="611">created_at</text>
-        <text class="der" x="74" y="631">append-only</text>
-
-        <!-- R13 TIENDA -> VENTA -->
-        <path class="rel" d="M250,70 H595 V236" marker-end="url(#ga)"/>
-        <text class="card" x="330" y="62">1 : N</text>
-        <text class="verb" x="378" y="62">vende</text>
-
-        <!-- R14 USUARIO -> VENTA -->
-        <path class="rel" d="M930,88 H770 V300 H720" marker-end="url(#ga)"/>
-        <text class="card" x="778" y="200">0 : N</text>
-        <text class="verb" x="778" y="216">atiende</text>
-
-        <!-- R15 CAJA -> VENTA -->
-        <path class="rel" d="M930,332 H720" marker-end="url(#ga)"/>
-        <text class="card" x="800" y="324">0 : N</text>
-        <text class="verb" x="848" y="324">cobra en</text>
-
-        <!-- R18 TIENDA -> CAJA -->
-        <path class="rel" d="M200,100 V176 H866 V236" marker-end="url(#ga)"/>
-        <text class="card" x="212" y="140">1 : N</text>
-        <text class="verb" x="700" y="168">opera</text>
-
-        <!-- R19/R20 USUARIO -> CAJA (dos roles) -->
-        <path class="rel" d="M990,100 V236" marker-end="url(#ga)"/>
-        <text class="verb" x="912" y="150">abre</text>
-        <path class="rel" d="M1080,100 V236" marker-end="url(#ga)"/>
-        <text class="verb" x="1090" y="150">cierra</text>
-        <text class="card" x="1000" y="196">0 : N</text>
-
-        <!-- R16 VENTA -> VENTA_LINEA (identificadora: doble línea) -->
-        <path class="rel-amb" d="M591,370 V480"/>
-        <path class="rel-amb" d="M599,370 V480" marker-end="url(#gb)"/>
-        <text class="card-amb" x="610" y="412">1 : N</text>
-        <text class="verb" x="610" y="428">detalla</text>
-
-        <!-- R17 PRODUCTO -> VENTA_LINEA -->
-        <path class="rel" d="M250,320 H400 V520 H470" marker-end="url(#ga)"/>
-        <text class="card" x="286" y="312">1 : N</text>
-        <text class="verb" x="410" y="440">referencia</text>
-
-        <!-- R10 PRODUCTO -> MOVIMIENTO -->
-        <path class="rel" d="M155,362 V470" marker-end="url(#ga)"/>
-        <text class="card" x="165" y="406">1 : N</text>
-        <text class="verb" x="165" y="422">afecta</text>
-
-        <!-- R9 TIENDA -> MOVIMIENTO -->
-        <path class="rel" d="M60,80 H24 V540 H60" marker-end="url(#ga)"/>
-        <text class="card" x="30" y="290" transform="rotate(-90 30 290)">1 : N</text>
-        <text class="verb" x="30" y="356" transform="rotate(-90 30 356)">registra</text>
-
-        <!-- R12 VENTA -> MOVIMIENTO -->
-        <path class="rel" d="M470,356 H440 V580 H330" marker-end="url(#ga)"/>
-        <text class="card" x="352" y="572">0 : N</text>
-        <text class="verb" x="400" y="572">origina</text>
-
-        <!-- R11 USUARIO -> MOVIMIENTO -->
-        <path class="rel" d="M1120,88 H1156 V664 H330 V640" marker-end="url(#ga)"/>
-        <text class="card" x="700" y="656">0 : N</text>
-        <text class="verb" x="748" y="656">ejecuta</text>
-
-        <text class="zona" x="486" y="616">* precio congelado al vender</text>
-      </svg>
-    </div>
-    <figcaption>
-      <b>Figura 2 &mdash; Vista de operación.</b> Las entidades punteadas ya se definieron en la
-      Figura 1 y aquí sirven de contexto. <code>VENTA_LINEA</code> lleva doble borde por ser
-      entidad débil, y su relación con <code>VENTA</code> se dibuja con doble línea por ser
-      identificadora. <code>USUARIO</code> se conecta dos veces a <code>CAJA</code>: son dos roles
-      distintos de la misma entidad, no dos relaciones repetidas.
-    </figcaption>
-  </figure>
-</section>
-
-<!-- ══════════════════════════════════════════════════════════ -->
-<section>
-  <div class="num">03</div>
-  <h2>Las cinco construcciones extendidas</h2>
-  <p class="intro">
-    Lo que separa a un modelo E-R de uno <em>extendido</em> son estas construcciones. Cada figura
-    usa notación Chen clásica y muestra una sola cosa.
-  </p>
-
-  <!-- ─────────── FIGURA 3: ESPECIALIZACIÓN ─────────── -->
-  <h3>Especialización de <code>USUARIO</code></h3>
+  <h3>7.4 Cambios que exige el levantamiento</h3>
   <p>
-    El sistema lo usan dos poblaciones muy distintas. El empleado de mostrador teclea su acceso
-    cincuenta veces al día, así que entra con un PIN corto desde la tablet de su tienda. El dueño
-    entra desde la web, a supervisar las dos tiendas, y necesita contraseña. No son atributos
-    opcionales del mismo tipo: son subtipos con credenciales y alcance diferentes.
-  </p>
-
-  <figure>
-    <div class="lienzo">
-      <svg class="dg" viewBox="0 0 900 420" role="img"
-           aria-label="La entidad usuario se especializa, de forma total y disjunta, en administrador, encargado y empleado, cada uno con credenciales y alcance distintos.">
-        <rect class="cab-ent" x="340" y="24" width="220" height="26"/>
-        <rect class="ent" x="340" y="50" width="220" height="60"/>
-        <text class="nom" x="450" y="43" text-anchor="middle">USUARIO</text>
-        <text class="pk"  x="354" y="69">id</text>
-        <text class="atr" x="354" y="85">nombre, activo</text>
-        <text class="atr" x="354" y="101">negocio_id (FK)</text>
-
-        <!-- doble línea = participación total -->
-        <line class="rel-amb" x1="446" y1="110" x2="446" y2="158"/>
-        <line class="rel-amb" x1="454" y1="110" x2="454" y2="158"/>
-
-        <circle cx="450" cy="176" r="18" fill="var(--ambar-tenue)" stroke="var(--ambar)" stroke-width="1.5"/>
-        <text class="card-amb" x="450" y="181" text-anchor="middle" font-size="13">d</text>
-
-        <line class="rel-amb" x1="450" y1="194" x2="450" y2="216"/>
-        <polygon points="450,216 486,254 414,254" fill="var(--ambar-tenue)" stroke="var(--ambar)" stroke-width="1.5"/>
-        <text class="card-amb" x="450" y="245" text-anchor="middle" font-size="10">ISA</text>
-
-        <path class="rel-amb" d="M450,254 V282 H130 V310"/>
-        <path class="rel-amb" d="M450,254 V310"/>
-        <path class="rel-amb" d="M450,254 V282 H770 V310"/>
-
-        <!-- ADMINISTRADOR -->
-        <rect class="cab-ent" x="30" y="310" width="200" height="26"/>
-        <rect class="ent" x="30" y="336" width="200" height="60"/>
-        <text class="nom" x="130" y="329" text-anchor="middle">ADMINISTRADOR</text>
-        <text class="atr" x="44" y="355">email</text>
-        <text class="atr" x="44" y="371">password_hash</text>
-        <text class="atr" x="44" y="387">alcance: 2 tiendas</text>
-
-        <!-- ENCARGADO -->
-        <rect class="cab-ent" x="350" y="310" width="200" height="26"/>
-        <rect class="ent" x="350" y="336" width="200" height="60"/>
-        <text class="nom" x="450" y="329" text-anchor="middle">ENCARGADO</text>
-        <text class="atr" x="364" y="355">pin_hash</text>
-        <text class="atr" x="364" y="371">tienda_id (obligatorio)</text>
-        <text class="atr" x="364" y="387">alcance: su tienda</text>
-
-        <!-- EMPLEADO -->
-        <rect class="cab-ent" x="670" y="310" width="200" height="26"/>
-        <rect class="ent" x="670" y="336" width="200" height="60"/>
-        <text class="nom" x="770" y="329" text-anchor="middle">EMPLEADO</text>
-        <text class="atr" x="684" y="355">pin_hash</text>
-        <text class="atr" x="684" y="371">tienda_id (obligatorio)</text>
-        <text class="atr" x="684" y="387">alcance: vender</text>
-
-        <text class="verb" x="480" y="140">doble línea = participación total</text>
-        <text class="verb" x="480" y="182">d = subtipos disjuntos</text>
-      </svg>
-    </div>
-    <figcaption>
-      <b>Figura 3 &mdash; Especialización total y disjunta.</b> <b>Total</b> (doble línea) porque
-      todo usuario es exactamente uno de los tres: no existe un usuario sin rol.
-      <b>Disjunta</b> (círculo con <code>d</code>) porque nadie puede ser administrador y empleado
-      a la vez. En el esquema físico esto se implementa con el tipo enumerado <code>rol</code> más
-      la restricción <code>chk_credenciales</code>, que exige contraseña al administrador y PIN más
-      tienda a los demás.
-    </figcaption>
-  </figure>
-
-  <!-- ─────────── FIGURA 4: ENTIDAD DÉBIL ─────────── -->
-  <h3>Entidad débil: <code>VENTA_LINEA</code></h3>
-  <p>
-    Una línea de venta no significa nada por sí sola. &laquo;3 unidades a 26 el kilo&raquo; no es un
-    dato del negocio si no se sabe de qué venta forma parte: no tiene fecha propia, ni tienda, ni
-    vendedor. Su identidad depende por completo de la venta que la contiene.
-  </p>
-
-  <figure>
-    <div class="lienzo">
-      <svg class="dg" viewBox="0 0 860 260" role="img"
-           aria-label="La venta se relaciona con venta línea mediante una relación identificadora dibujada con doble rombo; venta línea es entidad débil, con doble rectángulo.">
-        <defs>
-          <marker id="ha" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-            <path d="M0,0 L10,5 L0,10 z" fill="var(--ambar)"/>
-          </marker>
-        </defs>
-
-        <rect class="cab-ent" x="40" y="86" width="180" height="26"/>
-        <rect class="ent" x="40" y="112" width="180" height="60"/>
-        <text class="nom" x="130" y="105" text-anchor="middle">VENTA</text>
-        <text class="pk"  x="54" y="131">id</text>
-        <text class="atr" x="54" y="147">numero</text>
-        <text class="atr" x="54" y="163">total</text>
-
-        <line class="rel-amb" x1="220" y1="138" x2="330" y2="138"/>
-
-        <!-- rombo identificador: doble -->
-        <polygon class="rombo-id" points="430,96 530,138 430,180 330,138"/>
-        <polygon points="430,106 516,138 430,170 344,138" fill="none" stroke="var(--ambar)" stroke-width="1.1"/>
-        <text class="verb" x="430" y="136" text-anchor="middle" font-size="12">DETALLA</text>
-        <text class="card-amb" x="430" y="152" text-anchor="middle">1 : N</text>
-
-        <line class="rel-amb" x1="530" y1="138" x2="620" y2="138" marker-end="url(#ha)"/>
-
-        <rect class="cab-deb" x="640" y="80" width="200" height="26"/>
-        <rect class="ent-deb" x="640" y="106" width="200" height="76"/>
-        <rect x="644" y="110" width="192" height="68" fill="none" stroke="var(--ambar)" stroke-width="1"/>
-        <text class="nom" x="740" y="99" text-anchor="middle">VENTA_LINEA</text>
-        <text class="pk"  x="656" y="129">venta_id + nro</text>
-        <text class="atr" x="656" y="145">cantidad</text>
-        <text class="atr" x="656" y="161">precio_unitario</text>
-        <text class="atr" x="656" y="177">subtotal</text>
-
-        <text class="verb" x="130" y="212" text-anchor="middle">entidad fuerte</text>
-        <text class="verb" x="430" y="212" text-anchor="middle">relación identificadora</text>
-        <text class="verb" x="740" y="212" text-anchor="middle">entidad débil</text>
-
-        <text class="verb" x="430" y="240" text-anchor="middle">borrar la venta borra sus líneas &mdash; ON DELETE CASCADE</text>
-      </svg>
-    </div>
-    <figcaption>
-      <b>Figura 4 &mdash; Dependencia existencial.</b> El doble rectángulo marca la entidad débil y
-      el doble rombo la relación identificadora. Su clave es <em>parcial</em>: necesita la clave de
-      <code>VENTA</code> para identificarse.
-    </figcaption>
-  </figure>
-
-  <div class="nota">
-    <h4>Honestidad sobre la implementación</h4>
-    <p>
-      En el modelo conceptual <code>VENTA_LINEA</code> es una entidad débil de manual. En el
-      esquema físico le dimos una clave sustituta (<code>id UUID</code>) en lugar de la clave
-      compuesta <code>(venta_id, nro_linea)</code>. Es una decisión práctica &mdash; simplifica las
-      referencias desde la aplicación &mdash; pero técnicamente <strong>debilita la correspondencia</strong>:
-      con clave propia, la tabla ya no es débil en sentido estricto. La dependencia existencial se
-      conserva por el <code>ON DELETE CASCADE</code> y por el <code>NOT NULL</code> en
-      <code>venta_id</code>. Vale la pena mencionarlo en la exposición: es exactamente el tipo de
-      diferencia entre modelo conceptual y físico que conviene poder defender.
-    </p>
-  </div>
-
-  <!-- ─────────── FIGURA 5 y 6 ─────────── -->
-  <div class="rejilla-2">
-    <div>
-      <h3>Relación recursiva</h3>
-      <p>
-        Los rubros forman jerarquía: &laquo;Fijaciones&raquo; contiene &laquo;Tornillos&raquo;, que
-        contiene &laquo;Autorroscantes&raquo;. Es la misma entidad en los dos extremos de la
-        relación, con dos papeles distintos.
-      </p>
-      <figure>
-        <div class="lienzo">
-          <svg class="dg" viewBox="0 0 420 300" role="img"
-               aria-label="La entidad categoría se relaciona consigo misma mediante la relación contiene, con los roles padre e hija.">
-            <defs>
-              <marker id="ia" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-                <path d="M0,0 L10,5 L0,10 z" fill="var(--ambar)"/>
-              </marker>
-            </defs>
-            <rect class="cab-ent" x="110" y="190" width="200" height="26"/>
-            <rect class="ent" x="110" y="216" width="200" height="60"/>
-            <text class="nom" x="210" y="209" text-anchor="middle">CATEGORIA</text>
-            <text class="pk"  x="124" y="235">id</text>
-            <text class="atr" x="124" y="251">nombre</text>
-            <text class="atr" x="124" y="267">padre_id (FK)</text>
-
-            <polygon class="rombo-id" points="210,40 290,76 210,112 130,76"/>
-            <text class="verb" x="210" y="74" text-anchor="middle" font-size="11">CONTIENE</text>
-            <text class="card-amb" x="210" y="90" text-anchor="middle" font-size="10">1 : N</text>
-
-            <path class="rel-amb" d="M130,76 H60 V190"/>
-            <path class="rel-amb" d="M290,76 H360 V190" marker-end="url(#ia)"/>
-
-            <text class="verb" x="46" y="140" text-anchor="end">padre</text>
-            <text class="verb" x="374" y="140">hija</text>
-            <text class="verb" x="210" y="150" text-anchor="middle">(0,1) &mdash; (0,N)</text>
-          </svg>
-        </div>
-        <figcaption>
-          <b>Figura 5.</b> <code>padre_id</code> nulo significa rubro de primer nivel.
-        </figcaption>
-      </figure>
-    </div>
-
-    <div>
-      <h3>Entidad asociativa</h3>
-      <p>
-        Una tienda almacena muchos productos y un producto se almacena en muchas tiendas: es un
-        M:N. Pero la relación tiene datos propios &mdash; cuánto hay y cuál es el mínimo &mdash;
-        así que se convierte en entidad.
-      </p>
-      <figure>
-        <div class="lienzo">
-          <svg class="dg" viewBox="0 0 420 300" role="img"
-               aria-label="Tienda y producto se relacionan de muchos a muchos mediante almacena, que lleva los atributos cantidad y cantidad mínima y se convierte en la entidad asociativa stock.">
-            <rect class="cab-ctx" x="20" y="30" width="150" height="24"/>
-            <rect class="ent-ctx" x="20" y="54" width="150" height="34"/>
-            <text class="nom-ctx" x="95" y="47" text-anchor="middle">TIENDA</text>
-            <text class="atr" x="34" y="74">id (PK)</text>
-
-            <rect class="cab-ctx" x="250" y="30" width="150" height="24"/>
-            <rect class="ent-ctx" x="250" y="54" width="150" height="34"/>
-            <text class="nom-ctx" x="325" y="47" text-anchor="middle">PRODUCTO</text>
-            <text class="atr" x="264" y="74">id (PK)</text>
-
-            <line class="rel-amb" x1="95" y1="88" x2="95" y2="152"/>
-            <line class="rel-amb" x1="325" y1="88" x2="325" y2="152"/>
-            <text class="card-amb" x="104" y="124">M</text>
-            <text class="card-amb" x="334" y="124">N</text>
-
-            <polygon class="rombo-id" points="210,152 300,190 210,228 120,190"/>
-            <text class="verb" x="210" y="188" text-anchor="middle" font-size="11">ALMACENA</text>
-            <line class="rel-amb" x1="120" y1="190" x2="95" y2="190"/>
-            <line class="rel-amb" x1="300" y1="190" x2="325" y2="190"/>
-            <line class="rel-amb" x1="95" y1="152" x2="95" y2="190"/>
-            <line class="rel-amb" x1="325" y1="152" x2="325" y2="190"/>
-
-            <ellipse class="elip-der" cx="126" cy="264" rx="66" ry="19"/>
-            <text class="der" x="126" y="268" text-anchor="middle">cantidad</text>
-            <line class="rel-amb" x1="180" y1="228" x2="150" y2="248"/>
-
-            <ellipse class="elip" cx="300" cy="264" rx="76" ry="19"/>
-            <text class="atr" x="300" y="268" text-anchor="middle">cantidad_minima</text>
-            <line class="rel-amb" x1="242" y1="228" x2="278" y2="248"/>
-          </svg>
-        </div>
-        <figcaption>
-          <b>Figura 6.</b> Se implementa como la tabla <code>STOCK</code> con clave primaria
-          compuesta <code>(tienda_id, producto_id)</code>.
-        </figcaption>
-      </figure>
-    </div>
-  </div>
-
-  <!-- ─────────── FIGURA 7: DERIVADOS ─────────── -->
-  <h3>Atributos derivados</h3>
-  <p>
-    Aquí está el corazón del diseño. <code>stock.cantidad</code> <strong>no se captura</strong>: es
-    la suma de todos los movimientos registrados para ese producto en esa tienda. Guardar el stock
-    como un número que se pisa haría imposible la sincronización sin conexión, porque la última
-    tablet en sincronizar borraría lo que hizo la otra. Sumando movimientos independientes no hay
-    nada que pisar.
-  </p>
-
-  <figure>
-    <div class="lienzo">
-      <svg class="dg" viewBox="0 0 900 300" role="img"
-           aria-label="El stock se deriva sumando las cantidades de todos los movimientos de inventario; entradas y devoluciones suman, ventas y mermas restan, y los ajustes corrigen.">
-        <defs>
-          <marker id="ja" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-            <path d="M0,0 L10,5 L0,10 z" fill="var(--verde)"/>
-          </marker>
-        </defs>
-
-        <rect class="fondo-z" x="20" y="34" width="330" height="228"/>
-        <text class="zona" x="34" y="56">Movimientos registrados</text>
-
-        <rect class="ent" x="44" y="72" width="282" height="30"/>
-        <text class="atr" x="58" y="91">entrada</text>
-        <text class="card" x="300" y="91" text-anchor="end">+1500</text>
-
-        <rect class="ent" x="44" y="110" width="282" height="30"/>
-        <text class="atr" x="58" y="129">venta</text>
-        <text class="card" x="300" y="129" text-anchor="end">&minus;50</text>
-
-        <rect class="ent" x="44" y="148" width="282" height="30"/>
-        <text class="atr" x="58" y="167">venta (offline, tablet)</text>
-        <text class="card" x="300" y="167" text-anchor="end">&minus;8</text>
-
-        <rect class="ent" x="44" y="186" width="282" height="30"/>
-        <text class="atr" x="58" y="205">merma</text>
-        <text class="card" x="300" y="205" text-anchor="end">&minus;2</text>
-
-        <rect class="ent" x="44" y="224" width="282" height="30"/>
-        <text class="atr" x="58" y="243">ajuste (conteo físico)</text>
-        <text class="card" x="300" y="243" text-anchor="end">+2</text>
-
-        <line x1="350" y1="148" x2="430" y2="148" stroke="var(--verde)" stroke-width="1.4" fill="none"/>
-        <circle cx="460" cy="148" r="30" fill="var(--verde-tenue)" stroke="var(--verde)" stroke-width="1.5"/>
-        <text x="460" y="156" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="22" font-weight="600" fill="var(--verde)">&Sigma;</text>
-        <line x1="490" y1="148" x2="580" y2="148" stroke="var(--verde)" stroke-width="1.4" marker-end="url(#ja)" fill="none"/>
-
-        <ellipse class="elip-der" cx="716" cy="148" rx="130" ry="34"/>
-        <text class="der" x="716" y="143" text-anchor="middle" font-size="12">stock.cantidad</text>
-        <text class="der" x="716" y="163" text-anchor="middle" font-size="14">= 1442</text>
-
-        <text class="verb" x="716" y="212" text-anchor="middle">atributo derivado</text>
-        <text class="verb" x="716" y="230" text-anchor="middle">materializado por trigger para consulta rápida</text>
-        <text class="verb" x="716" y="248" text-anchor="middle">reconciliable con fn_recalcular_stock()</text>
-      </svg>
-    </div>
-    <figcaption>
-      <b>Figura 7 &mdash; El stock como atributo derivado.</b> La elipse punteada es la notación de
-      atributo derivado. Como consultarlo en cada tecla que toca el empleado sería lento, se
-      materializa en la tabla <code>STOCK</code> mediante un trigger; pero la fuente de verdad
-      siguen siendo los movimientos, y una función de reconciliación permite regenerarlo.
-      <code>caja.diferencia</code> es el otro derivado del modelo: efectivo contado menos esperado,
-      implementado como columna generada.
-    </figcaption>
-  </figure>
-</section>
-
-<!-- ══════════════════════════════════════════════════════════ -->
-<section>
-  <div class="num">04</div>
-  <h2>Cuadro de relaciones</h2>
-  <p class="intro">
-    Especificación completa: las 22 relaciones más la especialización. La cardinalidad se lee de la
-    entidad izquierda hacia la derecha; la participación usa notación (mínimo, máximo) para cada
-    lado. La última columna documenta qué ocurre al borrar la entidad referenciada, que es donde
-    se ve si la dependencia es existencial o no.
+    El modelo presentado hasta aquí se construyó antes de hablar con los dueños, a partir de cómo
+    suelen funcionar negocios de este tipo. El levantamiento confirmó la mayor parte, cerró una
+    duda y dejó tres cosas que el modelo todavía no resuelve. Reconocerlas es parte del trabajo.
   </p>
 
   <div class="tabla-env">
     <table>
-      <caption>Relaciones del modelo &middot; 12 entidades &middot; 22 relaciones + 1 jerarquía ISA</caption>
-      <thead>
-        <tr>
-          <th>N.º</th>
-          <th>Relación</th>
-          <th>Entidades</th>
-          <th>Card.</th>
-          <th>Participación</th>
-          <th>Implementación</th>
-          <th>Al borrar</th>
-        </tr>
-      </thead>
+      <caption>Lo que el levantamiento obliga a cambiar</caption>
+      <thead><tr><th>Hallazgo</th><th>Qué exige el modelo</th><th>Alcance del cambio</th></tr></thead>
       <tbody>
         <tr>
-          <td class="n">R1</td><td class="v">posee</td>
-          <td class="m">NEGOCIO &rarr; TIENDA</td><td class="c">1 : N</td>
-          <td class="m">(1,N) &mdash; (1,1)</td>
-          <td class="m">tiendas.negocio_id</td><td class="m">RESTRICT</td>
+          <td class="v">Algunos empleados trabajan en las dos tiendas</td>
+          <td>Una relación muchos a muchos entre <code>USUARIO</code> y <code>TIENDA</code>, con una entidad intermedia de asignación.</td>
+          <td><strong>Modificación, no adición.</strong> Hoy cada empleado cuelga de una sola tienda y la restricción de credenciales exige esa tienda. Ambas cosas dejan de valer.</td>
         </tr>
         <tr>
-          <td class="n">R2</td><td class="v">emplea</td>
-          <td class="m">NEGOCIO &rarr; USUARIO</td><td class="c">1 : N</td>
-          <td class="m">(1,N) &mdash; (1,1)</td>
-          <td class="m">usuarios.negocio_id</td><td class="m">RESTRICT</td>
+          <td class="v">Dan crédito a los clientes</td>
+          <td>Una entidad <code>CLIENTE</code> y el registro de cobros, para saber quién debe y cuánto queda pendiente tras cada pago parcial.</td>
+          <td>La adición más grande. Sin esto el sistema registra que una venta fue fiada pero no puede decir a quién.</td>
         </tr>
         <tr>
-          <td class="n">R3</td><td class="v">asigna</td>
-          <td class="m">TIENDA &rarr; USUARIO</td><td class="c">1 : N</td>
-          <td class="m">(0,N) &mdash; (0,1)</td>
-          <td class="m">usuarios.tienda_id</td><td class="m">SET NULL</td>
-        </tr>
-        <tr>
-          <td class="n">R4</td><td class="v">clasifica</td>
-          <td class="m">NEGOCIO &rarr; CATEGORIA</td><td class="c">1 : N</td>
-          <td class="m">(0,N) &mdash; (1,1)</td>
-          <td class="m">categorias.negocio_id</td><td class="m">CASCADE</td>
-        </tr>
-        <tr>
-          <td class="n">R5</td>
-          <td class="v">contiene <span class="marca">recursiva</span></td>
-          <td class="m">CATEGORIA &rarr; CATEGORIA</td><td class="c">1 : N</td>
-          <td class="m">(0,N) &mdash; (0,1)</td>
-          <td class="m">categorias.padre_id</td><td class="m">SET NULL</td>
-        </tr>
-        <tr>
-          <td class="n">R6</td><td class="v">oferta</td>
-          <td class="m">NEGOCIO &rarr; PRODUCTO</td><td class="c">1 : N</td>
-          <td class="m">(1,N) &mdash; (1,1)</td>
-          <td class="m">productos.negocio_id</td><td class="m">CASCADE</td>
-        </tr>
-        <tr>
-          <td class="n">R7</td><td class="v">agrupa</td>
-          <td class="m">CATEGORIA &rarr; PRODUCTO</td><td class="c">1 : N</td>
-          <td class="m">(0,N) &mdash; (0,1)</td>
-          <td class="m">productos.categoria_id</td><td class="m">SET NULL</td>
-        </tr>
-        <tr>
-          <td class="n">R8</td>
-          <td class="v">almacena <span class="marca">asociativa</span></td>
-          <td class="m">TIENDA &harr; PRODUCTO</td><td class="c">M : N</td>
-          <td class="m">(0,N) &mdash; (0,N)</td>
-          <td class="m">stock, PK (tienda_id, producto_id)</td><td class="m">CASCADE</td>
-        </tr>
-        <tr>
-          <td class="n">R9</td><td class="v">registra</td>
-          <td class="m">TIENDA &rarr; MOVIMIENTO</td><td class="c">1 : N</td>
-          <td class="m">(0,N) &mdash; (1,1)</td>
-          <td class="m">movimientos.tienda_id</td><td class="m">RESTRICT</td>
-        </tr>
-        <tr>
-          <td class="n">R10</td><td class="v">afecta</td>
-          <td class="m">PRODUCTO &rarr; MOVIMIENTO</td><td class="c">1 : N</td>
-          <td class="m">(0,N) &mdash; (1,1)</td>
-          <td class="m">movimientos.producto_id</td><td class="m">RESTRICT</td>
-        </tr>
-        <tr>
-          <td class="n">R11</td><td class="v">ejecuta</td>
-          <td class="m">USUARIO &rarr; MOVIMIENTO</td><td class="c">1 : N</td>
-          <td class="m">(0,N) &mdash; (0,1)</td>
-          <td class="m">movimientos.usuario_id</td><td class="m">SET NULL</td>
-        </tr>
-        <tr>
-          <td class="n">R12</td><td class="v">origina</td>
-          <td class="m">VENTA &rarr; MOVIMIENTO</td><td class="c">1 : N</td>
-          <td class="m">(0,N) &mdash; (0,1)</td>
-          <td class="m">movimientos.venta_id</td><td class="m">SET NULL</td>
-        </tr>
-        <tr>
-          <td class="n">R13</td><td class="v">vende</td>
-          <td class="m">TIENDA &rarr; VENTA</td><td class="c">1 : N</td>
-          <td class="m">(0,N) &mdash; (1,1)</td>
-          <td class="m">ventas.tienda_id</td><td class="m">RESTRICT</td>
-        </tr>
-        <tr>
-          <td class="n">R14</td><td class="v">atiende</td>
-          <td class="m">USUARIO &rarr; VENTA</td><td class="c">1 : N</td>
-          <td class="m">(0,N) &mdash; (0,1)</td>
-          <td class="m">ventas.usuario_id</td><td class="m">SET NULL</td>
-        </tr>
-        <tr>
-          <td class="n">R15</td><td class="v">cobra en</td>
-          <td class="m">CAJA &rarr; VENTA</td><td class="c">1 : N</td>
-          <td class="m">(0,N) &mdash; (0,1)</td>
-          <td class="m">ventas.caja_id</td><td class="m">SET NULL</td>
-        </tr>
-        <tr>
-          <td class="n">R16</td>
-          <td class="v">detalla <span class="marca">identificadora</span></td>
-          <td class="m">VENTA &rarr; VENTA_LINEA</td><td class="c">1 : N</td>
-          <td class="m">(1,N) &mdash; (1,1)</td>
-          <td class="m">venta_lineas.venta_id</td><td class="m">CASCADE</td>
-        </tr>
-        <tr>
-          <td class="n">R17</td><td class="v">referencia</td>
-          <td class="m">PRODUCTO &rarr; VENTA_LINEA</td><td class="c">1 : N</td>
-          <td class="m">(0,N) &mdash; (1,1)</td>
-          <td class="m">venta_lineas.producto_id</td><td class="m">RESTRICT</td>
-        </tr>
-        <tr>
-          <td class="n">R18</td><td class="v">opera</td>
-          <td class="m">TIENDA &rarr; CAJA</td><td class="c">1 : N</td>
-          <td class="m">(0,N) &mdash; (1,1)</td>
-          <td class="m">cajas.tienda_id</td><td class="m">RESTRICT</td>
-        </tr>
-        <tr>
-          <td class="n">R19</td>
-          <td class="v">abre <span class="marca">rol</span></td>
-          <td class="m">USUARIO &rarr; CAJA</td><td class="c">1 : N</td>
-          <td class="m">(0,N) &mdash; (0,1)</td>
-          <td class="m">cajas.usuario_apertura_id</td><td class="m">SET NULL</td>
-        </tr>
-        <tr>
-          <td class="n">R20</td>
-          <td class="v">cierra <span class="marca">rol</span></td>
-          <td class="m">USUARIO &rarr; CAJA</td><td class="c">1 : N</td>
-          <td class="m">(0,N) &mdash; (0,1)</td>
-          <td class="m">cajas.usuario_cierre_id</td><td class="m">SET NULL</td>
-        </tr>
-        <tr>
-          <td class="n">R21</td><td class="v">instala</td>
-          <td class="m">TIENDA &rarr; DISPOSITIVO</td><td class="c">1 : N</td>
-          <td class="m">(0,N) &mdash; (1,1)</td>
-          <td class="m">dispositivos.tienda_id</td><td class="m">CASCADE</td>
-        </tr>
-        <tr>
-          <td class="n">R22</td><td class="v">bitácora</td>
-          <td class="m">DISPOSITIVO &rarr; SYNC_LOG</td><td class="c">1 : N</td>
-          <td class="m">(0,N) &mdash; (0,1)</td>
-          <td class="m">sync_log.dispositivo_id</td><td class="m">CASCADE</td>
-        </tr>
-        <tr>
-          <td class="n">E1</td>
-          <td class="v">ISA <span class="marca">especialización</span></td>
-          <td class="m">USUARIO &rarr; {ADMIN, ENCARGADO, EMPLEADO}</td>
-          <td class="c">total, disjunta</td>
-          <td class="m">(1,1) cada subtipo</td>
-          <td class="m">usuarios.rol + chk_credenciales</td><td class="m">&mdash;</td>
+          <td class="v">Hacen rebajas por mayoreo</td>
+          <td>Una regla de descuento por cantidad, aplicada en la línea de venta y no como monto suelto en la cabecera.</td>
+          <td>Adición acotada. El descuento ya existe; falta la regla que lo justifica y lo hace reproducible.</td>
         </tr>
       </tbody>
     </table>
   </div>
 
-  <h4>Cómo leer la participación</h4>
-  <p>
-    El par <code>(mín, máx)</code> dice cuántas veces una ocurrencia de esa entidad puede
-    participar. En R1, <code>(1,N) &mdash; (1,1)</code> significa que un negocio tiene al menos una
-    tienda y puede tener muchas, mientras que cada tienda pertenece a exactamente un negocio.
-    Un mínimo de <code>0</code> indica participación <strong>parcial</strong>: en R14 la venta puede
-    no tener vendedor registrado, porque si se borra el usuario la venta sobrevive con el campo en
-    nulo &mdash; una venta histórica no debe desaparecer porque un empleado dejó de trabajar.
-  </p>
-</section>
-
-<!-- ══════════════════════════════════════════════════════════ -->
-<section>
-  <div class="num">05</div>
-  <h2>Por qué el modelo quedó así</h2>
-
-  <h3>El catálogo es del negocio, no de la tienda</h3>
-  <p>
-    <code>PRODUCTO</code> no tiene <code>tienda_id</code>. Un producto pertenece al negocio; lo que
-    varía entre la ferretería y la plastiquería es cuánto hay de él, y eso vive en
-    <code>STOCK</code>. Así, corregir el precio de un artículo se hace en un solo lugar y vale para
-    las dos tiendas. Si el producto fuera por tienda habría que mantener dos fichas del mismo
-    artículo y sincronizarlas a mano &mdash; exactamente el problema que el sistema viene a resolver.
-  </p>
-
-  <h3>El precio se congela en la línea de venta</h3>
-  <p>
-    <code>VENTA_LINEA</code> guarda copia del <code>precio_unitario</code> y del
-    <code>costo_unitario</code> del momento de vender. Es duplicación deliberada. Sin ella, subir el
-    precio del balde de 38 a 45 recalcularía sola la ganancia de todo el año pasado, mostrando
-    utilidades que nunca existieron. Guardar además el costo es lo que permite calcular el margen
-    real: no cuánto se vendió, sino cuánto se ganó.
-  </p>
-
-  <h3>La entidad <code>NEGOCIO</code> hoy sobra, y por eso está</h3>
-  <p>
-    Tiene una sola fila. Está porque el sistema se piensa para venderlo a otras familias: con ella,
-    sumar un cliente es insertar una fila. Sin ella habría que agregar la noción de
-    &laquo;a quién pertenece esto&raquo; a tablas ya cargadas con datos reales, que es de las
-    migraciones más caras que existen. Cuesta dos claves foráneas ahora y evita ese problema después.
-  </p>
-
-  <h3>El historial es inmutable</h3>
-  <p>
-    Sobre <code>MOVIMIENTO_INVENTARIO</code> no se hace <code>UPDATE</code> ni <code>DELETE</code>;
-    un trigger lo impide. Si alguien cargó mal, no se corrige el registro viejo: se inserta un
-    <code>ajuste</code> que compensa. El error y su corrección quedan ambos a la vista, que es lo
-    que hace auditable el inventario. Es también la razón de que las relaciones R9 y R10 usen
-    <code>RESTRICT</code>: no se puede borrar un producto que tiene historial.
-  </p>
-
-  <h3>Dónde el modelo físico se aparta del conceptual</h3>
+  <h4>Lo que el levantamiento dejó fuera de discusión</h4>
   <ul>
-    <li><strong><code>VENTA_LINEA</code> con clave sustituta</strong> en vez de clave parcial compuesta, como se explicó arriba.</li>
-    <li><strong><code>STOCK</code> materializado</strong>: conceptualmente <code>cantidad</code> es derivado, pero se guarda calculado por razones de rendimiento, con función de reconciliación como red de seguridad.</li>
-    <li><strong>La especialización no se implementa con tablas por subtipo</strong>, sino con un atributo discriminante (<code>rol</code>) y una restricción <code>CHECK</code>. Es la estrategia de <em>tabla única</em>: con tres subtipos que difieren en dos o tres atributos, tres tablas serían más costosas de consultar que útiles.</li>
+    <li><strong>Precios diferenciados por tienda: ya no hace falta.</strong> Era una duda abierta del modelo. Los dueños confirmaron que las dos tiendas cobran igual, así que el precio único se mantiene y la estructura adicional que se había previsto se descarta.</li>
   </ul>
+
+  <h4>Lo que sigue fuera del alcance</h4>
+  <ul>
+    <li><strong>Compras a proveedor.</strong> Una entrada registra el costo pero no a quién se le compró. No se preguntó por los proveedores en esta visita.</li>
+    <li><strong>Traspaso entre tiendas.</strong> Se representa con dos movimientos sueltos, una salida y una entrada, sin vínculo entre sí. Tampoco se preguntó con qué frecuencia ocurre.</li>
+  </ul>
+
+  <div class="nota">
+    <h4>Sobre el estado del modelo entidad-relación</h4>
+    <p>
+      Los diagramas y las tablas de este documento reflejan el modelo <strong>tal como está
+      construido y verificado hoy</strong>. Los tres cambios de arriba están identificados pero
+      todavía no incorporados, y así se presentan a propósito: un modelo que dice ser una cosa y
+      es otra vale menos que uno que declara con precisión hasta dónde llega.
+    </p>
+  </div>
 </section>
 
-<!-- ══════════════════════════════════════════════════════════ -->
-<section>
-  <div class="num">06</div>
-  <h2>Preguntas que conviene tener respondidas</h2>
-  <p class="intro">
-    Anticipando lo que suele preguntarse en la defensa.
-  </p>
+<!-- ═══════════════════ 8 ═══════════════════ -->
+<section id="s8">
+  <div class="rotulo">SECCIÓN 8 <span class="chip chip-prop" style="margin-left:8px">Añadido</span></div>
+  <h2>Estado y plan de trabajo</h2>
 
-  <h4>&laquo;¿Por qué el stock no es simplemente un campo del producto?&raquo;</h4>
-  <p>
-    Porque hay dos tiendas y cada una tiene su propia existencia del mismo artículo, y porque las
-    tablets trabajan sin conexión. Un campo único se sobrescribiría al sincronizar; la suma de
-    movimientos es conmutativa y no depende del orden de llegada.
-  </p>
+  <div class="tabla-env">
+    <table>
+      <caption>Estado de cada componente</caption>
+      <thead><tr><th>Componente</th><th>Estado</th><th>Verificación</th></tr></thead>
+      <tbody>
+        <tr><td class="forte">Levantamiento de requerimientos</td><td>Realizado</td><td class="mono">ficha de la visita incompleta</td></tr>
+        <tr><td class="forte">Modelo conceptual y reglas de negocio</td><td>Validado con los dueños</td><td class="mono">tres cambios pendientes (7.4)</td></tr>
+        <tr><td class="forte">Modelo entidad-relación</td><td>Completo</td><td class="mono">documentado y diagramado</td></tr>
+        <tr><td class="forte">Esquema de base de datos</td><td>Implementado</td><td class="mono">28 pruebas automatizadas</td></tr>
+        <tr><td class="forte">Interfaz de sincronización</td><td>Implementada</td><td class="mono">38 pruebas automatizadas</td></tr>
+        <tr><td class="forte">Autenticación</td><td>Pendiente</td><td class="mono">—</td></tr>
+        <tr><td class="forte">Punto de venta</td><td>Pendiente</td><td class="mono">—</td></tr>
+        <tr><td class="forte">Panel de administración</td><td>Pendiente</td><td class="mono">—</td></tr>
+      </tbody>
+    </table>
+  </div>
 
-  <h4>&laquo;¿No es redundante tener <code>STOCK</code> si se puede calcular?&raquo;</h4>
-  <p>
-    Sí, es redundancia, y es intencional. La pantalla de venta consulta el stock en cada tecla que
-    toca el empleado; sumar miles de movimientos cada vez sería inaceptable. La redundancia es
-    segura porque un trigger la mantiene y una función la reconstruye: la fuente de verdad sigue
-    siendo una sola.
-  </p>
+  <div class="nota">
+    <span class="rot">Sobre la verificación</span>
+    <p>
+      Las 66 pruebas no comprueban solamente que el código corra: comprueban las
+      <strong>reglas de negocio</strong>. Que una venta no pueda aumentar el stock, que el
+      historial no se pueda alterar, que reenviar una operación no la duplique, que una venta a
+      medias no deje rastros. Ese enfoque ya encontró dos errores reales: un cálculo de
+      ganancia inflado al triple por una suma mal agrupada, y una prueba que sólo fallaba entre
+      medianoche y las dos de la madrugada.
+    </p>
+  </div>
 
-  <h4>&laquo;¿Por qué <code>ON DELETE</code> distinto en cada relación?&raquo;</h4>
-  <p>
-    Porque codifica la regla del negocio. <code>CASCADE</code> donde lo hijo no tiene sentido sin lo
-    padre (las líneas de una venta borrada). <code>SET NULL</code> donde el dato histórico debe
-    sobrevivir aunque desaparezca la referencia (la venta sigue existiendo aunque se borre el
-    empleado). <code>RESTRICT</code> donde borrar sería destruir contabilidad (un producto con
-    movimientos registrados).
-  </p>
-
-  <h4>&laquo;¿El modelo está normalizado?&raquo;</h4>
-  <p>
-    Está en tercera forma normal, con dos desnormalizaciones deliberadas y documentadas:
-    <code>stock.cantidad</code> y los precios congelados en <code>VENTA_LINEA</code>. Ambas se
-    apartan de la normalización por razones distintas &mdash; rendimiento la primera, corrección
-    histórica la segunda &mdash; y ambas están controladas.
-  </p>
+  <h4>Próximos pasos</h4>
+  <ol class="lista">
+    <li><strong>Incorporar al modelo los tres cambios del apartado 7.4</strong>: empleados en varias tiendas, clientes con crédito y descuento por mayoreo.</li>
+    <li><strong>Completar la ficha de datos</strong> que la visita dejó sin llenar, sobre todo cómo llevan hoy la cuenta de quién debe.</li>
+    <li><strong>Autenticación</strong>, antes de construir las pantallas: hacerlo después obliga a rehacer parte del cliente.</li>
+    <li><strong>Punto de venta</strong> con funcionamiento sin conexión.</li>
+    <li><strong>Panel de administración</strong> consolidado.</li>
+    <li><strong>Prueba en tienda</strong> en paralelo con el cuaderno, hasta que los dueños confíen en el sistema.</li>
+  </ol>
 </section>
 
 </main>
 
 <footer class="env">
   <p>
-    Modelo entidad-relación extendido del proyecto <strong>Ferreplast</strong>. El esquema físico
-    correspondiente está implementado en PostgreSQL y verificado con 28 pruebas automatizadas sobre
-    el esquema y 38 sobre la API.
+    Documento de presentación del proyecto <strong>Ferreplast</strong>. El modelo
+    entidad-relación completo, con sus diagramas y la tabla de cardinalidades, está en el
+    <a class="enlace" href="https://claude.ai/code/artifact/f088adea-b9f0-4d02-9217-0d24e7957fd9">documento del MER</a>.
+    Los apartados en ciruela esperan los datos del levantamiento de requerimientos.
   </p>
 </footer>
