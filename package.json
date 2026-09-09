@@ -10,7 +10,8 @@
     "db:test": "node db/test-esquema.mjs",
     "test:api": "node src/test-api.mjs",
     "dev": "node --env-file=.env src/servidor.mjs",
-    "diagramas": "node docs/diagramas/_generar.mjs && node docs/diagramas/_verificar.mjs"
+    "diagramas": "node docs/diagramas/_generar.mjs && node docs/diagramas/_verificar.mjs",
+    "word": "node docs/word/construir.mjs"
   },
   "keywords": [],
   "author": "",
@@ -18,7 +19,9 @@
   "type": "module",
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
-    "@types/node": "^26.4.0"
+    "@resvg/resvg-js": "^2.6.2",
+    "@types/node": "^26.4.0",
+    "docx": "^9.7.1"
   },
   "dependencies": {
     "@fastify/cors": "^11.3.0",
