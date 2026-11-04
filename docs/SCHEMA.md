@@ -5,16 +5,24 @@ el modelo es como es; la definición concreta está en [`db/schema.sql`](../db/s
 
 ---
 
-## 1. Por qué PostgreSQL
+> **Motor: Microsoft SQL Server.** El proyecto empezó sobre PostgreSQL y migró
+> a SQL Server. El modelo relacional es el mismo; lo que cambia es cómo se
+> expresa cada regla. Las diferencias concretas están señaladas a lo largo del
+> documento. La versión PostgreSQL quedó archivada en `db/_postgresql/` como
+> referencia.
+
+---
+
+## 1. Por qué una base relacional
 
 La elección no es por moda: viene de tres exigencias concretas del problema.
 
 **El inventario y la caja son dinero.** Un sistema que pierde una venta o
 duplica un descuento de stock es peor que el cuaderno de papel, porque el error
-es invisible. PostgreSQL da transacciones ACID reales: cuando se registra una
-venta, o se guardan la cabecera, las líneas y los movimientos de inventario
-*todos juntos*, o no se guarda nada. No existe el estado intermedio en el que
-la venta quedó registrada pero el stock no se descontó.
+es invisible. Un motor relacional da transacciones ACID reales: cuando se
+registra una venta, o se guardan la cabecera, las líneas y los movimientos de
+inventario *todos juntos*, o no se guarda nada. No existe el estado intermedio
+en el que la venta quedó registrada pero el stock no se descontó.
 
 **Las reglas del negocio se pueden imponer en la base.** Que una venta no pueda
 aumentar el stock, que una tienda no pueda tener dos cajas abiertas, que el
@@ -27,17 +35,34 @@ base sin esquema esas reglas viven solo en el código, y con el código fallan.
 trimestre agrupada por categoría" es una consulta SQL de diez líneas. Sin un
 motor relacional habría que traer todo a memoria y calcularlo a mano.
 
-Como efecto secundario útil, es también el motor que mejor se presta a la
-materia: normalización, claves foráneas, índices, vistas, triggers, funciones y
-transacciones aparecen todos en este esquema resolviendo un problema real, no
-como ejercicio.
+Como efecto secundario útil, es también lo que mejor se presta a la materia:
+normalización, claves foráneas, índices, vistas, triggers, procedimientos,
+columnas calculadas y transacciones aparecen todos en este esquema resolviendo
+un problema real, no como ejercicio.
 
-Sobre alternativas: **MySQL** habría servido, pero PostgreSQL tiene tipos
-`ENUM` propios, columnas generadas, índices parciales y CTE modificantes, que
-en este modelo se usan de forma central. **MongoDB** o similares se descartan
-porque el problema es intrínsecamente relacional (ventas, líneas, productos,
-tiendas, usuarios) y porque no ofrecen las garantías de integridad que el
-manejo de dinero exige.
+**MongoDB** o similares se descartan porque el problema es intrínsecamente
+relacional (ventas, líneas, productos, tiendas, usuarios) y porque no ofrecen
+las garantías de integridad que el manejo de dinero exige.
+
+### Qué cambió al pasar de PostgreSQL a SQL Server
+
+El modelo es el mismo; lo que cambia es cómo se escribe cada regla. Los cuatro
+puntos donde hubo que resolver distinto:
+
+| Lo que hacía PostgreSQL | Cómo se resuelve en SQL Server |
+|---|---|
+| Tipos `ENUM` propios | Restricción `CHECK` con la lista de valores |
+| Índice parcial comparando **dos columnas** (`cantidad <= cantidad_minima`) | No se puede: se calcula una columna `PERSISTED` y se indexa esa |
+| Columna generada (`diferencia`) | Columna calculada `AS (...) PERSISTED` |
+| `ON CONFLICT DO NOTHING` para la idempotencia | Índice único filtrado sobre `uuid_externo` |
+
+Y una diferencia de comportamiento que no es de sintaxis sino de semántica, y
+que hay que tener presente al escribir triggers: **en SQL Server el trigger se
+dispara una vez por sentencia, no una vez por fila.** `inserted` es una tabla
+con todas las filas afectadas. Un trigger escrito como si trajera una sola
+funciona en las pruebas de a una y pierde datos en silencio en cuanto llega un
+lote de sincronización. Por eso `trg_movimiento_actualiza_stock` agrupa
+`inserted` antes de aplicar nada, y hay una prueba dedicada a ese caso.
 
 ---
 
@@ -145,22 +170,35 @@ venta, el servidor la guarda, y la confirmación se pierde por el camino. La
 tablet no sabe si llegó, así que reintenta. Si el servidor la vuelve a
 procesar, **el stock se descuenta dos veces**.
 
-La solución es que **el UUID lo genere el dispositivo, no el servidor**. Por eso
-`movimientos_inventario.id` y `ventas.id` no tienen `DEFAULT gen_random_uuid()`:
-el identificador viene de afuera. El servidor inserta con:
+La solución es que **el identificador lo genere el dispositivo, no el
+servidor**.
 
-```sql
-INSERT INTO movimientos_inventario (...) VALUES (...)
-ON CONFLICT (id) DO NOTHING;
-```
+Acá aparece una tensión concreta con el modelo. La clave primaria es
+`INT IDENTITY`: la asigna el servidor, es corta, legible y cómoda para las
+claves foráneas. Pero justamente por eso **no sirve para detectar un reenvío**:
+el segundo envío de la misma venta obtendría un id nuevo y entraría como si
+fuera otra.
 
-El segundo envío choca con la clave primaria y se descarta sin efecto. Reenviar
-cien veces el mismo movimiento produce el mismo resultado que enviarlo una vez:
-eso es ser **idempotente**, y es lo que permite reintentar sin miedo.
+Por eso `MOVIMIENTO_INVENTARIO` y `VENTA` llevan **dos** identificadores:
 
-`sync_log` registra cuántos registros se enviaron, cuántos se aceptaron y
-cuántos se descartaron por duplicado, para poder diagnosticar la sincronización
-cuando algo va mal.
+| Columna | Quién la genera | Para qué |
+|---|---|---|
+| `id` | el servidor (`IDENTITY`) | identificar la fila, enlazar claves foráneas |
+| `uuid_externo` | el dispositivo | reconocer que esto ya llegó antes |
+
+Sobre `uuid_externo` hay un **índice único filtrado**. El segundo envío choca y
+se descarta. Reenviar cien veces el mismo movimiento produce el mismo resultado
+que enviarlo una vez: eso es ser **idempotente**, y es lo que permite
+reintentar sin miedo.
+
+El índice es *filtrado* (`WHERE uuid_externo IS NOT NULL`) por una razón
+práctica: los movimientos cargados desde el panel, que nunca estuvieron en una
+tablet, no tienen identificador externo. Con un `UNIQUE` común, SQL Server
+admitiría **uno solo** de esos en toda la tabla.
+
+`SYNC_LOG` registra cuántos registros se enviaron, cuántos se aceptaron y
+cuántos se descartaron por duplicado. Los duplicados no son un error: son la
+prueba de que el reintento funcionó como debía.
 
 ---
 
@@ -203,51 +241,166 @@ ahora y evita ese problema después.
 
 | Elemento | Dónde | Qué problema resuelve |
 |---|---|---|
-| Tipos `ENUM` | `tipo_movimiento`, `rol_usuario`, … | Impide valores inválidos por error de tipeo |
-| `CHECK` de signo | `movimientos_inventario` | Una venta no puede aumentar el stock |
-| `CHECK` de credenciales | `usuarios` | Un admin necesita contraseña; un empleado, PIN y tienda |
-| `CHECK` de coherencia | `ventas` | El total debe ser subtotal menos descuento |
-| Clave primaria compuesta | `stock` | Una sola fila por tienda y producto |
-| Índice único parcial | `cajas` | Una sola caja abierta por tienda a la vez |
-| Índice parcial | `stock` (bajo mínimo) | Índice pequeño y alertas instantáneas |
-| Índice GIN + `pg_trgm` | `productos.nombre` | Búsqueda por texto parcial en el mostrador |
-| Columna generada | `cajas.diferencia` | El faltante nunca queda inconsistente |
-| Trigger de caché | `stock` | Consulta rápida sin perder la fuente de verdad |
-| Trigger de inmutabilidad | `movimientos_inventario` | El historial no se puede alterar |
+| `CHECK` de lista | `tipo`, `rol`, `metodo_pago`, `estado` | Impide valores inválidos por error de tipeo |
+| `CHECK` de signo | `MOVIMIENTO_INVENTARIO` | Una venta no puede aumentar el stock |
+| `CHECK` de credenciales | `Usuario` | Un admin necesita contraseña; un empleado, PIN y tienda |
+| `CHECK` de coherencia | `VENTA` | El total debe ser subtotal menos descuento |
+| `CHECK` de cierre | `CAJA` | No se puede cerrar un turno sin contar el efectivo |
+| `CHECK` de vigencia | `SESION` | Una sesión no puede caducar antes de haber nacido |
+| Clave primaria compuesta | `Stock` | Una sola fila por tienda y producto |
+| Clave primaria compuesta | `VENTA_LINEA` | Entidad débil: la línea solo existe dentro de su venta |
+| `UNIQUE` compuesto | `VENTA (tienda_id, numero)` | Dos facturas no comparten número en una tienda |
+| Índice único filtrado | `CAJA` (abiertas) | Una sola caja abierta por tienda a la vez |
+| Índice único filtrado | `uuid_externo` | Idempotencia, admitiendo muchos NULL |
+| Índice único filtrado | `PRODUCTO.codigo`, `Usuario.email` | Único si existe, opcional si no |
+| Índice filtrado | `SESION` (vivas) | Las sesiones muertas no engordan el índice que se consulta en cada petición |
+| Índice filtrado | `INTENTO_LOGIN` (fallidos) | El conteo de bloqueo solo mira fallos; los aciertos quedan para auditoría |
+| Columna calculada | `Stock.necesita_reposicion` | La alerta no se puede falsear a mano |
+| Trigger de caché | `Stock` | Consulta rápida sin perder la fuente de verdad |
+| Trigger de inmutabilidad | `MOVIMIENTO_INVENTARIO` | El historial no se puede alterar |
+| Procedimiento | `sp_recalcular_stock` | Red de seguridad del caché |
 | Vistas | `v_*` | Los reportes no se reescriben en cada pantalla |
 
-### Sobre los `ENUM`
+### Sobre las listas de valores
 
-Ventaja: la base rechaza cualquier valor fuera de la lista. Desventaja: agregar
-un valor exige `ALTER TYPE ... ADD VALUE`. Se eligieron para listas que casi no
-cambian (tipos de movimiento, roles). Para algo que sí cambia seguido —como las
-categorías de producto— se usó una **tabla** con clave foránea, que es el otro
-lado de ese compromiso.
+PostgreSQL permite declarar un tipo `ENUM`; SQL Server no. El equivalente es
+una restricción `CHECK`, que da la misma garantía —la base rechaza cualquier
+valor fuera de la lista— con dos diferencias: los valores válidos no se pueden
+consultar desde el catálogo del sistema tan cómodamente, y agregar uno exige
+`ALTER TABLE` en lugar de `ALTER TYPE`.
+
+Se usan para listas que casi no cambian (tipos de movimiento, roles, métodos de
+pago). Para algo que sí cambia seguido —como las categorías de producto— se usó
+una **tabla** con clave foránea, que es el otro lado de ese compromiso.
+
+### Sobre `float` y el dinero
+
+Todos los importes y cantidades son `DECIMAL`, nunca `FLOAT`. Un `float` no
+puede representar 0.10 exactamente: sumar cien veces diez centavos no da diez.
+En inventario y caja eso es inaceptable, y el error es del tipo que aparece
+recién cuando el arqueo no cuadra por centavos y nadie entiende por qué.
 
 ---
 
 ## 8. Verificación
 
-El esquema no se da por bueno porque compile. `db/test-esquema.mjs` levanta una
-instancia real de PostgreSQL, carga esquema y datos, y comprueba que las reglas
-se cumplan: que el trigger calcule bien, que las restricciones rechacen lo que
-deben rechazar, que reenviar un movimiento no lo duplique, que la reconciliación
-detecte y corrija desalineaciones, y que los reportes den los números correctos.
+El esquema no se da por bueno porque compile. `db/test-esquema.sql` corre **33
+pruebas** contra la base cargada: cada una intenta algo que debería ser
+imposible y verifica que la base lo rechace, o hace algo válido y comprueba que
+el resultado sea correcto. Ninguna deja rastro —cada una escribe dentro de una
+transacción que se revierte—.
 
 ```bash
-npm run db:test
+sqlcmd -S localhost -E -C -f 65001 -i db/test-esquema.sql
 ```
 
-Esas pruebas ya encontraron un error real: la vista de ventas diarias unía
-`ventas` con `venta_lineas` y sumaba directamente, de modo que una venta con dos
-artículos se contaba dos veces y la ganancia salía inflada —185 en lugar de 60—.
-Es el error de agregación por *fan-out*, y es especialmente peligroso porque el
-número resultante parece razonable y nadie lo cuestiona. Se corrigió agregando
-las líneas en un CTE previo, de modo que cada venta se cuente una sola vez.
+Qué cubren: el signo de los movimientos, la inmutabilidad del historial, el
+trigger de stock (incluido el caso de **lote de varias filas**, que es el que
+rompe los triggers mal escritos), la idempotencia del reenvío, la coherencia de
+las ventas, la unicidad del número de factura por tienda, la caja única
+abierta, las reglas de credenciales, la columna calculada y las cuatro vistas.
+
+Las pruebas ya encontraron errores reales:
+
+- **Fan-out en el reporte de ganancia.** La vista de ventas diarias unía la
+  cabecera con las líneas y sumaba directamente, de modo que una venta con dos
+  artículos se contaba dos veces. Es especialmente peligroso porque el número
+  resultante parece razonable y nadie lo cuestiona. Se corrigió agregando las
+  líneas en un CTE previo. Hay una prueba dedicada: la venta de 880 con dos
+  líneas tiene que seguir dando 880, no 1760.
+
+- **`DBCC CHECKIDENT ... RESEED, 0` sobre una tabla que nunca tuvo filas** hace
+  que la primera inserción tome el id **0**, no el 1 — y entonces todas las
+  claves foráneas que apuntan al 1 fallan. Solo se reinicia el contador cuando
+  la tabla ya tuvo filas.
+
+- **`TRY/CATCH` no atrapa errores de compilación.** Escribir una columna
+  calculada revienta el lote completo antes de ejecutar nada, así que la prueba
+  que verificaba eso se llevaba puestas a las que venían después. Se resolvió
+  envolviendo esa sentencia en `sp_executesql`, para que el error ocurra en
+  ejecución y se pueda capturar.
+
+Ese último punto es la misma trampa que vale para todo el archivo: **SQL Server
+compila el lote entero antes de ejecutar una sola línea**. Sin separadores `GO`,
+un error de sintaxis al final del script impide que se cree la primera tabla.
 
 ---
 
-## 9. Pendientes
+## 9. Quién entra y qué puede hacer
+
+Dos tablas sostienen la autenticación: `sesiones` e `intentos_login`.
+
+### Por qué una tabla de sesiones y no un token autocontenido
+
+Lo habitual hoy sería un JWT: un token que lleva adentro quién es el usuario,
+firmado para que no se pueda falsificar. No necesita consultar la base, que es
+su gran ventaja.
+
+Su defecto es que **no se puede revocar**. Un token firmado vale hasta que
+caduca, y el servidor no tiene forma de invalidarlo sin cambiar la clave de
+firma, lo que echaría a todos los usuarios a la vez. En este negocio eso importa
+concretamente: si una tablet se pierde o un empleado deja de trabajar, hay que
+poder cortarle el acceso en el momento, no cuando el token expire.
+
+Con una tabla, revocar es `UPDATE sesiones SET revocada_en = NOW()`. El precio
+es una consulta por petición; con dos tiendas no se nota.
+
+### Por qué se guarda el hash del token y no el token
+
+El mismo razonamiento que con las contraseñas: si alguien consigue un volcado de
+la base, con los tokens en claro entra como cualquier usuario que tenga sesión
+abierta.
+
+Lo que sí cambia es **qué hash**. Para el token alcanza SHA-256; para la
+contraseña no. La diferencia está en lo que se protege: un token son 32 bytes al
+azar, así que no hay diccionario que probar y no hace falta que cada intento sea
+caro. Una contraseña —y sobre todo un PIN de 4 dígitos— es adivinable, y ahí lo
+único que ayuda es encarecer cada prueba. Por eso las claves usan **scrypt**,
+que exige CPU y memoria deliberadamente.
+
+### Por qué el límite de intentos no es opcional
+
+Un PIN de 4 dígitos son 10.000 combinaciones. Un programa que pruebe una por
+segundo las agota en menos de tres horas. **El hash no protege de esto**: el
+hash protege de que roben la base, no de que prueben por la puerta de entrada.
+
+`intentos_login` registra cada intento. Pasados 5 fallos en 15 minutos se
+rechaza aunque la clave sea correcta —si no, bastaría con seguir probando hasta
+acertar—. La ventana se vacía sola en lugar de requerir que un admin desbloquee,
+porque si no, cualquiera podría dejar al mostrador sin vender tecleando cinco
+PIN malos, y en una tienda sin internet no hay nadie a mano que lo arregle.
+
+También se registran los **aciertos**: el patrón "veinte fallos y un acierto" es
+la firma de un ataque que funcionó, y sin los aciertos no se ve.
+
+El conteo se hace en la base y no en memoria del proceso: si la API corriera en
+dos instancias, un contador en memoria permitiría el doble de intentos sin que
+nadie lo note.
+
+### El alcance por tienda
+
+El empleado solo opera sobre su tienda; el admin, sobre las dos. Sin esa regla,
+cualquier empleado podría descontar stock del otro local cambiando un
+identificador en la petición.
+
+La comprobación se hace **por elemento del lote**, no por lote: una tablet puede
+enviar operaciones de las dos tiendas, y la que no corresponde se aparta sola sin
+tumbar al resto, igual que un registro mal formado.
+
+### Qué no resuelve
+
+El autor de cada venta (`usuario_id`) lo sigue poniendo el cliente, y es
+deliberado: la tablet acumula las ventas del día y durante ese día pudieron
+atenderla dos empleados distintos. Quien sincroniza al final no es
+necesariamente quien vendió, así que forzar el autor al de la sesión atribuiría
+todo al último que tocó la tablet.
+
+Lo que falta es comprobar que ese usuario pertenezca a la misma tienda. Hoy la
+clave foránea garantiza que exista, no que sea de ahí.
+
+---
+
+## 10. Pendientes
 
 Cosas conscientemente fuera del alcance actual, a decidir con los datos del
 levantamiento de requerimientos:

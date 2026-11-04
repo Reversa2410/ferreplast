@@ -6,8 +6,11 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "node db/test-esquema.mjs && node src/test-api.mjs",
-    "db:test": "node db/test-esquema.mjs",
+    "test": "npm run db:test",
+    "db:crear": "sqlcmd -S localhost -E -C -f 65001 -b -i db/schema.sql",
+    "db:datos": "sqlcmd -S localhost -E -C -f 65001 -b -i db/seed.sql",
+    "db:test": "sqlcmd -S localhost -E -C -f 65001 -b -i db/test-esquema.sql",
+    "db:reset": "npm run db:crear && npm run db:datos && npm run db:test",
     "test:api": "node src/test-api.mjs",
     "dev": "node --env-file=.env src/servidor.mjs",
     "diagramas": "node docs/diagramas/_generar.mjs && node docs/diagramas/_verificar.mjs",
