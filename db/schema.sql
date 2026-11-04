@@ -2,764 +2,904 @@
 -- FERREPLAST -- Esquema de base de datos
 -- Sistema de gestion para ferreteria y plastiqueria
 --
--- Motor:    PostgreSQL 15+
--- Encoding: UTF8
+-- Motor: Microsoft SQL Server 2019+ (T-SQL)
 --
 -- Este archivo es idempotente: se puede ejecutar varias veces seguidas.
--- Para recrear todo desde cero:  psql -f schema.sql
+--   sqlcmd -S localhost -E -C -f 65001 -i db/schema.sql
+--
+-- SOBRE LOS LOTES (GO)
+-- Cada bloque termina en GO a proposito. SQL Server compila un lote COMPLETO
+-- antes de ejecutar una sola de sus lineas: sin separadores, un error de
+-- sintaxis en la ultima consulta impide que se cree la primera tabla, y el
+-- script falla entero sin dejar rastro de por donde iba.
 -- =============================================================================
 
-BEGIN;
+IF DB_ID('FerreplastDB') IS NULL
+    CREATE DATABASE FerreplastDB;
+GO
+
+USE FerreplastDB;
+GO
+
+-- -----------------------------------------------------------------------------
+-- OPCIONES DE SESION -- obligatorias, no decorativas.
+--
+-- Los indices FILTRADOS (los que llevan WHERE) y las vistas indexadas exigen
+-- QUOTED_IDENTIFIER y ANSI_NULLS en ON. SSMS los pone asi por omision, pero
+-- sqlcmd NO: el mismo script que funciona apretando F5 falla desde la linea de
+-- comandos con "CREATE INDEX failed because the following SET options have
+-- incorrect settings". Declararlas aca hace que el resultado no dependa de con
+-- que herramienta se ejecute.
+--
+-- Ademas quedan grabadas en cada vista, trigger y procedimiento que se cree a
+-- continuacion: SQL Server captura estas opciones en el momento de crearlos.
+-- -----------------------------------------------------------------------------
+SET QUOTED_IDENTIFIER ON;
+SET ANSI_NULLS ON;
+GO
 
 -- -----------------------------------------------------------------------------
 -- 0. LIMPIEZA (solo desarrollo -- NUNCA correr esto en produccion)
--- -----------------------------------------------------------------------------
-DROP SCHEMA IF EXISTS public CASCADE;
-CREATE SCHEMA public;
-
-
--- -----------------------------------------------------------------------------
--- 1. TIPOS ENUMERADOS
 --
--- En PostgreSQL un ENUM es un TIPO propio que se declara aparte; no se escribe
--- en linea dentro del CREATE TABLE (eso es sintaxis de MySQL).
---
--- Ventaja:    la BD rechaza cualquier valor fuera de la lista. Imposible tener
---             un rol 'admni' por un error de tipeo.
--- Desventaja: agregar un valor nuevo exige ALTER TYPE ... ADD VALUE. Si se
---             espera que la lista cambie seguido, conviene una tabla de catalogo
---             con clave foranea en lugar de un ENUM.
+-- El orden es inverso al de creacion: no se puede borrar una tabla a la que
+-- otra todavia apunta con una clave foranea.
 -- -----------------------------------------------------------------------------
+DROP VIEW  IF EXISTS v_cuadre_caja;
+DROP VIEW  IF EXISTS v_alertas_stock;
+DROP VIEW  IF EXISTS v_ventas_diarias;
+DROP VIEW  IF EXISTS v_inventario_valorizado;
 
-CREATE TYPE tipo_tienda AS ENUM ('ferreteria', 'plastiqueria', 'otro');
-
-CREATE TYPE rol_usuario AS ENUM ('empleado', 'encargado', 'admin');
-
-CREATE TYPE tipo_movimiento AS ENUM (
-    'entrada',      -- compra a proveedor / reabastecimiento   (+)
-    'venta',        -- salida por venta al cliente             (-)
-    'devolucion',   -- el cliente devuelve mercaderia          (+)
-    'merma',        -- roto, vencido, perdido                  (-)
-    'ajuste'        -- correccion tras inventario fisico      (+/-)
-);
-
-CREATE TYPE metodo_pago AS ENUM (
-    'efectivo', 'tarjeta', 'transferencia', 'credito', 'otro'
-);
-
-CREATE TYPE estado_caja AS ENUM ('abierta', 'cerrada', 'revisada');
-
-
--- -----------------------------------------------------------------------------
--- 2. FUNCION AUXILIAR: mantener updated_at al dia
---
--- Una columna updated_at con DEFAULT NOW() solo se llena al INSERT. Para que
--- tambien se actualice en cada UPDATE hace falta un trigger. Se define la
--- funcion una sola vez y se reutiliza en todas las tablas que la necesiten.
--- -----------------------------------------------------------------------------
-
-CREATE OR REPLACE FUNCTION fn_set_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at := NOW();
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
+DROP TABLE IF EXISTS INTENTO_LOGIN;
+DROP TABLE IF EXISTS SESION;
+DROP TABLE IF EXISTS VENTA_LINEA;
+DROP TABLE IF EXISTS VENTA;
+DROP TABLE IF EXISTS CAJA;
+DROP TABLE IF EXISTS SYNC_LOG;
+DROP TABLE IF EXISTS DISPOSITIVO;
+DROP TABLE IF EXISTS MOVIMIENTO_INVENTARIO;
+DROP TABLE IF EXISTS Stock;
+DROP TABLE IF EXISTS Usuario;
+DROP TABLE IF EXISTS PRODUCTO;
+DROP TABLE IF EXISTS CATEGORIA;
+DROP TABLE IF EXISTS TIENDA;
+DROP TABLE IF EXISTS NEGOCIO;
+GO
 
 -- =============================================================================
--- 3. TABLAS
+-- 1. CONVENCIONES
+--
+-- SIN TIPOS ENUMERADOS. PostgreSQL permite declarar un tipo ENUM; SQL Server
+-- no. El equivalente es una restriccion CHECK con la lista de valores, que da
+-- la misma garantia (la base rechaza un valor fuera de la lista) con dos
+-- diferencias: el valor valido no se puede consultar desde el catalogo del
+-- sistema tan comodamente, y agregar uno exige ALTER TABLE en lugar de
+-- ALTER TYPE. Para listas que cambian seguido -- las categorias de producto --
+-- se usa una TABLA con clave foranea, que es el otro lado del compromiso.
+--
+-- DECIMAL, NUNCA FLOAT. Un FLOAT no puede representar 0.10 exactamente, asi
+-- que sumar cien veces diez centavos no da diez. En dinero e inventario eso es
+-- inaceptable. DECIMAL(18,2) para importes y DECIMAL(18,3) para cantidades
+-- (hay productos que se venden por metro y por libra).
+--
+-- FECHAS EN UTC. Todas las columnas de fecha son DATETIME2 y guardan UTC, con
+-- SYSUTCDATETIME() como valor por omision. La conversion a la hora local pasa
+-- al mostrar. Guardar hora local es el origen clasico del reporte que cambia
+-- segun quien lo abre.
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
--- 3.1 NEGOCIOS
+-- 2.1 NEGOCIO
 --
--- Nivel mas alto de la jerarquia: la familia duenia de las dos tiendas es UN
--- negocio. Hoy hay una sola fila.
---
--- Por que existe si hoy sobra: si maniana el sistema se le vende a otra familia,
--- basta con insertar otra fila; no hay que rehacer el modelo ni levantar una
--- base de datos por cliente. Agregar esta tabla ahora cuesta dos claves
--- foraneas; agregarla dentro de un anio cuesta migrar todas las tablas con
--- datos reales adentro.
+-- Hoy tiene una sola fila y parece sobrar. Esta por una razon concreta: el
+-- sistema se piensa para venderlo a otras familias. Con esta tabla, sumar un
+-- cliente es insertar una fila; sin ella habria que agregar la nocion de "a
+-- quien pertenece esto" a tablas ya cargadas con datos de produccion, que es
+-- una de las migraciones mas caras que existen.
 -- -----------------------------------------------------------------------------
-CREATE TABLE negocios (
-    id              UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-    nombre          VARCHAR(150) NOT NULL,
-    propietario     VARCHAR(150),
-    telefono        VARCHAR(30),
-    moneda          CHAR(3)      NOT NULL DEFAULT 'BOB',   -- ISO 4217
-    activo          BOOLEAN      NOT NULL DEFAULT TRUE,
-    created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    updated_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+CREATE TABLE NEGOCIO (
+    id          INT           IDENTITY(1,1) PRIMARY KEY,
+    nombre      VARCHAR(100)  NOT NULL,
+    propietario VARCHAR(100),
+    moneda      VARCHAR(10)   NOT NULL DEFAULT 'NIO',
+    -- BIT y no VARCHAR 'si'/'no': un booleano guardado como texto admite 'Si',
+    -- 'SI', 'S', 'true' y el dia que alguien escriba uno distinto, la consulta
+    -- que filtra activo = 'si' deja de ver esa fila sin avisar.
+    activo      BIT           NOT NULL DEFAULT 1,
+    created_at  DATETIME2(3)  NOT NULL DEFAULT SYSUTCDATETIME()
+);
+GO
+
+-- -----------------------------------------------------------------------------
+-- 2.2 TIENDA
+-- -----------------------------------------------------------------------------
+CREATE TABLE TIENDA (
+    id         INT           IDENTITY(1,1) PRIMARY KEY,
+    negocio_id INT           NOT NULL,
+    nombre     VARCHAR(100)  NOT NULL,
+    tipo       VARCHAR(50)   NOT NULL,
+    direccion  VARCHAR(255),
+    -- Prefijo del comprobante: 'FER', 'PLA'. El numero de factura legible se
+    -- arma al mostrar (prefijo + numero), asi no se guarda dos veces.
+    prefijo    VARCHAR(10)   NOT NULL,
+    activo     BIT           NOT NULL DEFAULT 1,
+    created_at DATETIME2(3)  NOT NULL DEFAULT SYSUTCDATETIME(),
+
+    CONSTRAINT FK_TIENDA_NEGOCIO FOREIGN KEY (negocio_id) REFERENCES NEGOCIO(id),
+    CONSTRAINT CK_TIENDA_TIPO CHECK (tipo IN ('ferreteria', 'plastiqueria', 'otro'))
 );
 
-CREATE TRIGGER trg_negocios_updated
-    BEFORE UPDATE ON negocios
-    FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
-
+CREATE INDEX IX_TIENDA_NEGOCIO ON TIENDA(negocio_id);
+GO
 
 -- -----------------------------------------------------------------------------
--- 3.2 TIENDAS
+-- 2.3 CATEGORIA
 --
--- La ferreteria y la plastiqueria. Cada una es un punto de venta independiente
--- con su propio stock y su propia caja, pero comparten catalogo y duenio.
+-- Jerarquia simple por auto-referencia: "Plomeria" puede contener "Tuberias
+-- PVC". Con padre_id NULL la categoria es de primer nivel.
 -- -----------------------------------------------------------------------------
-CREATE TABLE tiendas (
-    id              UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-    negocio_id      UUID         NOT NULL REFERENCES negocios(id) ON DELETE RESTRICT,
-    nombre          VARCHAR(150) NOT NULL,
-    tipo            tipo_tienda  NOT NULL,
-    direccion       VARCHAR(255),
-    -- Prefijo para numerar comprobantes: 'FER', 'PLA'. Evita que las dos
-    -- tiendas generen el mismo numero de venta estando desconectadas.
-    prefijo         VARCHAR(5)   NOT NULL,
-    activo          BOOLEAN      NOT NULL DEFAULT TRUE,
-    created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    updated_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+CREATE TABLE CATEGORIA (
+    id       INT          IDENTITY(1,1) PRIMARY KEY,
+    nombre   VARCHAR(100) NOT NULL,
+    padre_id INT NULL,
 
-    CONSTRAINT uq_tiendas_prefijo UNIQUE (negocio_id, prefijo)
+    CONSTRAINT FK_CATEGORIA_PADRE FOREIGN KEY (padre_id) REFERENCES CATEGORIA(id),
+    -- Una categoria no puede ser su propia madre. No alcanza para impedir un
+    -- ciclo largo (A -> B -> A), pero si el error que de verdad ocurre.
+    CONSTRAINT CK_CATEGORIA_NO_SE_CONTIENE CHECK (padre_id <> id)
+);
+GO
+
+-- -----------------------------------------------------------------------------
+-- 2.4 PRODUCTO
+--
+-- DOS PRECIOS, NO UNO.
+-- Tener una sola columna de precio obliga a elegir: o se guarda lo que cuesta
+-- o lo que se cobra. Con cualquiera de las dos sola, la pregunta que el duenio
+-- no puede contestar hoy -- "cuanto GANE", no "cuanto vendi" -- sigue sin
+-- respuesta, y el inventario no se puede valorizar a costo.
+--
+-- El producto pertenece al NEGOCIO, no a una tienda: corregir un nombre o un
+-- precio se hace en un solo lugar y vale para las dos. Lo que varia por tienda
+-- es el stock, y el catalogo de cada tienda es el conjunto de productos que
+-- tienen fila en Stock para ella.
+-- -----------------------------------------------------------------------------
+CREATE TABLE PRODUCTO (
+    id            INT           IDENTITY(1,1) PRIMARY KEY,
+    codigo        VARCHAR(50),
+    nombre        VARCHAR(150)  NOT NULL,
+    categoria_id  INT           NOT NULL,
+    precio_costo  DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+    precio_venta  DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+    -- 'Unidad', 'Libra', 'Metro', 'Galon'. Hay productos que no se venden de a
+    -- uno: por eso las cantidades admiten decimales.
+    unidad_medida VARCHAR(50)   NOT NULL DEFAULT 'Unidad',
+    activo        BIT           NOT NULL DEFAULT 1,
+    created_at    DATETIME2(3)  NOT NULL DEFAULT SYSUTCDATETIME(),
+    updated_at    DATETIME2(3)  NOT NULL DEFAULT SYSUTCDATETIME(),
+
+    CONSTRAINT FK_PRODUCTO_CATEGORIA FOREIGN KEY (categoria_id) REFERENCES CATEGORIA(id),
+    CONSTRAINT CK_PRODUCTO_PRECIOS CHECK (precio_costo >= 0 AND precio_venta >= 0)
 );
 
-CREATE INDEX idx_tiendas_negocio ON tiendas(negocio_id);
-
-CREATE TRIGGER trg_tiendas_updated
-    BEFORE UPDATE ON tiendas
-    FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
-
+-- El codigo es opcional (hoy los productos no vienen con ninguno), pero si
+-- existe no puede repetirse. El indice unico FILTRADO permite muchos NULL y a
+-- la vez prohibe dos veces el mismo codigo: una restriccion UNIQUE comun en
+-- SQL Server solo admitiria UN NULL en toda la tabla.
+CREATE UNIQUE INDEX UX_PRODUCTO_CODIGO ON PRODUCTO(codigo) WHERE codigo IS NOT NULL;
+CREATE INDEX IX_PRODUCTO_CATEGORIA ON PRODUCTO(categoria_id);
+-- Busqueda por nombre en el mostrador. SQL Server no tiene un indice de
+-- trigramas como pg_trgm, asi que un indice comun sirve para 'empieza con';
+-- para buscar por el medio ('%tornillo%') haria falta FULLTEXT.
+CREATE INDEX IX_PRODUCTO_NOMBRE ON PRODUCTO(nombre);
+GO
 
 -- -----------------------------------------------------------------------------
--- 3.3 USUARIOS
+-- 2.5 Usuario
 --
--- Empleados de mostrador y administradores (la familia).
---
--- Dos formas de entrar:
---   * empleado -> PIN corto en la tablet (rapido, se teclea 50 veces al dia)
+-- Dos formas de entrar, porque son dos situaciones distintas:
+--   * empleado -> PIN corto en la tablet (se teclea cincuenta veces al dia)
 --   * admin    -> email + contrasenia en el panel web
 --
--- IMPORTANTE: se guarda el HASH, nunca el PIN ni la contrasenia en claro.
--- Un PIN de 4 digitos solo tiene 10.000 combinaciones, asi que ademas del hash
--- la aplicacion debe limitar los intentos fallidos.
---
--- tienda_id NULL = el usuario no esta atado a una tienda (caso del admin, que
--- ve las dos).
+-- Se guarda el HASH, nunca el PIN ni la contrasenia en claro.
 -- -----------------------------------------------------------------------------
-CREATE TABLE usuarios (
-    id              UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-    negocio_id      UUID         NOT NULL REFERENCES negocios(id) ON DELETE RESTRICT,
-    tienda_id       UUID         REFERENCES tiendas(id) ON DELETE SET NULL,
-    nombre          VARCHAR(150) NOT NULL,
-    email           VARCHAR(150),
-    password_hash   TEXT,        -- para admins (login web)
-    pin_hash        TEXT,        -- para empleados (login en tablet)
-    rol             rol_usuario  NOT NULL DEFAULT 'empleado',
-    activo          BOOLEAN      NOT NULL DEFAULT TRUE,
-    ultimo_acceso   TIMESTAMPTZ,
-    created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    updated_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+CREATE TABLE Usuario (
+    id            INT           IDENTITY(1,1) PRIMARY KEY,
+    negocio_id    INT           NOT NULL,
+    -- NULL = no esta atado a una tienda. Es el caso del administrador, que ve
+    -- las dos. Dejarlo NOT NULL obligaria a inventarle una tienda al duenio y
+    -- a recordar en cada consulta que ese valor no significa nada.
+    tienda_id     INT NULL,
+    nombre        VARCHAR(100)  NOT NULL,
+    rol           VARCHAR(20)   NOT NULL DEFAULT 'empleado',
+    email         VARCHAR(150),
+    password_hash VARCHAR(255),
+    pin_hash      VARCHAR(255),
+    activo        BIT           NOT NULL DEFAULT 1,
+    ultimo_acceso DATETIME2(3),
+    created_at    DATETIME2(3)  NOT NULL DEFAULT SYSUTCDATETIME(),
 
-    CONSTRAINT uq_usuarios_email UNIQUE (email),
+    CONSTRAINT FK_USUARIO_NEGOCIO FOREIGN KEY (negocio_id) REFERENCES NEGOCIO(id),
+    CONSTRAINT FK_USUARIO_TIENDA  FOREIGN KEY (tienda_id)  REFERENCES TIENDA(id),
+    CONSTRAINT CK_USUARIO_ROL CHECK (rol IN ('empleado', 'encargado', 'admin')),
 
-    -- Un admin necesita email+contrasenia; un empleado necesita PIN y tienda.
-    -- La regla de negocio vive en la BD, no solo en el codigo de la app.
-    CONSTRAINT chk_credenciales CHECK (
-        (rol = 'admin'    AND email IS NOT NULL AND password_hash IS NOT NULL)
-     OR (rol <> 'admin'   AND pin_hash IS NOT NULL AND tienda_id IS NOT NULL)
+    -- La regla de negocio vive en la BASE, no solo en el codigo de la app.
+    -- Un admin necesita email y contrasenia; cualquier otro rol necesita PIN y
+    -- una tienda a la que pertenecer. Sin esto se pueden crear usuarios que no
+    -- pueden entrar por ningun lado, y el error aparece recien cuando esa
+    -- persona intenta trabajar.
+    CONSTRAINT CK_USUARIO_CREDENCIALES CHECK (
+        (rol =  'admin' AND email IS NOT NULL AND password_hash IS NOT NULL)
+     OR (rol <> 'admin' AND pin_hash IS NOT NULL AND tienda_id IS NOT NULL)
     )
 );
 
-CREATE INDEX idx_usuarios_tienda ON usuarios(tienda_id) WHERE activo;
-
-CREATE TRIGGER trg_usuarios_updated
-    BEFORE UPDATE ON usuarios
-    FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
-
+-- Mismo motivo que el codigo de producto: el email es opcional (los empleados
+-- no tienen) pero no se puede repetir.
+CREATE UNIQUE INDEX UX_USUARIO_EMAIL ON Usuario(email) WHERE email IS NOT NULL;
+CREATE INDEX IX_USUARIO_TIENDA ON Usuario(tienda_id) WHERE activo = 1;
+GO
 
 -- -----------------------------------------------------------------------------
--- 3.4 CATEGORIAS
+-- 2.6 Stock -- CACHE, NO VERDAD
 --
--- Jerarquia simple mediante auto-referencia (padre_id): "Fontaneria" puede
--- contener "Tuberias PVC". Con padre_id NULL la categoria es de primer nivel.
+-- Guarda el total ya calculado para que la pantalla de venta no tenga que
+-- sumar miles de movimientos cada vez que el empleado toca una tecla.
+--
+-- La VERDAD siempre es MOVIMIENTO_INVENTARIO. Esta tabla la mantiene al dia un
+-- trigger. Si se desalinea, se regenera (ver seccion 5).
+--
+-- Clave primaria compuesta (tienda_id, producto_id): hace imposible por diseno
+-- que existan dos filas contradictorias para el mismo par.
 -- -----------------------------------------------------------------------------
-CREATE TABLE categorias (
-    id              UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-    negocio_id      UUID         NOT NULL REFERENCES negocios(id) ON DELETE CASCADE,
-    padre_id        UUID         REFERENCES categorias(id) ON DELETE SET NULL,
-    nombre          VARCHAR(100) NOT NULL,
-    created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+CREATE TABLE Stock (
+    tienda_id       INT           NOT NULL,
+    producto_id     INT           NOT NULL,
+    cantidad        DECIMAL(18,3) NOT NULL DEFAULT 0,
+    cantidad_minima DECIMAL(18,3) NOT NULL DEFAULT 0,
+    updated_at      DATETIME2(3)  NOT NULL DEFAULT SYSUTCDATETIME(),
 
-    CONSTRAINT uq_categorias_nombre UNIQUE (negocio_id, nombre)
+    -- COLUMNA CALCULADA Y PERSISTIDA.
+    --
+    -- Existe por una limitacion concreta: en PostgreSQL se puede crear un
+    -- indice parcial con WHERE cantidad <= cantidad_minima, pero SQL Server
+    -- NO admite comparar dos columnas en el filtro de un indice filtrado
+    -- (solo columna contra constante). El intento falla con
+    -- "Incorrect WHERE clause for filtered index".
+    --
+    -- La vuelta es calcular la comparacion una sola vez, guardarla (PERSISTED)
+    -- e indexarla. Al ser calculada no se puede escribir a mano, asi que es
+    -- imposible que diga que un producto esta bien de stock cuando no lo esta.
+    necesita_reposicion AS (CASE WHEN cantidad <= cantidad_minima THEN 1 ELSE 0 END) PERSISTED,
+
+    CONSTRAINT PK_STOCK PRIMARY KEY (tienda_id, producto_id),
+    CONSTRAINT FK_STOCK_TIENDA   FOREIGN KEY (tienda_id)   REFERENCES TIENDA(id),
+    CONSTRAINT FK_STOCK_PRODUCTO FOREIGN KEY (producto_id) REFERENCES PRODUCTO(id),
+    CONSTRAINT CK_STOCK_MINIMA CHECK (cantidad_minima >= 0)
 );
 
+-- La alerta de reposicion del panel se resuelve leyendo el principio de este
+-- indice, sin recorrer el catalogo entero.
+CREATE INDEX IX_STOCK_BAJO ON Stock(necesita_reposicion, tienda_id)
+    INCLUDE (producto_id, cantidad, cantidad_minima);
+GO
 
 -- -----------------------------------------------------------------------------
--- 3.5 PRODUCTOS
+-- 2.7 MOVIMIENTO_INVENTARIO -- LA DECISION CENTRAL DEL MODELO
 --
--- Catalogo unico del negocio. Un producto existe una sola vez aunque se venda
--- en las dos tiendas; lo que cambia por tienda es el STOCK, no el producto.
--- Asi, cambiar el nombre o el precio de un articulo se hace en un solo lugar.
+-- No se guarda el stock: se guarda CADA HECHO QUE LO MODIFICO. El stock es la
+-- suma de los movimientos.
 --
--- Sobre los precios:
---   precio_costo -> lo que se le paga al proveedor
---   precio_venta -> lo que paga el cliente
--- Son los precios VIGENTES. El precio historico de cada venta se congela en
--- venta_lineas (ver 3.9), porque si no, al subir un precio se recalcularian
--- hacia atras todas las ganancias del anio pasado.
+-- POR QUE. Lo natural seria una columna que sube y baja. Funciona mientras haya
+-- una sola fuente de escritura y conexion permanente, y no se cumple ninguna de
+-- las dos: hay dos tiendas, cada una con su tablet, y la senial es
+-- intermitente. El escenario que lo rompe:
+--
+--   1. La tablet pierde internet con 50 tornillos en stock.
+--   2. Vende 3. Localmente anota "quedan 47".
+--   3. Mientras tanto entran 100 tornillos por el panel: el servidor dice 150.
+--   4. Vuelve la conexion y la tablet sincroniza "el stock es 47".
+--   5. Los 100 tornillos que entraron desaparecieron.
+--
+-- Enviar un estado final pisa lo que hicieron los demas. Enviando el DELTA
+-- (-3 y +100) el resultado es 147 llegue en el orden que llegue, porque la
+-- suma es conmutativa. De ahi sale la propiedad que hace viable trabajar sin
+-- conexion, y de regalo quedan la auditoria completa y la reconstruccion
+-- historica ("cuanto habia el 15 de agosto").
+--
+-- EL SIGNO. Positivo si entra mercaderia, negativo si sale. Lo impone la
+-- restriccion CK_MOVIMIENTO_SIGNO, no la buena voluntad de la aplicacion: sin
+-- ella una venta podria AUMENTAR el stock, y el error es invisible.
 -- -----------------------------------------------------------------------------
-CREATE TABLE productos (
-    id              UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
-    negocio_id      UUID          NOT NULL REFERENCES negocios(id) ON DELETE CASCADE,
-    categoria_id    UUID          REFERENCES categorias(id) ON DELETE SET NULL,
-    codigo          VARCHAR(50)   NOT NULL,   -- codigo de barras o interno
-    nombre          VARCHAR(255)  NOT NULL,
-    descripcion     TEXT,
-    unidad_medida   VARCHAR(20)   NOT NULL DEFAULT 'unidad',  -- unidad, kg, metro, litro
-    precio_costo    NUMERIC(12,2) NOT NULL DEFAULT 0,
-    precio_venta    NUMERIC(12,2) NOT NULL,
-    activo          BOOLEAN       NOT NULL DEFAULT TRUE,
-    created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-    updated_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+CREATE TABLE MOVIMIENTO_INVENTARIO (
+    id             INT              IDENTITY(1,1) PRIMARY KEY,
 
-    CONSTRAINT uq_productos_codigo   UNIQUE (negocio_id, codigo),
-    CONSTRAINT chk_precios_positivos CHECK (precio_costo >= 0 AND precio_venta >= 0)
-);
+    -- CLAVE DE IDEMPOTENCIA, generada en el DISPOSITIVO.
+    --
+    -- La tablet no sabe si su envio anterior llego: la respuesta pudo perderse
+    -- en el camino, asi que reintenta. Si el servidor reprocesara el reenvio,
+    -- el stock se descontaria dos veces.
+    --
+    -- La clave primaria no sirve para esto: es IDENTITY, la asigna el servidor,
+    -- y un reenvio obtendria un id nuevo. Por eso el dispositivo genera ademas
+    -- un GUID propio y lo manda; el indice unico hace que el segundo envio
+    -- choque y se descarte. Reenviar cien veces el mismo movimiento produce el
+    -- mismo resultado que enviarlo una vez.
+    uuid_externo   UNIQUEIDENTIFIER NULL,
 
-CREATE INDEX idx_productos_categoria ON productos(categoria_id);
--- Busqueda por nombre en el mostrador: el empleado teclea "torn" y aparece
--- "Tornillo...". pg_trgm permite indexar busquedas por LIKE '%texto%'.
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
-CREATE INDEX idx_productos_nombre_trgm ON productos USING GIN (nombre gin_trgm_ops);
+    tienda_id      INT              NOT NULL,
+    producto_id    INT              NOT NULL,
+    -- Quien lo hizo. NULL si el usuario fue dado de baja: se pierde el nombre,
+    -- no el movimiento.
+    usuario_id     INT NULL,
+    -- Si el movimiento salio de una venta, cual. Permite ir de la factura al
+    -- descuento de stock y al reves, sin leer el texto del motivo.
+    venta_id       INT NULL,
 
-CREATE TRIGGER trg_productos_updated
-    BEFORE UPDATE ON productos
-    FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
+    tipo           VARCHAR(20)      NOT NULL,
+    cantidad       DECIMAL(18,3)    NOT NULL,
+    -- Costo al momento del movimiento, congelado: permite valorizar el
+    -- inventario historicamente aunque el proveedor cambie sus precios.
+    costo_unitario DECIMAL(18,2),
+    motivo         VARCHAR(255),
 
+    -- Cuando OCURRIO en la tienda (lo pone el dispositivo) y cuando LLEGO al
+    -- servidor. Comparar ambas mide el retraso de sincronizacion.
+    ocurrido_en    DATETIME2(3)     NOT NULL DEFAULT SYSUTCDATETIME(),
+    created_at     DATETIME2(3)     NOT NULL DEFAULT SYSUTCDATETIME(),
 
--- -----------------------------------------------------------------------------
--- 3.6 MOVIMIENTOS DE INVENTARIO   <-- NUCLEO DEL MODELO
---
--- Esta tabla es la FUENTE DE VERDAD del inventario. Es un registro de solo
--- insercion (append-only): nunca se hace UPDATE ni DELETE sobre una fila. Si
--- alguien se equivoco al cargar, se inserta un movimiento de 'ajuste' que
--- compensa. El historial queda intacto y auditable.
---
--- El stock nunca se "escribe"; se DEDUCE sumando las cantidades:
---     stock = SUM(cantidad) para esa tienda y ese producto
---
--- POR QUE ASI, y no una columna stock que se suma y se resta:
---
---   1. Sincronizacion sin conflictos. Las tablets trabajan sin internet. Si
---      cada una guardara "el stock quedo en 47", al sincronizar la ultima en
---      llegar pisaria a la otra y se perderia mercaderia. Sumando movimientos
---      independientes no hay nada que pisar: -3 y -5 dan -8 sin importar en
---      que orden lleguen.
---
---   2. Auditoria completa. Ante una diferencia en el conteo fisico se puede
---      reconstruir dia por dia que paso, quien lo hizo y cuando.
---
---   3. Reconstruccion historica. Permite responder "cuanto stock habia el 15
---      de agosto", cosa imposible con un unico numero que se sobrescribe.
---
--- Sobre id_cliente: el UUID lo genera LA TABLET, no el servidor. Si se corta
--- la conexion justo al enviar, la tablet reintenta con el mismo UUID y el
--- servidor lo descarta por clave primaria duplicada (ON CONFLICT DO NOTHING).
--- Esto es lo que hace la sincronizacion IDEMPOTENTE: reenviar no duplica.
--- -----------------------------------------------------------------------------
-CREATE TABLE movimientos_inventario (
-    -- Generado en el dispositivo, no en el servidor. Ver nota de idempotencia.
-    id              UUID            PRIMARY KEY,
-    tienda_id       UUID            NOT NULL REFERENCES tiendas(id)   ON DELETE RESTRICT,
-    producto_id     UUID            NOT NULL REFERENCES productos(id) ON DELETE RESTRICT,
-    usuario_id      UUID            REFERENCES usuarios(id) ON DELETE SET NULL,
-    tipo            tipo_movimiento NOT NULL,
+    CONSTRAINT FK_MOV_TIENDA   FOREIGN KEY (tienda_id)   REFERENCES TIENDA(id),
+    CONSTRAINT FK_MOV_PRODUCTO FOREIGN KEY (producto_id) REFERENCES PRODUCTO(id),
+    CONSTRAINT FK_MOV_USUARIO  FOREIGN KEY (usuario_id)  REFERENCES Usuario(id),
 
-    -- Positiva si entra mercaderia, negativa si sale. El signo lo valida la
-    -- restriccion chk_signo_segun_tipo mas abajo.
-    cantidad        NUMERIC(12,3)   NOT NULL,
-
-    -- Costo unitario al momento del movimiento. Se congela aca para poder
-    -- valorizar el inventario historicamente aunque el proveedor cambie precios.
-    costo_unitario  NUMERIC(12,2),
-
-    venta_id        UUID,           -- FK agregada tras crear ventas (ver 3.8)
-    motivo          VARCHAR(255),   -- "compra a proveedor", "se rompio al descargar"
-
-    -- Cuando OCURRIO el movimiento en la tienda (lo pone el dispositivo).
-    ocurrido_en     TIMESTAMPTZ     NOT NULL,
-    -- Cuando LLEGO al servidor. Si la tablet estuvo sin senial, hay diferencia
-    -- entre ambas; comparar las dos permite medir el retraso de sincronizacion.
-    created_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    CONSTRAINT CK_MOVIMIENTO_TIPO CHECK
+        (tipo IN ('entrada', 'venta', 'devolucion', 'merma', 'ajuste')),
 
     -- Un movimiento de cantidad cero no significa nada.
-    CONSTRAINT chk_cantidad_no_cero CHECK (cantidad <> 0),
+    CONSTRAINT CK_MOVIMIENTO_NO_CERO CHECK (cantidad <> 0),
 
-    -- El signo tiene que ser coherente con el tipo. Sin esto, un error de la
-    -- app podria registrar una venta que AUMENTA el stock.
-    CONSTRAINT chk_signo_segun_tipo CHECK (
+    CONSTRAINT CK_MOVIMIENTO_SIGNO CHECK (
         (tipo IN ('entrada', 'devolucion') AND cantidad > 0) OR
         (tipo IN ('venta',   'merma')      AND cantidad < 0) OR
-        (tipo = 'ajuste')
+        (tipo = 'ajuste')   -- el ajuste corrige en cualquier direccion
     )
 );
 
--- Indice para el calculo de stock y para el historial de un producto.
-CREATE INDEX idx_mov_tienda_producto ON movimientos_inventario(tienda_id, producto_id);
--- Indice para reportes por rango de fechas ("ventas de agosto").
-CREATE INDEX idx_mov_fecha           ON movimientos_inventario(tienda_id, ocurrido_en DESC);
-CREATE INDEX idx_mov_venta           ON movimientos_inventario(venta_id) WHERE venta_id IS NOT NULL;
-
+CREATE UNIQUE INDEX UX_MOV_UUID ON MOVIMIENTO_INVENTARIO(uuid_externo)
+    WHERE uuid_externo IS NOT NULL;
+CREATE INDEX IX_MOV_TIENDA_PRODUCTO ON MOVIMIENTO_INVENTARIO(tienda_id, producto_id);
+CREATE INDEX IX_MOV_FECHA           ON MOVIMIENTO_INVENTARIO(tienda_id, ocurrido_en DESC);
+CREATE INDEX IX_MOV_VENTA           ON MOVIMIENTO_INVENTARIO(venta_id) WHERE venta_id IS NOT NULL;
+GO
 
 -- -----------------------------------------------------------------------------
--- 3.7 STOCK  (cache derivado)
+-- 2.8 DISPOSITIVO y SYNC_LOG
 --
--- Contiene el mismo dato que SUM(movimientos), pero ya calculado.
---
--- Por que duplicar: la pantalla de venta consulta el stock en cada tecla que
--- toca el empleado. Sumar miles de movimientos cada vez seria lento. Esta
--- tabla mantiene el total al dia mediante un trigger.
---
--- Compromiso: es dato DERIVADO, no fuente de verdad. Si alguna vez se
--- desincroniza, se regenera con fn_recalcular_stock() (ver seccion 5). La
--- verdad siempre esta en movimientos_inventario.
---
--- cantidad_minima define el umbral de la alerta de reposicion y se configura
--- por tienda: la ferreteria puede querer avisar con 20 tornillos y la
--- plastiqueria con 5 barriles.
+-- Cada tablet y cuando sincronizo por ultima vez. Sirve para que el panel
+-- avise "la tablet de la plastiqueria no sincroniza hace 3 horas", que suele
+-- ser el primer sintoma de un problema.
 -- -----------------------------------------------------------------------------
-CREATE TABLE stock (
-    tienda_id       UUID          NOT NULL REFERENCES tiendas(id)   ON DELETE CASCADE,
-    producto_id     UUID          NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
-    cantidad        NUMERIC(12,3) NOT NULL DEFAULT 0,
-    cantidad_minima NUMERIC(12,3) NOT NULL DEFAULT 0,
-    updated_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+CREATE TABLE DISPOSITIVO (
+    id          INT          IDENTITY(1,1) PRIMARY KEY,
+    tienda_id   INT          NOT NULL,
+    nombre      VARCHAR(100) NOT NULL,
+    ultimo_sync DATETIME2(3),
+    activo      BIT          NOT NULL DEFAULT 1,
+    created_at  DATETIME2(3) NOT NULL DEFAULT SYSUTCDATETIME(),
 
-    -- Clave primaria compuesta: un producto tiene UNA fila de stock por tienda.
-    -- Evita de raiz que existan dos filas contradictorias para el mismo par.
-    PRIMARY KEY (tienda_id, producto_id)
+    CONSTRAINT FK_DISPOSITIVO_TIENDA FOREIGN KEY (tienda_id) REFERENCES TIENDA(id)
 );
 
--- Indice parcial: solo indexa las filas bajo el minimo. Es pequenio y hace
--- instantanea la consulta de alertas del panel del duenio.
-CREATE INDEX idx_stock_bajo ON stock(tienda_id)
-    WHERE cantidad <= cantidad_minima;
+CREATE TABLE SYNC_LOG (
+    id                   INT          IDENTITY(1,1) PRIMARY KEY,
+    dispositivo_id       INT          NOT NULL,
+    registros_enviados   INT          NOT NULL DEFAULT 0,
+    registros_aceptados  INT          NOT NULL DEFAULT 0,
+    -- Descartados por idempotencia: no son un error, son la prueba de que el
+    -- reintento funciono como debia.
+    registros_duplicados INT          NOT NULL DEFAULT 0,
+    error                VARCHAR(MAX),
+    created_at           DATETIME2(3) NOT NULL DEFAULT SYSUTCDATETIME(),
 
-
--- -----------------------------------------------------------------------------
--- 3.8 VENTAS
---
--- Cabecera de la transaccion: quien vendio, cuando, cuanto y como se pago.
--- El detalle articulo por articulo va en venta_lineas.
--- -----------------------------------------------------------------------------
-CREATE TABLE ventas (
-    -- Igual que los movimientos: UUID generado en la tablet -> reenviar es seguro.
-    id              UUID          PRIMARY KEY,
-    tienda_id       UUID          NOT NULL REFERENCES tiendas(id) ON DELETE RESTRICT,
-    usuario_id      UUID          REFERENCES usuarios(id) ON DELETE SET NULL,
-    caja_id         UUID,         -- FK agregada tras crear cajas (ver 3.10)
-
-    -- Numero de comprobante legible: 'FER-2026-000123'. Unico POR TIENDA, no
-    -- global: las dos tiendas numeran en paralelo aunque esten desconectadas.
-    numero          VARCHAR(30)   NOT NULL,
-
-    subtotal        NUMERIC(12,2) NOT NULL,
-    descuento       NUMERIC(12,2) NOT NULL DEFAULT 0,
-    total           NUMERIC(12,2) NOT NULL,
-    metodo_pago     metodo_pago   NOT NULL DEFAULT 'efectivo',
-    anulada         BOOLEAN       NOT NULL DEFAULT FALSE,
-    observaciones   TEXT,
-
-    ocurrido_en     TIMESTAMPTZ   NOT NULL,
-    created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-
-    CONSTRAINT uq_ventas_numero   UNIQUE (tienda_id, numero),
-    CONSTRAINT chk_montos         CHECK (subtotal >= 0 AND descuento >= 0 AND total >= 0),
-    CONSTRAINT chk_total_coherente CHECK (total = subtotal - descuento)
+    CONSTRAINT FK_SYNCLOG_DISPOSITIVO FOREIGN KEY (dispositivo_id) REFERENCES DISPOSITIVO(id)
 );
 
-CREATE INDEX idx_ventas_fecha  ON ventas(tienda_id, ocurrido_en DESC);
-CREATE INDEX idx_ventas_caja   ON ventas(caja_id) WHERE caja_id IS NOT NULL;
-
--- Ahora que existe ventas, se puede cerrar la referencia desde movimientos.
-ALTER TABLE movimientos_inventario
-    ADD CONSTRAINT fk_mov_venta FOREIGN KEY (venta_id)
-    REFERENCES ventas(id) ON DELETE SET NULL;
-
+CREATE INDEX IX_SYNCLOG_DISPOSITIVO ON SYNC_LOG(dispositivo_id, created_at DESC);
+GO
 
 -- -----------------------------------------------------------------------------
--- 3.9 LINEAS DE VENTA
+-- 2.9 CAJA -- el turno de trabajo
 --
--- Cada articulo dentro de una venta.
+-- SOBRE 'diferencia' Y EL EFECTIVO ESPERADO.
+-- El efectivo esperado (monto inicial + ventas en efectivo del turno) NO se
+-- guarda: es exactamente lo que 'diferencia' ya expresa, y almacenar los dos
+-- seria guardar el mismo dato dos veces, con el riesgo de que se contradigan.
 --
--- Se copian precio_unitario Y costo_unitario del producto en el momento de
--- vender. Es una desnormalizacion DELIBERADA: sin ella, si maniana sube el
--- precio del balde, todos los reportes de ganancia del anio pasado cambiarian
--- solos. Congelando el precio, cada venta conserva su verdad historica.
+-- Lo esperado se RECALCULA cuando hace falta, en la vista v_cuadre_caja, que
+-- suma las ventas en efectivo de la caja y compara contra lo contado. Esa
+-- vista es la que permite detectar si el valor guardado en 'diferencia' dejo
+-- de coincidir con la realidad -- que es justamente lo que una columna
+-- redundante no permitiria ver.
 -- -----------------------------------------------------------------------------
-CREATE TABLE venta_lineas (
-    id              UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
-    venta_id        UUID          NOT NULL REFERENCES ventas(id) ON DELETE CASCADE,
-    producto_id     UUID          NOT NULL REFERENCES productos(id) ON DELETE RESTRICT,
-    cantidad        NUMERIC(12,3) NOT NULL,
-    precio_unitario NUMERIC(12,2) NOT NULL,  -- congelado
-    costo_unitario  NUMERIC(12,2) NOT NULL DEFAULT 0,  -- congelado
-    subtotal        NUMERIC(12,2) NOT NULL,
+CREATE TABLE CAJA (
+    id                  INT           IDENTITY(1,1) PRIMARY KEY,
+    tienda_id           INT           NOT NULL,
+    usuario_id          INT           NOT NULL,
 
-    CONSTRAINT chk_linea_cantidad CHECK (cantidad > 0),
-    CONSTRAINT chk_linea_subtotal CHECK (subtotal = ROUND(cantidad * precio_unitario, 2))
-);
+    monto_inicial       DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+    -- Lo que hay fisicamente en el cajon al cerrar. NULL mientras esta abierta:
+    -- todavia no se conto.
+    efectivo_contado    DECIMAL(18,2) NULL,
+    -- Faltante (negativo) o sobrante (positivo) del arqueo.
+    diferencia          DECIMAL(18,2) NULL,
 
-CREATE INDEX idx_lineas_venta    ON venta_lineas(venta_id);
-CREATE INDEX idx_lineas_producto ON venta_lineas(producto_id);
+    estado              VARCHAR(20)   NOT NULL DEFAULT 'abierta',
+    abierta_en          DATETIME2(3)  NOT NULL DEFAULT SYSUTCDATETIME(),
+    cerrada_en          DATETIME2(3)  NULL,
+    observaciones       VARCHAR(MAX),
 
+    CONSTRAINT FK_CAJA_TIENDA  FOREIGN KEY (tienda_id)  REFERENCES TIENDA(id),
+    CONSTRAINT FK_CAJA_USUARIO FOREIGN KEY (usuario_id) REFERENCES Usuario(id),
+    CONSTRAINT CK_CAJA_ESTADO CHECK (estado IN ('abierta', 'cerrada', 'revisada')),
 
--- -----------------------------------------------------------------------------
--- 3.10 CAJAS  (apertura y cierre del turno)
---
--- Una caja se abre al empezar el dia con un monto inicial y se cierra al final
--- contando el efectivo real. La diferencia entre lo esperado y lo contado es
--- exactamente el faltante o sobrante que hoy se descubre a fin de mes sin
--- saber de donde salio.
---
--- esperado y contado se guardan por separado a proposito: si se guardara solo
--- la diferencia, se perderia la posibilidad de auditar cual de los dos numeros
--- estaba mal.
--- -----------------------------------------------------------------------------
-CREATE TABLE cajas (
-    id                  UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
-    tienda_id           UUID          NOT NULL REFERENCES tiendas(id) ON DELETE RESTRICT,
-    usuario_apertura_id UUID          REFERENCES usuarios(id) ON DELETE SET NULL,
-    usuario_cierre_id   UUID          REFERENCES usuarios(id) ON DELETE SET NULL,
-
-    monto_inicial       NUMERIC(12,2) NOT NULL DEFAULT 0,
-    efectivo_esperado   NUMERIC(12,2),  -- monto_inicial + ventas en efectivo
-    efectivo_contado    NUMERIC(12,2),  -- lo que hay fisicamente en el cajon
-
-    -- Columna GENERADA: la calcula PostgreSQL, no se puede escribir a mano.
-    -- Nunca puede quedar inconsistente con los dos valores de arriba.
-    diferencia          NUMERIC(12,2)
-        GENERATED ALWAYS AS (efectivo_contado - efectivo_esperado) STORED,
-
-    estado              estado_caja   NOT NULL DEFAULT 'abierta',
-    abierta_en          TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-    cerrada_en          TIMESTAMPTZ,
-    observaciones       TEXT,
-
-    CONSTRAINT chk_cierre_completo CHECK (
+    -- Una caja cerrada tiene que tener fecha de cierre y plata contada. Sin
+    -- esto se puede marcar una caja como cerrada sin haberla arqueado, que es
+    -- precisamente el control que esta tabla existe para imponer.
+    CONSTRAINT CK_CAJA_CIERRE_COMPLETO CHECK (
         estado = 'abierta'
         OR (cerrada_en IS NOT NULL AND efectivo_contado IS NOT NULL)
     )
 );
 
--- Indice UNICO PARCIAL: garantiza que una tienda no pueda tener dos cajas
--- abiertas a la vez. La condicion WHERE hace que la restriccion aplique solo
--- a las cajas abiertas; las cerradas pueden ser muchas.
-CREATE UNIQUE INDEX uq_caja_abierta_por_tienda ON cajas(tienda_id)
+-- Indice unico FILTRADO: una sola caja ABIERTA por tienda a la vez. Es la
+-- version SQL Server del indice unico parcial. Sin el, dos turnos solapados
+-- cobran contra la misma caja y el arqueo no cuadra nunca.
+CREATE UNIQUE INDEX UX_CAJA_ABIERTA_POR_TIENDA ON CAJA(tienda_id)
     WHERE estado = 'abierta';
-
-ALTER TABLE ventas
-    ADD CONSTRAINT fk_ventas_caja FOREIGN KEY (caja_id)
-    REFERENCES cajas(id) ON DELETE SET NULL;
-
+GO
 
 -- -----------------------------------------------------------------------------
--- 3.11 DISPOSITIVOS Y BITACORA DE SINCRONIZACION
+-- 2.10 VENTA
+-- -----------------------------------------------------------------------------
+CREATE TABLE VENTA (
+    id            INT              IDENTITY(1,1) PRIMARY KEY,
+    -- Misma idea que en los movimientos: lo genera la tablet y hace que
+    -- reenviar la venta no la duplique.
+    uuid_externo  UNIQUEIDENTIFIER NULL,
+
+    tienda_id     INT              NOT NULL,
+    usuario_id    INT NULL,
+    caja_id       INT NULL,
+
+    -- Correlativo POR TIENDA, no global: las dos numeran en paralelo aunque
+    -- esten desconectadas entre si. El comprobante legible se arma con el
+    -- prefijo de la tienda ('FER-1001').
+    numero        INT              NOT NULL,
+
+    subtotal      DECIMAL(18,2)    NOT NULL DEFAULT 0.00,
+    descuento     DECIMAL(18,2)    NOT NULL DEFAULT 0.00,
+    total         DECIMAL(18,2)    NOT NULL DEFAULT 0.00,
+    metodo_pago   VARCHAR(20)      NOT NULL DEFAULT 'efectivo',
+    anulada       BIT              NOT NULL DEFAULT 0,
+    observaciones VARCHAR(MAX),
+
+    ocurrido_en   DATETIME2(3)     NOT NULL DEFAULT SYSUTCDATETIME(),
+    created_at    DATETIME2(3)     NOT NULL DEFAULT SYSUTCDATETIME(),
+
+    CONSTRAINT FK_VENTA_TIENDA  FOREIGN KEY (tienda_id)  REFERENCES TIENDA(id),
+    CONSTRAINT FK_VENTA_USUARIO FOREIGN KEY (usuario_id) REFERENCES Usuario(id),
+    CONSTRAINT FK_VENTA_CAJA    FOREIGN KEY (caja_id)    REFERENCES CAJA(id),
+
+    CONSTRAINT CK_VENTA_METODO CHECK
+        (metodo_pago IN ('efectivo', 'tarjeta', 'transferencia', 'credito', 'otro')),
+    CONSTRAINT CK_VENTA_MONTOS CHECK (subtotal >= 0 AND descuento >= 0 AND total >= 0),
+    -- El total no puede contradecir a sus partes. Es la clase de error que
+    -- nadie detecta mirando, porque el numero parece razonable.
+    CONSTRAINT CK_VENTA_TOTAL CHECK (total = subtotal - descuento),
+
+    -- Dos facturas no pueden compartir numero dentro de la misma tienda.
+    CONSTRAINT UQ_VENTA_NUMERO UNIQUE (tienda_id, numero)
+);
+
+CREATE UNIQUE INDEX UX_VENTA_UUID ON VENTA(uuid_externo) WHERE uuid_externo IS NOT NULL;
+CREATE INDEX IX_VENTA_FECHA ON VENTA(tienda_id, ocurrido_en DESC);
+CREATE INDEX IX_VENTA_CAJA  ON VENTA(caja_id) WHERE caja_id IS NOT NULL;
+GO
+
+-- Ahora que existe VENTA se puede cerrar el vinculo desde los movimientos.
+-- La clave foranea no se declaro antes porque la tabla todavia no existia.
+ALTER TABLE MOVIMIENTO_INVENTARIO
+    ADD CONSTRAINT FK_MOV_VENTA FOREIGN KEY (venta_id) REFERENCES VENTA(id);
+GO
+
+-- -----------------------------------------------------------------------------
+-- 2.11 VENTA_LINEA -- entidad debil
 --
--- Registra cada tablet y cuando sincronizo por ultima vez. Sirve para que el
--- panel avise "la tablet de la plastiqueria no sincroniza hace 3 horas", que
--- suele ser el primer sintoma de un problema.
+-- Su clave primaria es (venta_id, numero): una linea no existe por si sola,
+-- solo dentro de su venta, y se identifica por el orden en que aparece en el
+-- comprobante. Es la definicion de entidad debil, y el ON DELETE CASCADE la
+-- completa: borrar la venta se lleva sus lineas.
+--
+-- PRECIOS CONGELADOS. Guarda copia del precio y del costo al momento de
+-- vender. Es duplicacion a proposito: sin ella, subir el precio de un balde de
+-- 38 a 45 haria que todos los reportes de ganancia del anio pasado se
+-- recalcularan solos, mostrando utilidades que nunca ocurrieron.
+-- Guardar tambien el COSTO es lo que permite calcular el margen real.
 -- -----------------------------------------------------------------------------
-CREATE TABLE dispositivos (
-    id              UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-    tienda_id       UUID         NOT NULL REFERENCES tiendas(id) ON DELETE CASCADE,
-    nombre          VARCHAR(100) NOT NULL,   -- "Tablet mostrador ferreteria"
-    ultimo_sync     TIMESTAMPTZ,
-    created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+CREATE TABLE VENTA_LINEA (
+    venta_id        INT           NOT NULL,
+    numero          INT           NOT NULL,
+    producto_id     INT           NOT NULL,
+    cantidad        DECIMAL(18,3) NOT NULL,
+    precio_unitario DECIMAL(18,2) NOT NULL,
+    costo_unitario  DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+    subtotal        DECIMAL(18,2) NOT NULL,
+
+    CONSTRAINT PK_VENTA_LINEA PRIMARY KEY (venta_id, numero),
+    CONSTRAINT FK_VENTALINEA_VENTA    FOREIGN KEY (venta_id)    REFERENCES VENTA(id) ON DELETE CASCADE,
+    CONSTRAINT FK_VENTALINEA_PRODUCTO FOREIGN KEY (producto_id) REFERENCES PRODUCTO(id),
+
+    CONSTRAINT CK_LINEA_CANTIDAD CHECK (cantidad > 0),
+    CONSTRAINT CK_LINEA_SUBTOTAL CHECK (subtotal = ROUND(cantidad * precio_unitario, 2))
 );
 
-CREATE TABLE sync_log (
-    id                  BIGSERIAL   PRIMARY KEY,
-    dispositivo_id      UUID        REFERENCES dispositivos(id) ON DELETE CASCADE,
-    registros_enviados  INTEGER     NOT NULL DEFAULT 0,
-    registros_aceptados INTEGER     NOT NULL DEFAULT 0,
-    registros_duplicados INTEGER    NOT NULL DEFAULT 0,  -- descartados por idempotencia
-    error               TEXT,
-    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX idx_synclog_dispositivo ON sync_log(dispositivo_id, created_at DESC);
-
+CREATE INDEX IX_LINEA_PRODUCTO ON VENTA_LINEA(producto_id);
+GO
 
 -- -----------------------------------------------------------------------------
--- 3.12 SESIONES
+-- 2.12 SESION
 --
 -- Una fila por sesion abierta. El usuario recibe un token al entrar y lo manda
 -- en cada peticion.
 --
--- POR QUE UNA TABLA Y NO UN TOKEN AUTOCONTENIDO (tipo JWT):
--- Un token autocontenido no se puede revocar. Si una tablet se pierde o un
--- empleado deja de trabajar, el token sigue siendo valido hasta que caduque, y
--- no hay forma de cortarlo sin cambiar la clave de firma y echar a todos. Con
--- una tabla, revocar es un UPDATE de una fila.
--- El costo es una consulta mas por peticion; a esta escala no se nota.
+-- POR QUE UNA TABLA Y NO UN TOKEN AUTOCONTENIDO (tipo JWT): un token firmado
+-- no se puede revocar. Si una tablet se pierde o alguien deja de trabajar, el
+-- token sigue valido hasta caducar. Con una tabla, revocar es un UPDATE.
 --
--- POR QUE SE GUARDA EL HASH DEL TOKEN Y NO EL TOKEN:
--- Exactamente el mismo motivo que con las contrasenias. Si alguien consigue una
--- copia de la base, con los tokens en claro entra como cualquier usuario que
--- tenga la sesion abierta. Con el hash, no: tendria que invertir SHA-256.
--- Aca alcanza SHA-256 (y no scrypt, como en las contrasenias) porque el token
--- son 32 bytes al azar, no una palabra adivinable: no hay diccionario que
+-- POR QUE SE GUARDA EL HASH DEL TOKEN: mismo motivo que con las contrasenias.
+-- Si se filtra un volcado de la base, con los tokens en claro se entra como
+-- cualquier usuario con sesion abierta. Aca alcanza SHA-256 (y no scrypt, como
+-- en las claves) porque el token son 32 bytes al azar: no hay diccionario que
 -- probar, asi que no hace falta encarecer cada intento.
 -- -----------------------------------------------------------------------------
-CREATE TABLE sesiones (
-    -- SHA-256 del token, en hexadecimal. El token en claro solo existe en el
-    -- dispositivo del usuario; el servidor no puede recuperarlo.
-    token_hash      CHAR(64)     PRIMARY KEY,
-    usuario_id      UUID         NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+CREATE TABLE SESION (
+    token_hash     CHAR(64)     NOT NULL PRIMARY KEY,   -- SHA-256 en hexadecimal
+    usuario_id     INT          NOT NULL,
+    dispositivo_id INT NULL,
+    expira_en      DATETIME2(3) NOT NULL,
+    revocada_en    DATETIME2(3) NULL,                   -- NULL = sigue viva
+    created_at     DATETIME2(3) NOT NULL DEFAULT SYSUTCDATETIME(),
 
-    -- Desde que tablet se abrio. Permite cerrar todas las sesiones de un
-    -- dispositivo extraviado sin tocar las de los demas.
-    dispositivo_id  UUID         REFERENCES dispositivos(id) ON DELETE SET NULL,
-
-    expira_en       TIMESTAMPTZ  NOT NULL,
-    revocada_en     TIMESTAMPTZ,            -- NULL = sigue viva
-    created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-
-    CONSTRAINT chk_sesion_vigencia CHECK (expira_en > created_at)
+    CONSTRAINT FK_SESION_USUARIO     FOREIGN KEY (usuario_id)     REFERENCES Usuario(id),
+    CONSTRAINT FK_SESION_DISPOSITIVO FOREIGN KEY (dispositivo_id) REFERENCES DISPOSITIVO(id),
+    CONSTRAINT CK_SESION_VIGENCIA CHECK (expira_en > created_at)
 );
 
--- Indice PARCIAL: solo indexa las sesiones vivas. Las caducadas y revocadas se
--- acumulan para siempre (son la bitacora de accesos), pero no engordan el
--- indice que se consulta en cada peticion.
-CREATE INDEX idx_sesiones_usuario ON sesiones(usuario_id)
-    WHERE revocada_en IS NULL;
-
+-- Indice filtrado: las sesiones muertas se acumulan para siempre (son la
+-- bitacora de accesos) pero no engordan el indice que se consulta en cada
+-- peticion.
+CREATE INDEX IX_SESION_USUARIO ON SESION(usuario_id) WHERE revocada_en IS NULL;
+GO
 
 -- -----------------------------------------------------------------------------
--- 3.13 INTENTOS DE INGRESO
+-- 2.13 INTENTO_LOGIN
 --
--- Bitacora de cada intento de entrar, acertado o no.
---
--- POR QUE EXISTE: un PIN de 4 digitos son 10.000 combinaciones. Un programa que
--- pruebe una por segundo las agota en menos de tres horas. El hash no protege
--- de eso -- protege de que roben la base, no de que prueben por la puerta.
--- Lo unico que lo frena es contar los fallos y bloquear.
+-- Un PIN de 4 digitos son 10.000 combinaciones. Un programa que pruebe una por
+-- segundo las agota en menos de tres horas. EL HASH NO PROTEGE DE ESTO: protege
+-- de que roben la base, no de que prueben por la puerta. Lo unico que lo frena
+-- es contar los fallos y bloquear.
 --
 -- Se registran tambien los aciertos: el patron "veinte fallos y un acierto" es
 -- la firma de un ataque que funciono, y sin los aciertos no se ve.
 --
--- No hay clave foranea a usuarios a proposito: hay que poder registrar el
--- intento de entrar con un email que no existe, que es justamente el caso
--- interesante.
+-- No hay clave foranea a Usuario a proposito: hay que poder registrar el
+-- intento de entrar con un email que no existe, que es el caso interesante.
 -- -----------------------------------------------------------------------------
-CREATE TABLE intentos_login (
-    id              BIGSERIAL    PRIMARY KEY,
+CREATE TABLE INTENTO_LOGIN (
+    id            INT          IDENTITY(1,1) PRIMARY KEY,
+    identificador VARCHAR(150) NOT NULL,   -- email del admin, o id del empleado
+    tienda_id     INT NULL,
+    exitoso       BIT          NOT NULL,
+    ip            VARCHAR(45),             -- 45 caracteres = IPv6 en forma larga
+    created_at    DATETIME2(3) NOT NULL DEFAULT SYSUTCDATETIME(),
 
-    -- Con que se intento entrar: el email del admin, o el id del empleado.
-    -- Se guarda como texto porque puede no corresponder a ningun usuario.
-    identificador   VARCHAR(150) NOT NULL,
-    tienda_id       UUID         REFERENCES tiendas(id) ON DELETE SET NULL,
-    exitoso         BOOLEAN      NOT NULL,
-    ip              VARCHAR(45),            -- 45 caracteres = IPv6 en su forma larga
-    created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    CONSTRAINT FK_INTENTO_TIENDA FOREIGN KEY (tienda_id) REFERENCES TIENDA(id)
 );
 
--- Indice PARCIAL sobre los fallos: la consulta de bloqueo pregunta siempre
+-- Indice filtrado sobre los fallos: la consulta de bloqueo pregunta siempre
 -- "cuantos intentos FALLIDOS tuvo este identificador en los ultimos minutos".
--- Los aciertos quedan en la tabla para auditoria pero fuera de este indice.
-CREATE INDEX idx_intentos_fallidos ON intentos_login(identificador, created_at DESC)
-    WHERE NOT exitoso;
-
+CREATE INDEX IX_INTENTO_FALLIDO ON INTENTO_LOGIN(identificador, created_at DESC)
+    WHERE exitoso = 0;
+GO
 
 -- =============================================================================
--- 4. TRIGGERS DE NEGOCIO
+-- 3. TRIGGERS DE NEGOCIO
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
--- 4.1 Mantener la tabla stock al dia
+-- 3.1 Mantener Stock al dia
 --
--- Se dispara con cada movimiento insertado. Si no existe fila de stock para
--- ese par (tienda, producto), la crea; si existe, le suma la cantidad.
--- El UPSERT (INSERT ... ON CONFLICT) resuelve los dos casos en una sola
--- sentencia y de forma atomica, sin condicion de carrera entre dos cajas
--- vendiendo el mismo producto a la vez.
+-- CUIDADO -- EN SQL SERVER LOS TRIGGERS SE DISPARAN UNA VEZ POR SENTENCIA,
+-- NO UNA VEZ POR FILA. 'inserted' es una tabla con TODAS las filas insertadas.
+-- Escribir este trigger como si trajera una sola (SELECT cantidad FROM inserted)
+-- funciona en las pruebas de a una fila y pierde datos silenciosamente en
+-- cuanto llega un lote de sincronizacion. Por eso todo aca es por conjuntos.
+--
+-- Primero se AGRUPA: un mismo lote puede traer varios movimientos del mismo
+-- producto, y hay que sumarlos antes de aplicarlos.
 -- -----------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION fn_aplicar_movimiento_a_stock()
-RETURNS TRIGGER AS $$
+CREATE OR ALTER TRIGGER trg_movimiento_actualiza_stock
+ON MOVIMIENTO_INVENTARIO
+AFTER INSERT
+AS
 BEGIN
-    INSERT INTO stock (tienda_id, producto_id, cantidad, updated_at)
-    VALUES (NEW.tienda_id, NEW.producto_id, NEW.cantidad, NOW())
-    ON CONFLICT (tienda_id, producto_id) DO UPDATE
-        SET cantidad   = stock.cantidad + EXCLUDED.cantidad,
-            updated_at = NOW();
-    RETURN NEW;
+    SET NOCOUNT ON;
+
+    DECLARE @cambios TABLE (
+        tienda_id   INT,
+        producto_id INT,
+        delta       DECIMAL(18,3),
+        PRIMARY KEY (tienda_id, producto_id)
+    );
+
+    INSERT INTO @cambios (tienda_id, producto_id, delta)
+    SELECT tienda_id, producto_id, SUM(cantidad)
+      FROM inserted
+     GROUP BY tienda_id, producto_id;
+
+    -- Los que ya tienen fila: se les suma el delta.
+    UPDATE s
+       SET s.cantidad   = s.cantidad + c.delta,
+           s.updated_at = SYSUTCDATETIME()
+      FROM Stock s
+      JOIN @cambios c
+        ON c.tienda_id = s.tienda_id AND c.producto_id = s.producto_id;
+
+    -- Los que no: se crea la fila con el delta como saldo inicial.
+    INSERT INTO Stock (tienda_id, producto_id, cantidad, cantidad_minima, updated_at)
+    SELECT c.tienda_id, c.producto_id, c.delta, 0, SYSUTCDATETIME()
+      FROM @cambios c
+     WHERE NOT EXISTS (
+           SELECT 1 FROM Stock s
+            WHERE s.tienda_id = c.tienda_id AND s.producto_id = c.producto_id);
 END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trg_movimiento_actualiza_stock
-    AFTER INSERT ON movimientos_inventario
-    FOR EACH ROW EXECUTE FUNCTION fn_aplicar_movimiento_a_stock();
-
+GO
 
 -- -----------------------------------------------------------------------------
--- 4.2 Proteger el caracter append-only del historial
+-- 3.2 El historial es inmutable
 --
 -- Impide fisicamente modificar o borrar un movimiento ya registrado. Ni la
--- aplicacion ni alguien conectado con psql pueden alterar el historial: la
--- unica forma de corregir es insertar un movimiento de 'ajuste'.
+-- aplicacion ni alguien conectado con SSMS pueden alterar el historial: la
+-- unica forma de corregir es insertar un movimiento de 'ajuste' que compense.
+-- Asi el historial nunca miente, y el error y su correccion quedan ambos a la
+-- vista.
+--
+-- Es un trigger INSTEAD OF y no un AFTER: el AFTER tendria que dejar que la
+-- modificacion ocurra para despues revertirla. El INSTEAD OF la reemplaza por
+-- el error, sin tocar los datos.
+--
+-- (El modelo anterior resolvia esto con una columna 'append_only BIT'. Una
+-- columna no impide nada: es un dato, no una regla. Cualquier UPDATE la ignora.)
 -- -----------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION fn_bloquear_modificacion()
-RETURNS TRIGGER AS $$
+CREATE OR ALTER TRIGGER trg_movimientos_inmutables
+ON MOVIMIENTO_INVENTARIO
+INSTEAD OF UPDATE, DELETE
+AS
 BEGIN
-    RAISE EXCEPTION
-        'movimientos_inventario es de solo insercion: registre un movimiento de ajuste en lugar de modificar el historial';
+    SET NOCOUNT ON;
+    THROW 50001,
+        'MOVIMIENTO_INVENTARIO es de solo agregado: para corregir, registre un movimiento de tipo ajuste.',
+        1;
 END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trg_movimientos_inmutables
-    BEFORE UPDATE OR DELETE ON movimientos_inventario
-    FOR EACH ROW EXECUTE FUNCTION fn_bloquear_modificacion();
-
+GO
 
 -- =============================================================================
--- 5. FUNCION DE RECONCILIACION
+-- 4. VISTAS -- los reportes del panel
 --
--- Recalcula la tabla stock desde cero a partir de los movimientos. Es la red
--- de seguridad del cache: si por un bug o una carga manual el stock quedara
--- desalineado, esta funcion lo devuelve a la verdad.
---
--- Devuelve las filas que estaban mal, para poder auditar que se corrigio.
--- =============================================================================
-CREATE OR REPLACE FUNCTION fn_recalcular_stock(p_tienda_id UUID DEFAULT NULL)
-RETURNS TABLE (
-    tienda_id       UUID,
-    producto_id     UUID,
-    cantidad_previa NUMERIC,
-    cantidad_real   NUMERIC
-) AS $$
-BEGIN
-    RETURN QUERY
-    -- 1) Verdad: el total que surge de sumar los movimientos.
-    WITH calculado AS (
-        SELECT m.tienda_id, m.producto_id, SUM(m.cantidad) AS total
-        FROM movimientos_inventario m
-        WHERE p_tienda_id IS NULL OR m.tienda_id = p_tienda_id
-        GROUP BY m.tienda_id, m.producto_id
-    ),
-    -- 2) Diferencias, capturadas ANTES de tocar nada. Hacerlo en un paso
-    --    separado es lo que permite informar el valor previo sin depender
-    --    del orden de evaluacion del UPDATE.
-    diferencias AS (
-        SELECT c.tienda_id, c.producto_id, s.cantidad AS previa, c.total AS nueva
-        FROM calculado c
-        JOIN stock s
-          ON s.tienda_id = c.tienda_id AND s.producto_id = c.producto_id
-        WHERE s.cantidad IS DISTINCT FROM c.total
-    ),
-    -- 3) Correccion. Un CTE que modifica datos se ejecuta siempre y por
-    --    completo, aunque la consulta principal no lea su salida.
-    corregidas AS (
-        UPDATE stock s
-        SET cantidad = d.nueva, updated_at = NOW()
-        FROM diferencias d
-        WHERE s.tienda_id = d.tienda_id AND s.producto_id = d.producto_id
-        RETURNING 1
-    )
-    SELECT d.tienda_id, d.producto_id, d.previa, d.nueva FROM diferencias d;
-END;
-$$ LANGUAGE plpgsql;
-
-
--- =============================================================================
--- 6. VISTAS DE CONSULTA
---
--- Encapsulan los JOIN que el panel del duenio necesita, para que la aplicacion
--- no repita la misma logica en varios lugares.
+-- El calculo vive en la BASE y no en la aplicacion, para que el mismo numero
+-- salga igual desde la API, desde SSMS o desde cualquier herramienta de
+-- reportes que se conecte despues.
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
--- 6.1 Inventario valorizado: cuanta plata hay parada en mercaderia
+-- 4.1 Inventario valorizado: cuanta plata hay parada en mercaderia
 -- -----------------------------------------------------------------------------
-CREATE OR REPLACE VIEW v_inventario_valorizado AS
+CREATE OR ALTER VIEW v_inventario_valorizado AS
 SELECT
-    t.id                                 AS tienda_id,
-    t.nombre                             AS tienda,
-    p.id                                 AS producto_id,
+    t.id     AS tienda_id,
+    t.nombre AS tienda,
+    p.id     AS producto_id,
     p.codigo,
-    p.nombre                             AS producto,
+    p.nombre AS producto,
     s.cantidad,
     s.cantidad_minima,
     p.precio_costo,
     p.precio_venta,
-    ROUND(s.cantidad * p.precio_costo, 2) AS valor_costo,
-    ROUND(s.cantidad * p.precio_venta, 2) AS valor_venta,
-    (s.cantidad <= s.cantidad_minima)     AS necesita_reposicion
-FROM stock s
-JOIN tiendas   t ON t.id = s.tienda_id
-JOIN productos p ON p.id = s.producto_id
-WHERE p.activo;
-
+    CAST(ROUND(s.cantidad * p.precio_costo, 2) AS DECIMAL(18,2)) AS valor_costo,
+    CAST(ROUND(s.cantidad * p.precio_venta, 2) AS DECIMAL(18,2)) AS valor_venta,
+    CAST(s.necesita_reposicion AS BIT) AS necesita_reposicion
+FROM Stock s
+JOIN TIENDA   t ON t.id = s.tienda_id
+JOIN PRODUCTO p ON p.id = s.producto_id
+WHERE p.activo = 1;
+GO
 
 -- -----------------------------------------------------------------------------
--- 6.2 Ventas por dia y por tienda, con ganancia real
+-- 4.2 Ventas por dia y por tienda, con ganancia real
 --
 -- Responde la pregunta que hoy nadie puede contestar sin sentarse dos horas:
 -- no cuanto se VENDIO, sino cuanto se GANO.
 --
 -- CUIDADO -- ERROR DE AGREGACION POR FAN-OUT:
--- La tentacion es unir ventas con venta_lineas y sumar todo junto. Esta mal.
--- El JOIN multiplica la cabecera por cada linea: una venta de Bs 125 con dos
--- articulos aparece DOS veces, y SUM(v.total) devuelve 250 en lugar de 125.
--- La ganancia sale inflada y nadie lo nota, porque el numero parece razonable.
+-- La tentacion es unir VENTA con VENTA_LINEA y sumar todo junto. Esta mal. El
+-- JOIN multiplica la cabecera por cada linea: una venta de 880 con dos
+-- articulos aparece DOS veces y SUM(total) devuelve 1760. La ganancia sale
+-- inflada y nadie lo nota, porque el numero parece razonable.
 --
--- La solucion es agregar las lineas PRIMERO (CTE costos, una fila por venta) y
--- recien despues unirlas a la cabecera. Asi cada venta se cuenta una sola vez.
+-- La solucion es agregar las lineas PRIMERO (una fila por venta) y recien
+-- despues unirlas a la cabecera.
 -- -----------------------------------------------------------------------------
-CREATE OR REPLACE VIEW v_ventas_diarias AS
+CREATE OR ALTER VIEW v_ventas_diarias AS
 WITH costos AS (
-    -- Una unica fila por venta: cuanto costo la mercaderia que salio.
     SELECT l.venta_id, SUM(l.cantidad * l.costo_unitario) AS costo
-    FROM venta_lineas l
-    GROUP BY l.venta_id
+      FROM VENTA_LINEA l
+     GROUP BY l.venta_id
 )
 SELECT
     v.tienda_id,
-    t.nombre                                  AS tienda,
-    DATE(v.ocurrido_en)                       AS fecha,
-    COUNT(*)                                  AS cantidad_ventas,
-    SUM(v.total)                              AS total_vendido,
-    SUM(COALESCE(c.costo, 0))                 AS costo_mercaderia,
-    SUM(v.total) - SUM(COALESCE(c.costo, 0))  AS ganancia_bruta,
-    ROUND(AVG(v.total), 2)                    AS ticket_promedio
-FROM ventas v
-JOIN tiendas t ON t.id = v.tienda_id
+    t.nombre                  AS tienda,
+    CAST(v.ocurrido_en AS DATE) AS fecha,
+    COUNT(*)                  AS cantidad_ventas,
+    SUM(v.total)              AS total_vendido,
+    SUM(ISNULL(c.costo, 0))   AS costo_mercaderia,
+    SUM(v.total) - SUM(ISNULL(c.costo, 0)) AS ganancia_bruta,
+    CAST(ROUND(AVG(v.total), 2) AS DECIMAL(18,2)) AS ticket_promedio
+FROM VENTA v
+JOIN TIENDA t ON t.id = v.tienda_id
 -- LEFT JOIN: una venta sin lineas cargadas igual debe figurar en el reporte,
 -- con costo cero, en lugar de desaparecer silenciosamente.
 LEFT JOIN costos c ON c.venta_id = v.id
-WHERE NOT v.anulada
-GROUP BY v.tienda_id, t.nombre, DATE(v.ocurrido_en);
-
+WHERE v.anulada = 0
+GROUP BY v.tienda_id, t.nombre, CAST(v.ocurrido_en AS DATE);
+GO
 
 -- -----------------------------------------------------------------------------
--- 6.3 Productos que necesitan reposicion (alimenta las alertas del panel)
+-- 4.3 Productos que necesitan reposicion
 -- -----------------------------------------------------------------------------
-CREATE OR REPLACE VIEW v_alertas_stock AS
-SELECT
-    t.nombre    AS tienda,
+CREATE OR ALTER VIEW v_alertas_stock AS
+SELECT TOP 100 PERCENT
+    t.id     AS tienda_id,
+    t.nombre AS tienda,
     p.codigo,
-    p.nombre    AS producto,
+    p.nombre AS producto,
     s.cantidad,
     s.cantidad_minima,
     p.unidad_medida
-FROM stock s
-JOIN tiendas   t ON t.id = s.tienda_id
-JOIN productos p ON p.id = s.producto_id
-WHERE p.activo
-  AND s.cantidad <= s.cantidad_minima
-ORDER BY (s.cantidad - s.cantidad_minima) ASC;
+FROM Stock s
+JOIN TIENDA   t ON t.id = s.tienda_id
+JOIN PRODUCTO p ON p.id = s.producto_id
+WHERE p.activo = 1
+  AND s.necesita_reposicion = 1;
+GO
 
+-- -----------------------------------------------------------------------------
+-- 4.4 Cuadre de caja
+--
+-- Aca es donde se paga el no haber guardado el efectivo esperado: se recalcula.
+--
+-- esperado = monto_inicial + ventas en efectivo de esa caja
+-- diferencia_real = efectivo_contado - esperado
+--
+-- La columna 'diferencia' que guarda CAJA es lo que la aplicacion anoto al
+-- cerrar el turno. 'diferencia_real' es lo que sale de las ventas registradas.
+-- Cuando no coinciden, 'cuadra' da 0 y hay algo que revisar: o se cargo mal el
+-- arqueo, o entraron ventas despues de cerrar.
+--
+-- Ese contraste es imposible de hacer si el valor esperado se guarda como
+-- columna, porque entonces ambos lados del calculo salen del mismo dato.
+-- -----------------------------------------------------------------------------
+CREATE OR ALTER VIEW v_cuadre_caja AS
+WITH efectivo AS (
+    SELECT v.caja_id, SUM(v.total) AS vendido_efectivo
+      FROM VENTA v
+     WHERE v.anulada = 0
+       AND v.metodo_pago = 'efectivo'
+       AND v.caja_id IS NOT NULL
+     GROUP BY v.caja_id
+)
+SELECT
+    c.id         AS caja_id,
+    c.tienda_id,
+    t.nombre     AS tienda,
+    u.nombre     AS usuario,
+    c.estado,
+    c.abierta_en,
+    c.cerrada_en,
+    c.monto_inicial,
+    ISNULL(e.vendido_efectivo, 0)                        AS vendido_efectivo,
+    c.monto_inicial + ISNULL(e.vendido_efectivo, 0)      AS esperado,
+    c.efectivo_contado,
+    c.diferencia                                         AS diferencia_registrada,
+    c.efectivo_contado - (c.monto_inicial + ISNULL(e.vendido_efectivo, 0)) AS diferencia_real,
+    CAST(CASE
+        WHEN c.efectivo_contado IS NULL THEN NULL
+        WHEN c.diferencia = c.efectivo_contado - (c.monto_inicial + ISNULL(e.vendido_efectivo, 0))
+            THEN 1 ELSE 0
+    END AS BIT) AS cuadra
+FROM CAJA c
+JOIN TIENDA  t ON t.id = c.tienda_id
+JOIN Usuario u ON u.id = c.usuario_id
+LEFT JOIN efectivo e ON e.caja_id = c.id;
+GO
 
-COMMIT;
+-- =============================================================================
+-- 5. RECONCILIACION DEL CACHE DE STOCK
+--
+-- Stock es un dato derivado. Esta es la red de seguridad que hace aceptable la
+-- duplicacion: compara el cache contra la verdad (la suma de movimientos),
+-- corrige las diferencias e informa cuales corrigio.
+--
+-- Se ejecuta a mano cuando se sospecha una desalineacion:
+--     EXEC sp_recalcular_stock;
+--     EXEC sp_recalcular_stock @solo_informar = 1;   -- sin tocar nada
+-- =============================================================================
+CREATE OR ALTER PROCEDURE sp_recalcular_stock
+    @solo_informar BIT = 0
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- La verdad: lo que dicen los movimientos.
+    WITH verdad AS (
+        SELECT tienda_id, producto_id, SUM(cantidad) AS cantidad_real
+          FROM MOVIMIENTO_INVENTARIO
+         GROUP BY tienda_id, producto_id
+    )
+    SELECT
+        v.tienda_id,
+        v.producto_id,
+        p.nombre AS producto,
+        ISNULL(s.cantidad, 0) AS cantidad_cache,
+        v.cantidad_real,
+        v.cantidad_real - ISNULL(s.cantidad, 0) AS desvio
+    INTO #diferencias
+    FROM verdad v
+    JOIN PRODUCTO p ON p.id = v.producto_id
+    LEFT JOIN Stock s
+           ON s.tienda_id = v.tienda_id AND s.producto_id = v.producto_id
+    WHERE ISNULL(s.cantidad, 0) <> v.cantidad_real;
+
+    SELECT * FROM #diferencias ORDER BY ABS(desvio) DESC;
+
+    -- PRINT no admite subconsultas, asi que el conteo se pasa por una variable.
+    DECLARE @corregidas INT = (SELECT COUNT(*) FROM #diferencias);
+
+    IF @solo_informar = 0
+    BEGIN
+        UPDATE s
+           SET s.cantidad   = d.cantidad_real,
+               s.updated_at = SYSUTCDATETIME()
+          FROM Stock s
+          JOIN #diferencias d
+            ON d.tienda_id = s.tienda_id AND d.producto_id = s.producto_id;
+
+        INSERT INTO Stock (tienda_id, producto_id, cantidad, cantidad_minima, updated_at)
+        SELECT d.tienda_id, d.producto_id, d.cantidad_real, 0, SYSUTCDATETIME()
+          FROM #diferencias d
+         WHERE NOT EXISTS (
+               SELECT 1 FROM Stock s
+                WHERE s.tienda_id = d.tienda_id AND s.producto_id = d.producto_id);
+
+        PRINT CONCAT('Filas de stock corregidas: ', @corregidas);
+    END
+    ELSE
+        PRINT CONCAT('Filas de stock desalineadas: ', @corregidas, ' (no se modifico nada)');
+
+    DROP TABLE #diferencias;
+END;
+GO
 
 -- =============================================================================
 -- FIN DEL ESQUEMA
 -- =============================================================================
+PRINT 'Esquema de Ferreplast creado correctamente.';
+GO

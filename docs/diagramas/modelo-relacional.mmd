@@ -1,0 +1,209 @@
+%% =============================================================================
+%% FERREPLAST -- Modelo entidad-relacion
+%% Corresponde a db/schema.sql (SQL Server). 14 entidades, 23 relaciones.
+%%
+%% Pegar en https://mermaid.live para renderizar y exportar a SVG o PNG.
+%%
+%% NOTACION DE LAS LINEAS
+%%   linea CONTINUA (--)  relacion IDENTIFICADORA: la clave foranea forma parte
+%%                        de la clave primaria del hijo. Son las entidades
+%%                        debiles: Stock y VENTA_LINEA.
+%%   linea PUNTEADA (..)  relacion no identificadora: el hijo tiene clave
+%%                        propia y la foranea es solo una referencia.
+%%
+%% NOTACION DE LA CARDINALIDAD
+%%   ||  exactamente uno        |o  cero o uno (clave foranea que admite NULL)
+%%   |{  uno o varios           o{  cero o varios
+%% =============================================================================
+
+erDiagram
+
+    %% --- Estructura del negocio -------------------------------------------
+    NEGOCIO     ||..o{ TIENDA        : "Posee"
+    NEGOCIO     ||..o{ Usuario       : "Emplea"
+    TIENDA      |o..o{ Usuario       : "Asigna"
+    CATEGORIA   ||..o{ PRODUCTO      : "Clasifica"
+    CATEGORIA   |o..o{ CATEGORIA     : "Contiene"
+
+    %% --- Stock: entidad asociativa que resuelve el M:N tienda-producto ----
+    TIENDA      ||--o{ Stock         : "Almacena"
+    PRODUCTO    ||--o{ Stock         : "Referencia"
+
+    %% --- Inventario --------------------------------------------------------
+    TIENDA      ||..o{ MOVIMIENTO_INVENTARIO : "Afecta"
+    PRODUCTO    ||..o{ MOVIMIENTO_INVENTARIO : "Afecta"
+    Usuario     |o..o{ MOVIMIENTO_INVENTARIO : "Registra"
+    VENTA       |o..o{ MOVIMIENTO_INVENTARIO : "Genera"
+
+    %% --- Dispositivos y sincronizacion -------------------------------------
+    TIENDA      ||..o{ DISPOSITIVO   : "Opera"
+    DISPOSITIVO ||..o{ SYNC_LOG      : "Bitacora"
+
+    %% --- Caja y ventas -----------------------------------------------------
+    TIENDA      ||..o{ CAJA          : "Tiene"
+    Usuario     ||..o{ CAJA          : "Atiende"
+    TIENDA      ||..o{ VENTA         : "Vende"
+    Usuario     |o..o{ VENTA         : "Realiza"
+    CAJA        |o..o{ VENTA         : "Agrupa"
+    VENTA       ||--|{ VENTA_LINEA   : "Detalla"
+    PRODUCTO    ||..o{ VENTA_LINEA   : "Referencia"
+
+    %% --- Acceso al sistema -------------------------------------------------
+    Usuario     ||..o{ SESION        : "Abre"
+    DISPOSITIVO |o..o{ SESION        : "Desde"
+    TIENDA      |o..o{ INTENTO_LOGIN : "Registra"
+
+
+    NEGOCIO {
+        int id PK
+        string nombre
+        string propietario
+        bit activo "booleano real, no el texto si/no"
+        string moneda
+        datetime created_at
+    }
+
+    TIENDA {
+        int id PK
+        int negocio_id FK
+        string nombre
+        string tipo "CHECK ferreteria / plastiqueria / otro"
+        string direccion
+        string prefijo "arma el comprobante legible FER-1001"
+        bit activo
+        datetime created_at
+    }
+
+    CATEGORIA {
+        int id PK
+        string nombre
+        int padre_id FK "auto-referencia: jerarquia de categorias"
+    }
+
+    PRODUCTO {
+        int id PK
+        string codigo UK "unico si existe (indice filtrado)"
+        string nombre
+        int categoria_id FK
+        decimal precio_costo "lo que cuesta"
+        decimal precio_venta "lo que se cobra"
+        string unidad_medida "Unidad / Libra / Metro / Galon"
+        bit activo
+        datetime created_at
+        datetime updated_at
+    }
+
+    Usuario {
+        int id PK
+        int negocio_id FK
+        int tienda_id FK "NULL = administrador: ve las dos tiendas"
+        string nombre
+        string rol "CHECK empleado / encargado / admin"
+        string email UK "unico si existe"
+        string password_hash "scrypt. solo administrador"
+        string pin_hash "scrypt. solo empleado"
+        bit activo
+        datetime ultimo_acceso
+        datetime created_at
+    }
+
+    Stock {
+        int tienda_id PK,FK
+        int producto_id PK,FK
+        decimal cantidad "CACHE: la verdad es la suma de movimientos"
+        decimal cantidad_minima
+        bit necesita_reposicion "COLUMNA CALCULADA: no se puede falsear"
+        datetime updated_at
+    }
+
+    MOVIMIENTO_INVENTARIO {
+        int id PK
+        uniqueidentifier uuid_externo UK "lo genera la tablet: idempotencia"
+        int tienda_id FK
+        int producto_id FK
+        int usuario_id FK "quien lo hizo"
+        int venta_id FK "de que venta salio"
+        string tipo "CHECK entrada / venta / devolucion / merma / ajuste"
+        decimal cantidad "CHECK signo segun tipo: entrada positiva, venta negativa"
+        decimal costo_unitario "congelado al momento del movimiento"
+        string motivo
+        datetime ocurrido_en "cuando paso en la tienda"
+        datetime created_at "cuando llego al servidor"
+    }
+
+    DISPOSITIVO {
+        int id PK
+        int tienda_id FK
+        string nombre
+        datetime ultimo_sync
+        bit activo
+        datetime created_at
+    }
+
+    SYNC_LOG {
+        int id PK
+        int dispositivo_id FK
+        int registros_enviados
+        int registros_aceptados
+        int registros_duplicados "descartados por idempotencia"
+        string error
+        datetime created_at
+    }
+
+    CAJA {
+        int id PK
+        int tienda_id FK
+        int usuario_id FK
+        decimal monto_inicial
+        decimal efectivo_contado "NULL mientras la caja esta abierta"
+        decimal diferencia "faltante o sobrante del arqueo"
+        string estado "CHECK abierta / cerrada / revisada"
+        datetime abierta_en
+        datetime cerrada_en
+        string observaciones
+    }
+
+    VENTA {
+        int id PK
+        uniqueidentifier uuid_externo UK "lo genera la tablet: idempotencia"
+        int tienda_id FK
+        int usuario_id FK
+        int caja_id FK
+        int numero UK "UNIQUE junto con tienda_id"
+        decimal subtotal
+        decimal descuento
+        decimal total "CHECK total = subtotal - descuento"
+        string metodo_pago "CHECK efectivo / tarjeta / transferencia / credito / otro"
+        bit anulada
+        string observaciones
+        datetime ocurrido_en
+        datetime created_at
+    }
+
+    VENTA_LINEA {
+        int venta_id PK,FK
+        int numero PK "orden dentro del comprobante"
+        int producto_id FK
+        decimal cantidad
+        decimal precio_unitario "congelado"
+        decimal costo_unitario "congelado: permite el margen real"
+        decimal subtotal "CHECK subtotal = cantidad x precio"
+    }
+
+    SESION {
+        char token_hash PK "SHA-256 del token. el token nunca se guarda"
+        int usuario_id FK
+        int dispositivo_id FK
+        datetime expira_en
+        datetime revocada_en "NULL = sigue viva"
+        datetime created_at
+    }
+
+    INTENTO_LOGIN {
+        int id PK
+        string identificador "email o id de usuario. sin FK a proposito"
+        int tienda_id FK
+        bit exitoso "se guardan tambien los aciertos"
+        string ip
+        datetime created_at
+    }
