@@ -117,6 +117,44 @@ export const EsquemaSincronizacion = z.object({
   ventas:         z.array(EsquemaVenta).max(500).default([]),
 });
 
+// -----------------------------------------------------------------------------
+// Credenciales de ingreso
+// -----------------------------------------------------------------------------
+
+// Ingreso del administrador: email y contrasenia, desde el panel web.
+//
+// El minimo de 8 caracteres se exige al CREAR la contrasenia, no al usarla:
+// aca se acepta cualquier cosa no vacia. Si alguien tiene una clave vieja mas
+// corta tiene que poder entrar para cambiarla; rechazarla en el ingreso la
+// dejaria afuera de su propia cuenta.
+export const EsquemaLoginAdmin = z.object({
+  email:    z.email().max(150),
+  password: z.string().min(1).max(200),
+});
+
+// Ingreso del empleado: elige su nombre de una lista y teclea el PIN.
+//
+// Se manda usuario_id y no el nombre porque dos empleados pueden llamarse
+// igual, y porque el nombre cambia (se corrige un error de tipeo) mientras que
+// el identificador no.
+export const EsquemaLoginPin = z.object({
+  usuario_id:     uuid(),
+  pin:            z.string().regex(/^\d{4,8}$/, 'el PIN son de 4 a 8 digitos'),
+  dispositivo_id: uuid().nullish(),
+});
+
+// Cambio de clave propia. Aca SI se exige una contrasenia decente, porque es
+// el momento en que se elige.
+export const EsquemaCambioPassword = z.object({
+  actual: z.string().min(1).max(200),
+  nueva:  z.string().min(8, 'la contrasenia necesita al menos 8 caracteres').max(200),
+});
+
+export const EsquemaCambioPin = z.object({
+  actual: z.string().regex(/^\d{4,8}$/, 'el PIN son de 4 a 8 digitos'),
+  nuevo:  z.string().regex(/^\d{4,8}$/, 'el PIN son de 4 a 8 digitos'),
+});
+
 /**
  * Convierte los errores de zod en una lista plana y legible.
  */

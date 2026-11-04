@@ -6,7 +6,17 @@
 // desde psql o desde cualquier herramienta de reportes que se conecte despues.
 // =============================================================================
 
+import { exigirRol } from '../auth/guardia.mjs';
+
 export default async function rutasReportes(app, { db }) {
+  // Todas las rutas de este archivo son del panel del duenio y consolidan las
+  // DOS tiendas, asi que el rol se exige una sola vez para el conjunto.
+  //
+  // El hook se registra dentro de esta funcion, que es un plugin de Fastify:
+  // su alcance es solo lo que se declara aca adentro. Las rutas de sync y de
+  // ingreso, que estan en otros plugins, no se ven afectadas.
+  app.addHook('preHandler', exigirRol('admin'));
+
   // ---------------------------------------------------------------------------
   // GET /reportes/resumen
   //

@@ -8,36 +8,41 @@
 
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import rutasAuth from './rutas/auth.mjs';
 import rutasSync from './rutas/sync.mjs';
 import rutasReportes from './rutas/reportes.mjs';
+import { registrarGuardia } from './auth/guardia.mjs';
 
 // -----------------------------------------------------------------------------
-// PENDIENTE -- AUTENTICACION
+// AUTENTICACION
 //
-// Ninguna ruta esta protegida todavia. Cualquiera que llegue al servidor puede
-// leer los reportes y escribir movimientos.
+// Toda ruta exige sesion salvo las cuatro de la lista en auth/guardia.mjs
+// (salud, lista de empleados de una tienda y las dos de ingreso).
 //
-// Es aceptable mientras corre solo en la maquina de desarrollo, y NO se puede
-// desplegar asi. Falta:
-//   * login por PIN (empleado) y por email + contrasenia (admin)
-//   * token de sesion firmado, verificado en cada peticion
-//   * que un empleado solo pueda operar sobre SU tienda
-//   * limite de intentos fallidos (un PIN de 4 digitos son 10.000 combinaciones)
+// El guardia se registra ANTES que las rutas a proposito: un hook de Fastify
+// solo alcanza a lo que se registra despues de el dentro del mismo ambito. Si
+// se invirtiera el orden, las rutas quedarian abiertas sin que nada falle.
 // -----------------------------------------------------------------------------
 
 export async function crearApp({ db, logger = false }) {
   const app = Fastify({ logger });
 
+  // origin: true devuelve el origen que pide el navegador, lo que equivale a
+  // permitir cualquiera. Sirve mientras el cliente corre en localhost; al
+  // desplegar hay que poner aca la lista concreta de origenes permitidos.
   await app.register(cors, { origin: true });
 
   // Deja el cliente de base disponible para el resto de la aplicacion.
   app.decorate('db', db);
+
+  registrarGuardia(app, db);
 
   app.get('/salud', async () => {
     const { rows } = await db.query('SELECT 1 AS ok');
     return { estado: 'ok', base_de_datos: rows[0].ok === 1 ? 'conectada' : 'error' };
   });
 
+  await app.register(rutasAuth, { db });
   await app.register(rutasSync, { db });
   await app.register(rutasReportes, { db });
 

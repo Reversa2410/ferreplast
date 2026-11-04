@@ -26,6 +26,7 @@ import {
   EsquemaVenta,
   formatearErrores,
 } from '../validacion.mjs';
+import { exigirRol, puedeOperarEn } from '../auth/guardia.mjs';
 
 const LIMITE_LOTE = 500;
 
@@ -111,7 +112,7 @@ async function insertarVenta(db, v) {
  * con el resto: el objetivo es que la tablet pueda descartar de su cola todo lo
  * que el servidor confirmo, y apartar solo lo que dio problema.
  */
-async function procesarLote(db, elementos, esquema, insertar, log) {
+async function procesarLote(db, elementos, esquema, insertar, usuario, log) {
   const resultado = { aceptados: 0, duplicados: 0, rechazados: [] };
 
   for (const bruto of elementos) {
@@ -126,6 +127,34 @@ async function procesarLote(db, elementos, esquema, insertar, log) {
       continue;
     }
 
+    // El empleado solo puede escribir en SU tienda. Se comprueba por elemento y
+    // no de una vez para el lote entero porque el lote puede traer de las dos:
+    // asi entra lo que corresponde y se aparta solo lo que no, igual que con
+    // los errores de validacion.
+    //
+    // Se valida la TIENDA, no el usuario_id del elemento.
+    //
+    // POR QUE NO SE FUERZA usuario_id AL DE LA SESION: la tablet acumula las
+    // operaciones del dia, y durante ese dia pudieron atenderla dos empleados
+    // distintos, cada uno con su ingreso. Quien sincroniza al final no es
+    // necesariamente quien vendio. Sobrescribir el autor con el de la sesion
+    // atribuiria todas las ventas del dia al ultimo que toco la tablet, que es
+    // justo lo contrario de lo que la auditoria necesita.
+    //
+    // PENDIENTE: falta comprobar que ese usuario_id pertenezca a la misma
+    // tienda. Hoy la clave foranea garantiza que el usuario exista, pero no que
+    // sea de ahi: un empleado podria atribuirle una venta a alguien de la otra
+    // tienda. No permite robar ni alterar dinero -- los importes y el stock se
+    // validan aparte -- pero ensucia el historial.
+    if (!puedeOperarEn(usuario, validacion.data.tienda_id)) {
+      resultado.rechazados.push({
+        id: validacion.data.id,
+        motivo: 'permiso',
+        detalles: 'no puede registrar operaciones en esa tienda',
+      });
+      continue;
+    }
+
     try {
       const estado = await insertar(db, validacion.data);
       if (estado === 'aceptado') resultado.aceptados++;
@@ -133,11 +162,16 @@ async function procesarLote(db, elementos, esquema, insertar, log) {
     } catch (e) {
       // Errores de la base: clave foranea inexistente (un producto que la
       // tablet tiene y el servidor no), violacion de restriccion, etc.
+      //
+      // El detalle completo va al registro del servidor, no a la respuesta: el
+      // mensaje de PostgreSQL nombra tablas, columnas y restricciones, y eso es
+      // un mapa de la base para quien no deberia tenerlo. A la tablet le basta
+      // con saber que ese elemento no entro para apartarlo de su cola.
       log?.error({ err: e, id: validacion.data.id }, 'fallo al sincronizar elemento');
       resultado.rechazados.push({
         id: validacion.data.id,
         motivo: 'base_de_datos',
-        detalles: e.message,
+        detalles: 'el servidor no pudo registrar este elemento',
       });
     }
   }
@@ -167,9 +201,9 @@ export default async function rutasSync(app, { db }) {
     }
 
     const resMovimientos = await procesarLote(
-      db, movimientos, EsquemaMovimiento, insertarMovimiento, peticion.log);
+      db, movimientos, EsquemaMovimiento, insertarMovimiento, peticion.usuario, peticion.log);
     const resVentas = await procesarLote(
-      db, ventas, EsquemaVenta, insertarVenta, peticion.log);
+      db, ventas, EsquemaVenta, insertarVenta, peticion.usuario, peticion.log);
 
     // Bitacora de sincronizacion: permite detectar desde el panel que una
     // tablet dejo de sincronizar, que suele ser el primer sintoma de problema.
@@ -217,6 +251,12 @@ export default async function rutasSync(app, { db }) {
   app.get('/sync/catalogo/:tiendaId', async (peticion, respuesta) => {
     const { tiendaId } = peticion.params;
 
+    // Se responde 403 antes de consultar: si no se puede operar en esa tienda,
+    // tampoco hay que confirmar si existe.
+    if (!puedeOperarEn(peticion.usuario, tiendaId)) {
+      return respuesta.code(403).send({ error: 'no tiene acceso a esa tienda' });
+    }
+
     const tienda = await db.query(
       `SELECT id, nombre, tipo, prefijo FROM tiendas WHERE id = $1 AND activo`,
       [tiendaId],
@@ -251,8 +291,11 @@ export default async function rutasSync(app, { db }) {
   //
   // Alimenta el aviso del panel: "la tablet de la plastiqueria no sincroniza
   // hace 3 horas".
+  //
+  // Es del panel del duenio, asi que es solo para el admin: muestra las tablets
+  // de las dos tiendas juntas.
   // ---------------------------------------------------------------------------
-  app.get('/sync/estado', async () => {
+  app.get('/sync/estado', { preHandler: exigirRol('admin') }, async () => {
     const { rows } = await db.query(
       `SELECT d.id, d.nombre, t.nombre AS tienda, d.ultimo_sync,
               EXTRACT(EPOCH FROM (NOW() - d.ultimo_sync))/60 AS minutos_sin_sincronizar
