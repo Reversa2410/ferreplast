@@ -23,16 +23,34 @@ INSERT INTO tiendas (id, negocio_id, nombre, tipo, direccion, prefijo) VALUES
 -- -----------------------------------------------------------------------------
 -- Usuarios
 --
--- Los hash son de relleno: la aplicacion los reemplaza al crear usuarios de
--- verdad. NUNCA guardar un PIN o contrasenia en texto plano.
+-- NUNCA se guarda un PIN o contrasenia en texto plano: lo que va en la base es
+-- el hash scrypt, con su sal y sus parametros adentro (ver src/auth/password.mjs).
+--
+-- CREDENCIALES DE PRUEBA -- solo para desarrollo local.
+-- Son publicas a proposito: estan en el repositorio para que cualquiera pueda
+-- levantar el proyecto y entrar. Al cargar datos reales hay que crear los
+-- usuarios de verdad y borrar estas tres filas.
+--
+--   Administrador          admin@ferreplast.test   contrasenia: ferreplast2026
+--   Empleado Ferreteria    (PIN en la tablet)      PIN: 1234
+--   Empleado Plastiqueria  (PIN en la tablet)      PIN: 5678
+--
+-- Para regenerar estos hash:
+--   node --input-type=module -e "import {hashear} from './src/auth/password.mjs'; console.log(await hashear('loquesea'))"
 -- -----------------------------------------------------------------------------
 INSERT INTO usuarios (id, negocio_id, tienda_id, nombre, email, password_hash, pin_hash, rol) VALUES
 ('33333333-0000-0000-0000-000000000001', '11111111-0000-0000-0000-000000000001',
- NULL, 'Administrador', 'admin@ferreplast.test', '$2b$10$placeholder', NULL, 'admin'),
+ NULL, 'Administrador', 'admin@ferreplast.test',
+ 'scrypt$16384$8$1$Dqh3JaASO5NwNKaI+I+eLA==$8ZUSwEVybue0Y/N0wAERopYhTm3W5sW1fgO0wMMrB89pM2eOZ6u/GKjhGulYkauyTquCLDrhweYayJW0aYzg2w==',
+ NULL, 'admin'),
 ('33333333-0000-0000-0000-000000000002', '11111111-0000-0000-0000-000000000001',
- '22222222-0000-0000-0000-000000000001', 'Empleado Ferreteria', NULL, NULL, '$2b$10$placeholder', 'empleado'),
+ '22222222-0000-0000-0000-000000000001', 'Empleado Ferreteria', NULL, NULL,
+ 'scrypt$16384$8$1$DHu4I9gFIz+AdUtwPFQUlw==$bsVbQh6U3xMTPdarVYh0maBnL2r86B2ZMfxbeofAJqfS7D+L2OVGQ+gdt+LORTZdKuFc+Ua7LkA3Mnt6w/zpsQ==',
+ 'empleado'),
 ('33333333-0000-0000-0000-000000000003', '11111111-0000-0000-0000-000000000001',
- '22222222-0000-0000-0000-000000000002', 'Empleado Plastiqueria', NULL, NULL, '$2b$10$placeholder', 'empleado');
+ '22222222-0000-0000-0000-000000000002', 'Empleado Plastiqueria', NULL, NULL,
+ 'scrypt$16384$8$1$3ddyfhlIMTmV6/jby6EbCQ==$S9Fmbw2PrI9yYuSOIIVguivm9myNBVBIw29hjDn3Aw5rDr5asRtDtdz3K/Nrrjkh7tamdWkEtbecoVzlc/A2QQ==',
+ 'empleado');
 
 -- -----------------------------------------------------------------------------
 -- Categorias
