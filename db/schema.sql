@@ -489,6 +489,87 @@ CREATE TABLE sync_log (
 CREATE INDEX idx_synclog_dispositivo ON sync_log(dispositivo_id, created_at DESC);
 
 
+-- -----------------------------------------------------------------------------
+-- 3.12 SESIONES
+--
+-- Una fila por sesion abierta. El usuario recibe un token al entrar y lo manda
+-- en cada peticion.
+--
+-- POR QUE UNA TABLA Y NO UN TOKEN AUTOCONTENIDO (tipo JWT):
+-- Un token autocontenido no se puede revocar. Si una tablet se pierde o un
+-- empleado deja de trabajar, el token sigue siendo valido hasta que caduque, y
+-- no hay forma de cortarlo sin cambiar la clave de firma y echar a todos. Con
+-- una tabla, revocar es un UPDATE de una fila.
+-- El costo es una consulta mas por peticion; a esta escala no se nota.
+--
+-- POR QUE SE GUARDA EL HASH DEL TOKEN Y NO EL TOKEN:
+-- Exactamente el mismo motivo que con las contrasenias. Si alguien consigue una
+-- copia de la base, con los tokens en claro entra como cualquier usuario que
+-- tenga la sesion abierta. Con el hash, no: tendria que invertir SHA-256.
+-- Aca alcanza SHA-256 (y no scrypt, como en las contrasenias) porque el token
+-- son 32 bytes al azar, no una palabra adivinable: no hay diccionario que
+-- probar, asi que no hace falta encarecer cada intento.
+-- -----------------------------------------------------------------------------
+CREATE TABLE sesiones (
+    -- SHA-256 del token, en hexadecimal. El token en claro solo existe en el
+    -- dispositivo del usuario; el servidor no puede recuperarlo.
+    token_hash      CHAR(64)     PRIMARY KEY,
+    usuario_id      UUID         NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+
+    -- Desde que tablet se abrio. Permite cerrar todas las sesiones de un
+    -- dispositivo extraviado sin tocar las de los demas.
+    dispositivo_id  UUID         REFERENCES dispositivos(id) ON DELETE SET NULL,
+
+    expira_en       TIMESTAMPTZ  NOT NULL,
+    revocada_en     TIMESTAMPTZ,            -- NULL = sigue viva
+    created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT chk_sesion_vigencia CHECK (expira_en > created_at)
+);
+
+-- Indice PARCIAL: solo indexa las sesiones vivas. Las caducadas y revocadas se
+-- acumulan para siempre (son la bitacora de accesos), pero no engordan el
+-- indice que se consulta en cada peticion.
+CREATE INDEX idx_sesiones_usuario ON sesiones(usuario_id)
+    WHERE revocada_en IS NULL;
+
+
+-- -----------------------------------------------------------------------------
+-- 3.13 INTENTOS DE INGRESO
+--
+-- Bitacora de cada intento de entrar, acertado o no.
+--
+-- POR QUE EXISTE: un PIN de 4 digitos son 10.000 combinaciones. Un programa que
+-- pruebe una por segundo las agota en menos de tres horas. El hash no protege
+-- de eso -- protege de que roben la base, no de que prueben por la puerta.
+-- Lo unico que lo frena es contar los fallos y bloquear.
+--
+-- Se registran tambien los aciertos: el patron "veinte fallos y un acierto" es
+-- la firma de un ataque que funciono, y sin los aciertos no se ve.
+--
+-- No hay clave foranea a usuarios a proposito: hay que poder registrar el
+-- intento de entrar con un email que no existe, que es justamente el caso
+-- interesante.
+-- -----------------------------------------------------------------------------
+CREATE TABLE intentos_login (
+    id              BIGSERIAL    PRIMARY KEY,
+
+    -- Con que se intento entrar: el email del admin, o el id del empleado.
+    -- Se guarda como texto porque puede no corresponder a ningun usuario.
+    identificador   VARCHAR(150) NOT NULL,
+    tienda_id       UUID         REFERENCES tiendas(id) ON DELETE SET NULL,
+    exitoso         BOOLEAN      NOT NULL,
+    ip              VARCHAR(45),            -- 45 caracteres = IPv6 en su forma larga
+    created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+-- Indice PARCIAL sobre los fallos: la consulta de bloqueo pregunta siempre
+-- "cuantos intentos FALLIDOS tuvo este identificador en los ultimos minutos".
+-- Los aciertos quedan en la tabla para auditoria pero fuera de este indice.
+CREATE INDEX idx_intentos_fallidos ON intentos_login(identificador, created_at DESC)
+    WHERE NOT exitoso;
+
+
 -- =============================================================================
 -- 4. TRIGGERS DE NEGOCIO
 -- =============================================================================
