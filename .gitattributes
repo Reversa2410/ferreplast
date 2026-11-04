@@ -1,0 +1,15 @@
+# Normaliza los finales de linea.
+#
+# Sin esto, Windows guarda CRLF y Linux LF, y el mismo archivo aparece como
+# "modificado por completo" segun en que maquina se lo mire. Git guarda LF en
+# el repositorio y convierte al checkout segun la plataforma.
+* text=auto
+
+# Archivos que NO son texto: si Git intentara convertirles los finales de
+# linea los corromperia.
+*.png  binary
+*.jpg  binary
+*.pdf  binary
+*.docx binary
+*.zip  binary
+*.dump binary

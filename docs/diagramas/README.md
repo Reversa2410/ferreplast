@@ -15,6 +15,7 @@ o para imprimir.
 | `05-relacion-recursiva.svg` | `CATEGORIA` relacionada consigo misma | 420 × 300 |
 | `06-entidad-asociativa.svg` | `STOCK` resolviendo el M:N entre tienda y producto | 420 × 300 |
 | `07-atributos-derivados.svg` | El stock deducido de la suma de movimientos | 900 × 300 |
+| `08-proceso-venta.svg` | El recorrido de una venta: de la tablet sin conexión a la base | — |
 
 El `00` es el diagrama completo: sirve para imprimir en A3 o proyectar. Para
 exponer conviene usar el `01` y el `02`, que son el mismo modelo partido en dos
