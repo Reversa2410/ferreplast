@@ -411,43 +411,62 @@ PRINT '=== 7. Usuarios y credenciales ===';
 -- =============================================================================
 DECLARE @ok BIT, @det VARCHAR(500) = NULL;
 
--- Un admin sin contrasenia no podria entrar por ningun lado.
+-- Un administrador sin contrasenia no podria entrar por ningun lado.
 BEGIN TRY
     BEGIN TRAN;
     INSERT INTO Usuario (negocio_id, nombre, rol, email)
-    VALUES (1, 'Admin incompleto', 'admin', 'otro@ferreplast.com');
+    VALUES (1, 'Admin incompleto', 'administrador', 'otro@ferreplast.com');
     ROLLBACK;
-    SET @ok = 0; SET @det = 'se creo un admin sin contrasenia';
+    SET @ok = 0; SET @det = 'se creo un administrador sin contrasenia';
 END TRY
 BEGIN CATCH
     IF XACT_STATE() <> 0 ROLLBACK;
     SET @ok = 1;
 END CATCH
 INSERT INTO #resultado (seccion, nombre, ok, detalle)
-VALUES ('usuarios', 'un admin necesita email y contrasenia', @ok, @det);
+VALUES ('usuarios', 'un administrador necesita email y contrasenia', @ok, @det);
 
--- Un empleado sin tienda tampoco.
+-- Un empleado sin PIN tampoco.
+--
+-- Ya NO se le exige tienda: la pertenencia se mudo a USUARIO_TIENDA porque un
+-- empleado puede trabajar en las dos, y un CHECK no puede mirar otra tabla.
+SET @det = NULL;
+BEGIN TRY
+    BEGIN TRAN;
+    INSERT INTO Usuario (negocio_id, nombre, rol, email, password_hash)
+    VALUES (1, 'Empleado sin PIN', 'empleado', NULL, NULL);
+    ROLLBACK;
+    SET @ok = 0; SET @det = 'se creo un empleado sin PIN';
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK;
+    SET @ok = 1;
+END CATCH
+INSERT INTO #resultado (seccion, nombre, ok, detalle)
+VALUES ('usuarios', 'un empleado necesita PIN', @ok, @det);
+
+-- Solo quedan dos roles: el 'encargado' del modelo anterior ya no existe.
 SET @det = NULL;
 BEGIN TRY
     BEGIN TRAN;
     INSERT INTO Usuario (negocio_id, nombre, rol, pin_hash)
-    VALUES (1, 'Empleado sin tienda', 'empleado', 'hash');
+    VALUES (1, 'Encargado fantasma', 'encargado', 'hash');
     ROLLBACK;
-    SET @ok = 0; SET @det = 'se creo un empleado sin tienda';
+    SET @ok = 0; SET @det = 'se acepto el rol encargado';
 END TRY
 BEGIN CATCH
     IF XACT_STATE() <> 0 ROLLBACK;
     SET @ok = 1;
 END CATCH
 INSERT INTO #resultado (seccion, nombre, ok, detalle)
-VALUES ('usuarios', 'un empleado necesita PIN y tienda', @ok, @det);
+VALUES ('usuarios', 'solo existen los roles empleado y administrador', @ok, @det);
 
 -- El email no se puede repetir.
 SET @det = NULL;
 BEGIN TRY
     BEGIN TRAN;
     INSERT INTO Usuario (negocio_id, nombre, rol, email, password_hash)
-    VALUES (1, 'Clon', 'admin', 'admin@ferreplast.com', 'hash');
+    VALUES (1, 'Clon', 'administrador', 'admin@ferreplast.com', 'hash');
     ROLLBACK;
     SET @ok = 0; SET @det = 'se acepto un email repetido';
 END TRY
@@ -462,9 +481,9 @@ VALUES ('usuarios', 'rechaza dos usuarios con el mismo email', @ok, @det);
 SET @det = NULL;
 BEGIN TRY
     BEGIN TRAN;
-    INSERT INTO Usuario (negocio_id, tienda_id, nombre, rol, pin_hash)
-    VALUES (1, 1, 'Empleado A', 'empleado', 'hashA'),
-           (1, 1, 'Empleado B', 'empleado', 'hashB');
+    INSERT INTO Usuario (negocio_id, nombre, rol, pin_hash)
+    VALUES (1, 'Empleado A', 'empleado', 'hashA'),
+           (1, 'Empleado B', 'empleado', 'hashB');
     ROLLBACK;
     SET @ok = 1;
 END TRY
@@ -474,6 +493,39 @@ BEGIN CATCH
 END CATCH
 INSERT INTO #resultado (seccion, nombre, ok, detalle)
 VALUES ('usuarios', 'varios empleados pueden no tener email', @ok, @det);
+
+-- EL CASO QUE EL MODELO VIEJO NO PODIA REPRESENTAR: la misma persona
+-- trabajando en los dos locales. Antes habia que crearle dos usuarios.
+SET @det = NULL;
+BEGIN TRY
+    BEGIN TRAN;
+    INSERT INTO USUARIO_TIENDA (usuario_id, tienda_id) VALUES (3, 1);
+    SET @det = CONCAT('tiendas de Maria: ',
+        (SELECT COUNT(*) FROM USUARIO_TIENDA WHERE usuario_id = 3));
+    ROLLBACK;
+    SET @ok = 1;
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK;
+    SET @ok = 0; SET @det = ERROR_MESSAGE();
+END CATCH
+INSERT INTO #resultado (seccion, nombre, ok, detalle)
+VALUES ('usuarios', 'un empleado puede trabajar en las dos tiendas', @ok, @det);
+
+-- ...pero no dos veces en la misma (la clave primaria compuesta lo impide).
+SET @det = NULL;
+BEGIN TRY
+    BEGIN TRAN;
+    INSERT INTO USUARIO_TIENDA (usuario_id, tienda_id) VALUES (2, 1);
+    ROLLBACK;
+    SET @ok = 0; SET @det = 'se repitio la asignacion';
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK;
+    SET @ok = 1;
+END CATCH
+INSERT INTO #resultado (seccion, nombre, ok, detalle)
+VALUES ('usuarios', 'no se repite la misma tienda para el mismo empleado', @ok, @det);
 GO
 
 -- =============================================================================
@@ -557,12 +609,18 @@ DECLARE @total DECIMAL(18,2), @ganancia DECIMAL(18,2), @n INT;
 -- FAN-OUT: la venta 1 tiene DOS lineas. Si la vista uniera cabecera con lineas
 -- y sumara, el total saldria 1760 en lugar de 880 y la ganancia saldria al
 -- doble. El numero parece razonable y por eso nadie lo cuestiona.
-SELECT @total = total_vendido, @ganancia = ganancia_bruta
+DECLARE @cabeceras DECIMAL(18,2) = (
+    SELECT SUM(total) FROM VENTA WHERE tienda_id = 1 AND anulada = 0);
+
+SELECT @total = SUM(total_vendido), @ganancia = SUM(ganancia_bruta)
   FROM v_ventas_diarias
  WHERE tienda_id = 1;
 
-SET @ok = CASE WHEN @total = 880.00 THEN 1 ELSE 0 END;
-SET @det = CONCAT('total_vendido de la ferreteria: ', @total);
+-- Se compara contra la suma de las CABECERAS, no contra un numero escrito a
+-- mano: asi la prueba sigue valiendo cuando cambian los datos de ejemplo, que
+-- es lo unico que tiene que cambiar cuando cambia el seed.
+SET @ok = CASE WHEN @total = @cabeceras THEN 1 ELSE 0 END;
+SET @det = CONCAT('vista: ', @total, '  cabeceras: ', @cabeceras);
 INSERT INTO #resultado (seccion, nombre, ok, detalle)
 VALUES ('vistas', 'v_ventas_diarias no duplica una venta de dos lineas', @ok, @det);
 
@@ -623,6 +681,159 @@ SET @ok = CASE WHEN @desvios = 0 THEN 1 ELSE 0 END;
 SET @det = CONCAT('filas desalineadas: ', @desvios);
 INSERT INTO #resultado (seccion, nombre, ok, detalle)
 VALUES ('reconciliacion', 'Stock coincide con la suma de los movimientos', @ok, @det);
+GO
+
+-- =============================================================================
+PRINT '=== 12. Credito, clientes y descuentos ===';
+-- =============================================================================
+DECLARE @ok BIT, @det VARCHAR(500) = NULL;
+DECLARE @saldo DECIMAL(18,2), @cupo DECIMAL(18,2), @esperado DECIMAL(18,2);
+
+-- No se puede fiar al aire: sin cliente no hay a quien cobrarle.
+BEGIN TRY
+    BEGIN TRAN;
+    INSERT INTO VENTA (tienda_id, usuario_id, numero, subtotal, descuento, total, metodo_pago)
+    VALUES (1, 2, 9001, 100.00, 0.00, 100.00, 'credito');
+    ROLLBACK;
+    SET @ok = 0; SET @det = 'se registro una venta a credito sin cliente';
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK;
+    SET @ok = 1;
+END CATCH
+INSERT INTO #resultado (seccion, nombre, ok, detalle)
+VALUES ('credito', 'una venta a credito exige cliente', @ok, @det);
+
+-- El limite se respeta. Pedro tiene 1000 de cupo y no debe nada.
+SET @det = NULL;
+BEGIN TRY
+    BEGIN TRAN;
+    INSERT INTO VENTA (tienda_id, usuario_id, cliente_id, numero, subtotal, descuento, total, metodo_pago)
+    VALUES (1, 2, 1, 9002, 2000.00, 0.00, 2000.00, 'credito');
+    ROLLBACK;
+    SET @ok = 0; SET @det = 'se fio por encima del limite';
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK;
+    SET @ok = 1;
+END CATCH
+INSERT INTO #resultado (seccion, nombre, ok, detalle)
+VALUES ('credito', 'rechaza una venta que supera el limite del cliente', @ok, @det);
+
+-- ...y por debajo del limite si entra.
+SET @det = NULL;
+BEGIN TRY
+    BEGIN TRAN;
+    INSERT INTO VENTA (tienda_id, usuario_id, cliente_id, numero, subtotal, descuento, total, metodo_pago)
+    VALUES (1, 2, 1, 9003, 500.00, 0.00, 500.00, 'credito');
+    ROLLBACK;
+    SET @ok = 1;
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK;
+    SET @ok = 0; SET @det = ERROR_MESSAGE();
+END CATCH
+INSERT INTO #resultado (seccion, nombre, ok, detalle)
+VALUES ('credito', 'acepta una venta dentro del cupo', @ok, @det);
+
+-- EL AGUJERO QUE HABIA QUE CERRAR: entrar por debajo del limite y subir el
+-- total despues. Con el trigger solo en AFTER INSERT esto pasaba de largo.
+SET @det = NULL;
+BEGIN TRY
+    BEGIN TRAN;
+    INSERT INTO VENTA (tienda_id, usuario_id, cliente_id, numero, subtotal, descuento, total, metodo_pago)
+    VALUES (1, 2, 1, 9004, 500.00, 0.00, 500.00, 'credito');
+    UPDATE VENTA SET subtotal = 3000.00, total = 3000.00 WHERE numero = 9004 AND tienda_id = 1;
+    ROLLBACK;
+    SET @ok = 0; SET @det = 'se esquivo el limite subiendo el total despues';
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK;
+    SET @ok = 1;
+END CATCH
+INSERT INTO #resultado (seccion, nombre, ok, detalle)
+VALUES ('credito', 'el limite tambien se valida al modificar la venta', @ok, @det);
+
+-- Un abono de cero o negativo seria una venta disfrazada.
+SET @det = NULL;
+BEGIN TRY
+    BEGIN TRAN;
+    INSERT INTO PAGO_CREDITO (cliente_id, monto) VALUES (1, -50.00);
+    ROLLBACK;
+    SET @ok = 0; SET @det = 'se acepto un abono negativo';
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK;
+    SET @ok = 1;
+END CATCH
+INSERT INTO #resultado (seccion, nombre, ok, detalle)
+VALUES ('credito', 'rechaza un abono de monto no positivo', @ok, @det);
+
+-- El saldo se DERIVA: fiado menos abonado. La constructora debe 4260 y abono 200.
+SELECT @saldo = saldo, @cupo = cupo_disponible
+  FROM v_cuentas_por_cobrar WHERE cliente_id = 2;
+SET @ok = CASE WHEN @saldo = 4060.00 AND @cupo = 940.00 THEN 1 ELSE 0 END;
+SET @det = CONCAT('saldo ', @saldo, ', cupo disponible ', @cupo);
+INSERT INTO #resultado (seccion, nombre, ok, detalle)
+VALUES ('credito', 'v_cuentas_por_cobrar deriva el saldo del cliente', @ok, @det);
+
+-- Anular la venta fiada baja la deuda SOLA, sin que nadie reste nada.
+SET @det = NULL;
+BEGIN TRY
+    BEGIN TRAN;
+    UPDATE VENTA SET anulada = 1 WHERE id = 3;
+    SELECT @saldo = saldo FROM v_cuentas_por_cobrar WHERE cliente_id = 2;
+    ROLLBACK;
+    -- Quedan los 200 abonados contra ninguna deuda: saldo negativo, a favor.
+    SET @ok = CASE WHEN @saldo = -200.00 THEN 1 ELSE 0 END;
+    SET @det = CONCAT('saldo tras anular: ', @saldo);
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK;
+    SET @ok = 0; SET @det = ERROR_MESSAGE();
+END CATCH
+INSERT INTO #resultado (seccion, nombre, ok, detalle)
+VALUES ('credito', 'anular una venta fiada baja la deuda sola', @ok, @det);
+
+-- EL DETALLE QUE ROMPE EL ARQUEO: el abono en efectivo esta en el cajon sin
+-- venta detras. Si v_cuadre_caja no lo suma, esta caja deja de cuadrar.
+SELECT @esperado = esperado FROM v_cuadre_caja WHERE caja_id = 1;
+SET @ok = CASE WHEN @esperado = 2080.00 THEN 1 ELSE 0 END;
+SET @det = CONCAT('esperado en la caja 1: ', @esperado, ' (1000 + 880 ventas + 200 abono)');
+INSERT INTO #resultado (seccion, nombre, ok, detalle)
+VALUES ('credito', 'v_cuadre_caja suma los abonos en efectivo', @ok, @det);
+
+-- La rebaja no puede superar el renglon: el subtotal saldria negativo.
+SET @det = NULL;
+BEGIN TRY
+    BEGIN TRAN;
+    INSERT INTO VENTA_LINEA (venta_id, numero, producto_id, cantidad, precio_unitario, costo_unitario, descuento, subtotal)
+    VALUES (1, 90, 11, 1.000, 45.00, 36.00, 100.00, -55.00);
+    ROLLBACK;
+    SET @ok = 0; SET @det = 'se regalo mas de lo que valia el renglon';
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK;
+    SET @ok = 1;
+END CATCH
+INSERT INTO #resultado (seccion, nombre, ok, detalle)
+VALUES ('credito', 'la rebaja no puede superar el valor de la linea', @ok, @det);
+
+-- Un producto, una linea: si no, la rebaja queda partida y el reporte miente.
+SET @det = NULL;
+BEGIN TRY
+    BEGIN TRAN;
+    INSERT INTO VENTA_LINEA (venta_id, numero, producto_id, cantidad, precio_unitario, costo_unitario, subtotal)
+    VALUES (1, 91, 1, 1.000, 250.00, 150.00, 250.00);
+    ROLLBACK;
+    SET @ok = 0; SET @det = 'el mismo producto entro dos veces en la venta';
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK;
+    SET @ok = 1;
+END CATCH
+INSERT INTO #resultado (seccion, nombre, ok, detalle)
+VALUES ('credito', 'el mismo producto no se repite en una venta', @ok, @det);
 GO
 
 -- =============================================================================

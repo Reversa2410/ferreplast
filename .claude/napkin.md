@@ -7,16 +7,21 @@
 - Each item includes date + "Do instead".
 
 ## Execution & Validation (Highest Priority)
-1. **[2026-11-03] Las pruebas no necesitan base de datos ni conexion**
-   Do instead: validar cualquier cambio de esquema o API con `npm test`
-   (PGlite en memoria, 91 pruebas). No levantar Neon ni Docker para probar.
+1. **[2026-11-05] `npm test` prueba el ESQUEMA contra SQL Server, no la API**
+   Es `sqlcmd -i db/test-esquema.sql` (46 pruebas). Necesita la instancia
+   local; NO es PGlite y no prueba nada de `src/`.
+   Do instead: validar cualquier cambio de esquema con `npm test`. Para no
+   tocar las bases del usuario, copiar los .sql cambiando `FerreplastDB` por
+   otro nombre y correrlos sobre esa copia.
 2. **[2026-11-03] `crearApp({ db })` recibe la base por parametro**
    Do instead: para probar una ruta nueva, pasarle el cliente PGlite; nunca
    crear la conexion dentro de las rutas.
-3. **[2026-11-03] Las pruebas de API necesitan sesion desde que existe el guardia**
-   Do instead: usar `pedir()` (entra como admin), `pedirComo(token, ...)` para
-   probar alcance por tienda y `pedirSinSesion()` para rutas publicas.
-   Credenciales en `db/seed.sql`.
+3. **[2026-11-05] `npm run test:api` esta ROTO desde la migracion a SQL Server**
+   `src/test-api.mjs` carga `db/schema.sql` (T-SQL) dentro de PGlite
+   (PostgreSQL) y revienta en la primera sentencia (`IF DB_ID(...)`). Todo
+   `src/` sigue escrito para PostgreSQL.
+   Do instead: no editar `src/` esperando poder verificarlo; los cambios de
+   modelo que lo afecten van junto con el porte de la API.
 4. **[2026-11-03] Las vistas `v_*` son la fuente de los reportes**
    Do instead: al cambiar un calculo del panel, editar la vista en
    `db/schema.sql`, no la consulta en `src/rutas/reportes.mjs`.
@@ -84,10 +89,14 @@
    revientan el lote antes de ejecutarlo.
    Do instead: envolver esa sentencia en `sp_executesql` para que el error
    ocurra en ejecucion y se pueda capturar.
-7. **[2026-11-03] El diagrama se mantiene en Lucidchart, no se genera**
-   `docs/diagramas/modelo relacional 2.svg|png` salen de ahi.
-   Do instead: no intentar regenerarlos; entregar la lista de cambios a aplicar
-   en `docs/diagramas/CAMBIOS-MODELO.md`.
+7. **[2026-11-05] Hay conector MCP de Lucid: el diagrama se crea desde aca**
+   `lucid_create_erd` arma un ERD real y editable desde entidades y FK. NO
+   existe forma de reemplazar el contenido de un documento ya creado: solo
+   crear uno nuevo (`lucid_update_document` solo cambia titulo, carpeta y
+   etiquetas).
+   Do instead: para rehacer el modelo, crear documento nuevo y dejar el viejo
+   como historial. Las razones de cada decision van en
+   `docs/diagramas/DECISIONES-MODELO.md`.
 
 ## Domain Behavior Guardrails
 1. **[2026-11-03] El stock se deduce de `movimientos_inventario`, no se escribe**
