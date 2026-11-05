@@ -44,6 +44,7 @@ GO
 -- El orden es inverso al de creacion: no se puede borrar una tabla a la que
 -- otra todavia apunta con una clave foranea.
 -- -----------------------------------------------------------------------------
+DROP VIEW  IF EXISTS v_cuentas_por_cobrar;
 DROP VIEW  IF EXISTS v_cuadre_caja;
 DROP VIEW  IF EXISTS v_alertas_stock;
 DROP VIEW  IF EXISTS v_ventas_diarias;
@@ -51,12 +52,18 @@ DROP VIEW  IF EXISTS v_inventario_valorizado;
 
 DROP TABLE IF EXISTS INTENTO_LOGIN;
 DROP TABLE IF EXISTS SESION;
+DROP TABLE IF EXISTS USUARIO_TIENDA;
+DROP TABLE IF EXISTS PAGO_CREDITO;
 DROP TABLE IF EXISTS VENTA_LINEA;
+-- MOVIMIENTO_INVENTARIO va antes que VENTA: le apunta con FK_MOV_VENTA. Al
+-- reves el DROP falla y el script deja de ser idempotente, que es justo lo que
+-- promete la cabecera de este archivo.
+DROP TABLE IF EXISTS MOVIMIENTO_INVENTARIO;
 DROP TABLE IF EXISTS VENTA;
+DROP TABLE IF EXISTS CLIENTE;
 DROP TABLE IF EXISTS CAJA;
 DROP TABLE IF EXISTS SYNC_LOG;
 DROP TABLE IF EXISTS DISPOSITIVO;
-DROP TABLE IF EXISTS MOVIMIENTO_INVENTARIO;
 DROP TABLE IF EXISTS Stock;
 DROP TABLE IF EXISTS Usuario;
 DROP TABLE IF EXISTS PRODUCTO;
@@ -194,21 +201,65 @@ CREATE INDEX IX_PRODUCTO_NOMBRE ON PRODUCTO(nombre);
 GO
 
 -- -----------------------------------------------------------------------------
--- 2.5 Usuario
+-- 2.5 CLIENTE
 --
--- Dos formas de entrar, porque son dos situaciones distintas:
---   * empleado -> PIN corto en la tablet (se teclea cincuenta veces al dia)
---   * admin    -> email + contrasenia en el panel web
+-- Existe porque el negocio FIA. Sin esta tabla se puede registrar una venta
+-- con metodo_pago = 'credito' y no queda asentado a quien se le fio: el
+-- sistema no sabe contestar "quien me debe y cuanto", que para un negocio que
+-- da credito es LA pregunta.
+--
+-- El cliente cuelga de NEGOCIO y no de TIENDA: la duenia es una sola y la
+-- plata es la misma, asi que el limite es el total que la persona puede deber
+-- entre la ferreteria y la plastiqueria, no uno por local.
+--
+-- EL SALDO NO SE GUARDA. Se deriva de las ventas a credito menos los abonos,
+-- por el mismo motivo que el stock: un saldo escrito a mano se desincroniza y,
+-- ademas, anular una venta fiada tendria que acordarse de restarlo. Derivado,
+-- se corrige solo.
+-- -----------------------------------------------------------------------------
+CREATE TABLE CLIENTE (
+    id             INT           IDENTITY(1,1) PRIMARY KEY,
+    negocio_id     INT           NOT NULL,
+    nombre         VARCHAR(150)  NOT NULL,
+    telefono       VARCHAR(30),
+    identificacion VARCHAR(30),
+    -- Valor por omision, no constante del sistema: antes o despues le van a
+    -- querer subir el cupo a alguien, y si el numero vive en el codigo eso se
+    -- convierte en un pedido de cambio.
+    limite_credito DECIMAL(18,2) NOT NULL DEFAULT 1000.00,
+    activo         BIT           NOT NULL DEFAULT 1,
+    created_at     DATETIME2(3)  NOT NULL DEFAULT SYSUTCDATETIME(),
+
+    CONSTRAINT FK_CLIENTE_NEGOCIO FOREIGN KEY (negocio_id) REFERENCES NEGOCIO(id),
+    CONSTRAINT CK_CLIENTE_LIMITE  CHECK (limite_credito >= 0)
+);
+
+-- La cedula es opcional (muchos clientes del mostrador no la dan) pero si esta
+-- no puede repetirse: dos fichas de la misma persona parten la deuda en dos y
+-- el limite deja de valer.
+CREATE UNIQUE INDEX UX_CLIENTE_IDENTIFICACION ON CLIENTE(identificacion)
+    WHERE identificacion IS NOT NULL;
+CREATE INDEX IX_CLIENTE_NOMBRE ON CLIENTE(nombre) WHERE activo = 1;
+GO
+
+-- -----------------------------------------------------------------------------
+-- 2.6 Usuario
+--
+-- Dos roles, no mas: empleado y administrador. Son las dos unicas situaciones
+-- reales del negocio, y cada una entra distinto:
+--   * empleado      -> PIN corto en la tablet (se teclea cincuenta veces al dia)
+--   * administrador -> email + contrasenia en el panel web
 --
 -- Se guarda el HASH, nunca el PIN ni la contrasenia en claro.
+--
+-- El usuario NO tiene tienda_id. Un empleado puede trabajar en las dos tiendas
+-- (lo dice el levantamiento), asi que la pertenencia vive en USUARIO_TIENDA y
+-- la tienda desde la que esta operando AHORA vive en SESION. Son dos cosas
+-- distintas: a donde pertenece, y desde donde esta vendiendo hoy.
 -- -----------------------------------------------------------------------------
 CREATE TABLE Usuario (
     id            INT           IDENTITY(1,1) PRIMARY KEY,
     negocio_id    INT           NOT NULL,
-    -- NULL = no esta atado a una tienda. Es el caso del administrador, que ve
-    -- las dos. Dejarlo NOT NULL obligaria a inventarle una tienda al duenio y
-    -- a recordar en cada consulta que ese valor no significa nada.
-    tienda_id     INT NULL,
     nombre        VARCHAR(100)  NOT NULL,
     rol           VARCHAR(20)   NOT NULL DEFAULT 'empleado',
     email         VARCHAR(150),
@@ -219,28 +270,57 @@ CREATE TABLE Usuario (
     created_at    DATETIME2(3)  NOT NULL DEFAULT SYSUTCDATETIME(),
 
     CONSTRAINT FK_USUARIO_NEGOCIO FOREIGN KEY (negocio_id) REFERENCES NEGOCIO(id),
-    CONSTRAINT FK_USUARIO_TIENDA  FOREIGN KEY (tienda_id)  REFERENCES TIENDA(id),
-    CONSTRAINT CK_USUARIO_ROL CHECK (rol IN ('empleado', 'encargado', 'admin')),
+    CONSTRAINT CK_USUARIO_ROL CHECK (rol IN ('empleado', 'administrador')),
 
     -- La regla de negocio vive en la BASE, no solo en el codigo de la app.
-    -- Un admin necesita email y contrasenia; cualquier otro rol necesita PIN y
-    -- una tienda a la que pertenecer. Sin esto se pueden crear usuarios que no
-    -- pueden entrar por ningun lado, y el error aparece recien cuando esa
-    -- persona intenta trabajar.
+    -- Sin esto se pueden crear usuarios que no pueden entrar por ningun lado, y
+    -- el error aparece recien cuando esa persona intenta trabajar.
+    --
+    -- Ya no se exige tienda: un CHECK no puede mirar otra tabla y la
+    -- pertenencia se mudo a USUARIO_TIENDA. Esa garantia baja al codigo, y es
+    -- el costo consciente de admitir empleados compartidos.
     CONSTRAINT CK_USUARIO_CREDENCIALES CHECK (
-        (rol =  'admin' AND email IS NOT NULL AND password_hash IS NOT NULL)
-     OR (rol <> 'admin' AND pin_hash IS NOT NULL AND tienda_id IS NOT NULL)
+        (rol = 'administrador' AND email IS NOT NULL AND password_hash IS NOT NULL)
+     OR (rol = 'empleado'      AND pin_hash IS NOT NULL)
     )
 );
 
 -- Mismo motivo que el codigo de producto: el email es opcional (los empleados
 -- no tienen) pero no se puede repetir.
 CREATE UNIQUE INDEX UX_USUARIO_EMAIL ON Usuario(email) WHERE email IS NOT NULL;
-CREATE INDEX IX_USUARIO_TIENDA ON Usuario(tienda_id) WHERE activo = 1;
 GO
 
 -- -----------------------------------------------------------------------------
--- 2.6 Stock -- CACHE, NO VERDAD
+-- 2.7 USUARIO_TIENDA
+--
+-- En que tiendas puede trabajar cada empleado. El levantamiento dice que
+-- "algunos empleados trabajan en ambas tiendas a la vez": con un solo
+-- tienda_id en Usuario eso era inexpresable, y la salida practica -- crear dos
+-- usuarios para la misma persona -- parte en dos cualquier reporte de "cuanto
+-- vendio Fulano" y le deja dos PIN distintos.
+--
+-- El administrador no tiene filas aca: ver las dos tiendas es justamente no
+-- pertenecer a ninguna.
+-- -----------------------------------------------------------------------------
+CREATE TABLE USUARIO_TIENDA (
+    usuario_id INT          NOT NULL,
+    tienda_id  INT          NOT NULL,
+    created_at DATETIME2(3) NOT NULL DEFAULT SYSUTCDATETIME(),
+
+    CONSTRAINT PK_USUARIO_TIENDA PRIMARY KEY (usuario_id, tienda_id),
+    -- ON DELETE CASCADE: si se borra el usuario, sus asignaciones no significan
+    -- nada por separado. No es el caso de sus ventas, que se conservan.
+    CONSTRAINT FK_USUTIENDA_USUARIO FOREIGN KEY (usuario_id) REFERENCES Usuario(id) ON DELETE CASCADE,
+    CONSTRAINT FK_USUTIENDA_TIENDA  FOREIGN KEY (tienda_id)  REFERENCES TIENDA(id)
+);
+
+-- La pantalla de ingreso pregunta siempre "que empleados trabajan en esta
+-- tienda", asi que el indice va por tienda.
+CREATE INDEX IX_USUTIENDA_TIENDA ON USUARIO_TIENDA(tienda_id);
+GO
+
+-- -----------------------------------------------------------------------------
+-- 2.8 Stock -- CACHE, NO VERDAD
 --
 -- Guarda el total ya calculado para que la pantalla de venta no tenga que
 -- sumar miles de movimientos cada vez que el empleado toca una tecla.
@@ -284,7 +364,7 @@ CREATE INDEX IX_STOCK_BAJO ON Stock(necesita_reposicion, tienda_id)
 GO
 
 -- -----------------------------------------------------------------------------
--- 2.7 MOVIMIENTO_INVENTARIO -- LA DECISION CENTRAL DEL MODELO
+-- 2.9 MOVIMIENTO_INVENTARIO -- LA DECISION CENTRAL DEL MODELO
 --
 -- No se guarda el stock: se guarda CADA HECHO QUE LO MODIFICO. El stock es la
 -- suma de los movimientos.
@@ -372,7 +452,7 @@ CREATE INDEX IX_MOV_VENTA           ON MOVIMIENTO_INVENTARIO(venta_id) WHERE ven
 GO
 
 -- -----------------------------------------------------------------------------
--- 2.8 DISPOSITIVO y SYNC_LOG
+-- 2.10 DISPOSITIVO y SYNC_LOG
 --
 -- Cada tablet y cuando sincronizo por ultima vez. Sirve para que el panel
 -- avise "la tablet de la plastiqueria no sincroniza hace 3 horas", que suele
@@ -407,7 +487,7 @@ CREATE INDEX IX_SYNCLOG_DISPOSITIVO ON SYNC_LOG(dispositivo_id, created_at DESC)
 GO
 
 -- -----------------------------------------------------------------------------
--- 2.9 CAJA -- el turno de trabajo
+-- 2.11 CAJA -- el turno de trabajo
 --
 -- SOBRE 'diferencia' Y EL EFECTIVO ESPERADO.
 -- El efectivo esperado (monto inicial + ventas en efectivo del turno) NO se
@@ -458,7 +538,7 @@ CREATE UNIQUE INDEX UX_CAJA_ABIERTA_POR_TIENDA ON CAJA(tienda_id)
 GO
 
 -- -----------------------------------------------------------------------------
--- 2.10 VENTA
+-- 2.12 VENTA
 -- -----------------------------------------------------------------------------
 CREATE TABLE VENTA (
     id            INT              IDENTITY(1,1) PRIMARY KEY,
@@ -469,6 +549,9 @@ CREATE TABLE VENTA (
     tienda_id     INT              NOT NULL,
     usuario_id    INT NULL,
     caja_id       INT NULL,
+    -- A quien se le fio. NULL en la venta de mostrador comun, que es la
+    -- mayoria: solo el credito necesita saber de quien es la deuda.
+    cliente_id    INT NULL,
 
     -- Correlativo POR TIENDA, no global: las dos numeran en paralelo aunque
     -- esten desconectadas entre si. El comprobante legible se arma con el
@@ -488,9 +571,15 @@ CREATE TABLE VENTA (
     CONSTRAINT FK_VENTA_TIENDA  FOREIGN KEY (tienda_id)  REFERENCES TIENDA(id),
     CONSTRAINT FK_VENTA_USUARIO FOREIGN KEY (usuario_id) REFERENCES Usuario(id),
     CONSTRAINT FK_VENTA_CAJA    FOREIGN KEY (caja_id)    REFERENCES CAJA(id),
+    CONSTRAINT FK_VENTA_CLIENTE FOREIGN KEY (cliente_id) REFERENCES CLIENTE(id),
 
     CONSTRAINT CK_VENTA_METODO CHECK
         (metodo_pago IN ('efectivo', 'tarjeta', 'transferencia', 'credito', 'otro')),
+
+    -- No se puede fiar al aire. Sin esto vuelve el problema que CLIENTE vino a
+    -- resolver: deuda registrada sin deudor.
+    CONSTRAINT CK_VENTA_CLIENTE_CREDITO CHECK
+        (metodo_pago <> 'credito' OR cliente_id IS NOT NULL),
     CONSTRAINT CK_VENTA_MONTOS CHECK (subtotal >= 0 AND descuento >= 0 AND total >= 0),
     -- El total no puede contradecir a sus partes. Es la clase de error que
     -- nadie detecta mirando, porque el numero parece razonable.
@@ -503,6 +592,9 @@ CREATE TABLE VENTA (
 CREATE UNIQUE INDEX UX_VENTA_UUID ON VENTA(uuid_externo) WHERE uuid_externo IS NOT NULL;
 CREATE INDEX IX_VENTA_FECHA ON VENTA(tienda_id, ocurrido_en DESC);
 CREATE INDEX IX_VENTA_CAJA  ON VENTA(caja_id) WHERE caja_id IS NOT NULL;
+-- El saldo de un cliente se calcula sumando sus ventas a credito: sin este
+-- indice, cada venta fiada recorreria la tabla entera para validar el limite.
+CREATE INDEX IX_VENTA_CLIENTE ON VENTA(cliente_id) WHERE cliente_id IS NOT NULL;
 GO
 
 -- Ahora que existe VENTA se puede cerrar el vinculo desde los movimientos.
@@ -512,7 +604,7 @@ ALTER TABLE MOVIMIENTO_INVENTARIO
 GO
 
 -- -----------------------------------------------------------------------------
--- 2.11 VENTA_LINEA -- entidad debil
+-- 2.13 VENTA_LINEA -- entidad debil
 --
 -- Su clave primaria es (venta_id, numero): una linea no existe por si sola,
 -- solo dentro de su venta, y se identifica por el orden en que aparece en el
@@ -532,6 +624,17 @@ CREATE TABLE VENTA_LINEA (
     cantidad        DECIMAL(18,3) NOT NULL,
     precio_unitario DECIMAL(18,2) NOT NULL,
     costo_unitario  DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+    -- LA REBAJA POR MAYOREO VIVE ACA, NO EN LA CABECERA.
+    --
+    -- El negocio no tiene precios de mayoreo cargados: la rebaja la negocia el
+    -- empleado en el mostrador. Este campo es el unico lugar donde eso queda
+    -- registrado, asi que el "descuento" del modelo ES el mayoreo.
+    --
+    -- Va por linea y no por venta porque la rebaja es sobre un PRODUCTO ("te
+    -- dejo mas baratos los tubos"), no sobre la boleta. Con un monto suelto en
+    -- la cabecera habria que prorratearlo entre las lineas para saber cuanto
+    -- se gano con cada producto, y cualquier forma de prorratearlo es inventada.
+    descuento       DECIMAL(18,2) NOT NULL DEFAULT 0.00,
     subtotal        DECIMAL(18,2) NOT NULL,
 
     CONSTRAINT PK_VENTA_LINEA PRIMARY KEY (venta_id, numero),
@@ -539,14 +642,70 @@ CREATE TABLE VENTA_LINEA (
     CONSTRAINT FK_VENTALINEA_PRODUCTO FOREIGN KEY (producto_id) REFERENCES PRODUCTO(id),
 
     CONSTRAINT CK_LINEA_CANTIDAD CHECK (cantidad > 0),
-    CONSTRAINT CK_LINEA_SUBTOTAL CHECK (subtotal = ROUND(cantidad * precio_unitario, 2))
+    -- No se puede regalar mas de lo que vale el renglon: si no, el subtotal
+    -- sale negativo y la venta termina sumando en contra.
+    CONSTRAINT CK_LINEA_DESCUENTO CHECK
+        (descuento >= 0 AND descuento <= ROUND(cantidad * precio_unitario, 2)),
+    CONSTRAINT CK_LINEA_SUBTOTAL CHECK
+        (subtotal = ROUND(cantidad * precio_unitario, 2) - descuento),
+
+    -- Un producto, una linea. Si el mismo articulo entra dos veces, el
+    -- descuento queda partido y el reporte por producto miente.
+    CONSTRAINT UQ_LINEA_PRODUCTO UNIQUE (venta_id, producto_id)
 );
 
 CREATE INDEX IX_LINEA_PRODUCTO ON VENTA_LINEA(producto_id);
 GO
 
 -- -----------------------------------------------------------------------------
--- 2.12 SESION
+-- 2.14 PAGO_CREDITO -- los abonos
+--
+-- El abono va contra la CUENTA DEL CLIENTE, no contra una factura. Con pagos
+-- parciales, atarlos a una venta obligaria al empleado a elegir que boletas
+-- cancela cuando el cliente le pone quinientos pesos en el mostrador. Nadie
+-- hace eso: se abona a la cuenta y listo.
+--
+-- POR QUE LLEVA caja_id -- Y ES EL DETALLE QUE ROMPE EL ARQUEO SI FALTA.
+-- Un abono en efectivo es plata que entra al cajon SIN que haya una venta. El
+-- cuadre calcula el efectivo esperado a partir de las ventas del turno, asi
+-- que si alguien pasa a abonar una deuda vieja, al cerrar aparecen de mas y la
+-- caja marca un sobrante que no existe. Por eso el abono sabe en que caja cayo
+-- y v_cuadre_caja lo suma.
+-- -----------------------------------------------------------------------------
+CREATE TABLE PAGO_CREDITO (
+    id            INT           IDENTITY(1,1) PRIMARY KEY,
+    cliente_id    INT           NOT NULL,
+    -- NULL si el abono no entro por una caja abierta (transferencia recibida
+    -- fuera del turno, por ejemplo).
+    caja_id       INT NULL,
+    -- Quien lo recibio. NULL si ese usuario fue dado de baja: se pierde el
+    -- nombre, no el abono.
+    usuario_id    INT NULL,
+    monto         DECIMAL(18,2) NOT NULL,
+    metodo_pago   VARCHAR(20)   NOT NULL DEFAULT 'efectivo',
+    observaciones VARCHAR(MAX),
+    ocurrido_en   DATETIME2(3)  NOT NULL DEFAULT SYSUTCDATETIME(),
+    created_at    DATETIME2(3)  NOT NULL DEFAULT SYSUTCDATETIME(),
+
+    CONSTRAINT FK_PAGO_CLIENTE FOREIGN KEY (cliente_id) REFERENCES CLIENTE(id),
+    CONSTRAINT FK_PAGO_CAJA    FOREIGN KEY (caja_id)    REFERENCES CAJA(id),
+    CONSTRAINT FK_PAGO_USUARIO FOREIGN KEY (usuario_id) REFERENCES Usuario(id),
+
+    -- Un abono de cero no significa nada, y uno negativo seria una venta
+    -- disfrazada: para aumentar la deuda esta la venta a credito.
+    CONSTRAINT CK_PAGO_MONTO  CHECK (monto > 0),
+    -- Sin 'credito': no se puede pagar una deuda con otra deuda.
+    CONSTRAINT CK_PAGO_METODO CHECK
+        (metodo_pago IN ('efectivo', 'tarjeta', 'transferencia', 'otro'))
+);
+
+-- El saldo del cliente suma sus abonos: mismo motivo que IX_VENTA_CLIENTE.
+CREATE INDEX IX_PAGO_CLIENTE ON PAGO_CREDITO(cliente_id, ocurrido_en DESC);
+CREATE INDEX IX_PAGO_CAJA    ON PAGO_CREDITO(caja_id) WHERE caja_id IS NOT NULL;
+GO
+
+-- -----------------------------------------------------------------------------
+-- 2.15 SESION
 --
 -- Una fila por sesion abierta. El usuario recibe un token al entrar y lo manda
 -- en cada peticion.
@@ -565,12 +724,22 @@ CREATE TABLE SESION (
     token_hash     CHAR(64)     NOT NULL PRIMARY KEY,   -- SHA-256 en hexadecimal
     usuario_id     INT          NOT NULL,
     dispositivo_id INT NULL,
+    -- DESDE QUE TIENDA esta operando esta sesion.
+    --
+    -- Antes se deducia de Usuario.tienda_id. Con empleados que trabajan en las
+    -- dos ya no se puede deducir: la persona la ELIGE al entrar y queda fija
+    -- mientras dure la sesion. Para el alcance de los datos importa desde
+    -- donde esta vendiendo ahora, no a donde pertenece.
+    --
+    -- NULL = administrador, que no opera desde un local y ve los dos.
+    tienda_id      INT NULL,
     expira_en      DATETIME2(3) NOT NULL,
     revocada_en    DATETIME2(3) NULL,                   -- NULL = sigue viva
     created_at     DATETIME2(3) NOT NULL DEFAULT SYSUTCDATETIME(),
 
     CONSTRAINT FK_SESION_USUARIO     FOREIGN KEY (usuario_id)     REFERENCES Usuario(id),
     CONSTRAINT FK_SESION_DISPOSITIVO FOREIGN KEY (dispositivo_id) REFERENCES DISPOSITIVO(id),
+    CONSTRAINT FK_SESION_TIENDA      FOREIGN KEY (tienda_id)      REFERENCES TIENDA(id),
     CONSTRAINT CK_SESION_VIGENCIA CHECK (expira_en > created_at)
 );
 
@@ -581,7 +750,7 @@ CREATE INDEX IX_SESION_USUARIO ON SESION(usuario_id) WHERE revocada_en IS NULL;
 GO
 
 -- -----------------------------------------------------------------------------
--- 2.13 INTENTO_LOGIN
+-- 2.16 INTENTO_LOGIN
 --
 -- Un PIN de 4 digitos son 10.000 combinaciones. Un programa que pruebe una por
 -- segundo las agota en menos de tres horas. EL HASH NO PROTEGE DE ESTO: protege
@@ -692,6 +861,78 @@ BEGIN
 END;
 GO
 
+-- -----------------------------------------------------------------------------
+-- 3.3 El limite de credito se respeta
+--
+-- POR QUE UN TRIGGER Y NO UN CHECK: el limite compara contra la suma de las
+-- OTRAS ventas del cliente y de sus abonos. Un CHECK solo ve la fila que se
+-- esta insertando, asi que no puede expresarlo.
+--
+-- POR QUE EN LA BASE Y NO EN LA API: es la misma razon que CK_USUARIO_
+-- CREDENCIALES. Una regla que vive solo en el endpoint la saltea cualquier
+-- script que inserte directo, y el dia que pase nadie se entera.
+--
+-- ESTO SOLO FUNCIONA PORQUE EL CREDITO ES SOLO ONLINE. Si se pudiera fiar sin
+-- senial, dos tiendas desconectadas podrian pasarse del limite cada una por su
+-- lado y el choque recien aparecer al sincronizar, cuando ya no hay nada que
+-- hacer. Por eso /sync rechaza las ventas a credito que llegan por lote.
+--
+-- Valida SOLO lo que se esta tocando: si manana le bajan el cupo a alguien que
+-- ya debe de mas, la deuda existente no se invalida -- seria absurdo --
+-- simplemente no puede fiar mas.
+--
+-- VA TAMBIEN EN UPDATE, no solo en INSERT. Con AFTER INSERT a secas queda un
+-- agujero: insertar la venta en cero y subirle el total despues esquiva el
+-- limite por completo, y es exactamente lo que hace cualquier flujo que arme
+-- la cabecera a partir de las lineas.
+--
+-- Por conjuntos, como todos los triggers de este archivo.
+-- -----------------------------------------------------------------------------
+CREATE OR ALTER TRIGGER trg_venta_credito_limite
+ON VENTA
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF NOT EXISTS (SELECT 1 FROM inserted WHERE metodo_pago = 'credito')
+        RETURN;
+
+    -- Clientes tocados por este lote. DISTINCT porque una misma persona puede
+    -- aparecer en varias ventas del mismo envio.
+    DECLARE @clientes TABLE (cliente_id INT PRIMARY KEY);
+
+    INSERT INTO @clientes (cliente_id)
+    SELECT DISTINCT cliente_id
+      FROM inserted
+     WHERE metodo_pago = 'credito'
+       AND cliente_id IS NOT NULL;
+
+    -- El saldo se calcula entero, no por diferencia: incluye las ventas recien
+    -- insertadas porque el trigger es AFTER.
+    IF EXISTS (
+        SELECT 1
+          FROM @clientes q
+          JOIN CLIENTE cl ON cl.id = q.cliente_id
+         CROSS APPLY (
+            SELECT
+                ISNULL((SELECT SUM(v.total)
+                          FROM VENTA v
+                         WHERE v.cliente_id   = cl.id
+                           AND v.metodo_pago  = 'credito'
+                           AND v.anulada      = 0), 0)
+              - ISNULL((SELECT SUM(p.monto)
+                          FROM PAGO_CREDITO p
+                         WHERE p.cliente_id = cl.id), 0) AS saldo
+         ) s
+         WHERE s.saldo > cl.limite_credito
+    )
+        THROW 50002,
+            'La venta a credito supera el limite del cliente.',
+            1;
+END;
+GO
+
 -- =============================================================================
 -- 4. VISTAS -- los reportes del panel
 --
@@ -786,8 +1027,12 @@ GO
 --
 -- Aca es donde se paga el no haber guardado el efectivo esperado: se recalcula.
 --
--- esperado = monto_inicial + ventas en efectivo de esa caja
+-- esperado = monto_inicial + ventas en efectivo + abonos en efectivo
 -- diferencia_real = efectivo_contado - esperado
+--
+-- LOS ABONOS CUENTAN. Un cliente que pasa a pagar una deuda vieja deja plata
+-- en el cajon sin que haya una venta: sin sumarlos, el arqueo marca un
+-- sobrante que no existe y el empleado termina desconfiando del sistema.
 --
 -- La columna 'diferencia' que guarda CAJA es lo que la aplicacion anoto al
 -- cerrar el turno. 'diferencia_real' es lo que sale de las ventas registradas.
@@ -805,6 +1050,13 @@ WITH efectivo AS (
        AND v.metodo_pago = 'efectivo'
        AND v.caja_id IS NOT NULL
      GROUP BY v.caja_id
+),
+abonos AS (
+    SELECT p.caja_id, SUM(p.monto) AS abonado_efectivo
+      FROM PAGO_CREDITO p
+     WHERE p.metodo_pago = 'efectivo'
+       AND p.caja_id IS NOT NULL
+     GROUP BY p.caja_id
 )
 SELECT
     c.id         AS caja_id,
@@ -815,20 +1067,70 @@ SELECT
     c.abierta_en,
     c.cerrada_en,
     c.monto_inicial,
-    ISNULL(e.vendido_efectivo, 0)                        AS vendido_efectivo,
-    c.monto_inicial + ISNULL(e.vendido_efectivo, 0)      AS esperado,
+    ISNULL(e.vendido_efectivo, 0)  AS vendido_efectivo,
+    ISNULL(a.abonado_efectivo, 0)  AS abonado_efectivo,
+    c.monto_inicial + ISNULL(e.vendido_efectivo, 0) + ISNULL(a.abonado_efectivo, 0) AS esperado,
     c.efectivo_contado,
-    c.diferencia                                         AS diferencia_registrada,
-    c.efectivo_contado - (c.monto_inicial + ISNULL(e.vendido_efectivo, 0)) AS diferencia_real,
+    c.diferencia                   AS diferencia_registrada,
+    c.efectivo_contado
+      - (c.monto_inicial + ISNULL(e.vendido_efectivo, 0) + ISNULL(a.abonado_efectivo, 0)) AS diferencia_real,
     CAST(CASE
         WHEN c.efectivo_contado IS NULL THEN NULL
-        WHEN c.diferencia = c.efectivo_contado - (c.monto_inicial + ISNULL(e.vendido_efectivo, 0))
+        WHEN c.diferencia = c.efectivo_contado
+             - (c.monto_inicial + ISNULL(e.vendido_efectivo, 0) + ISNULL(a.abonado_efectivo, 0))
             THEN 1 ELSE 0
     END AS BIT) AS cuadra
 FROM CAJA c
 JOIN TIENDA  t ON t.id = c.tienda_id
 JOIN Usuario u ON u.id = c.usuario_id
-LEFT JOIN efectivo e ON e.caja_id = c.id;
+LEFT JOIN efectivo e ON e.caja_id = c.id
+LEFT JOIN abonos   a ON a.caja_id = c.id;
+GO
+
+-- -----------------------------------------------------------------------------
+-- 4.5 Cuentas por cobrar: quien debe y cuanto
+--
+-- La respuesta a la pregunta que el negocio hoy no puede contestar. Fiar lo
+-- hacen desde siempre; saber cuanto les deben en total, no.
+--
+-- El saldo se DERIVA aca y no se guarda en CLIENTE. Asi, anular una venta
+-- fiada baja la deuda sola, sin que nadie tenga que acordarse de restarla.
+-- -----------------------------------------------------------------------------
+CREATE OR ALTER VIEW v_cuentas_por_cobrar AS
+WITH fiado AS (
+    SELECT v.cliente_id,
+           SUM(v.total)       AS total_fiado,
+           COUNT(*)           AS ventas_a_credito,
+           MAX(v.ocurrido_en) AS ultima_venta
+      FROM VENTA v
+     WHERE v.metodo_pago = 'credito'
+       AND v.anulada     = 0
+       AND v.cliente_id IS NOT NULL
+     GROUP BY v.cliente_id
+),
+abonado AS (
+    SELECT p.cliente_id,
+           SUM(p.monto)       AS total_abonado,
+           MAX(p.ocurrido_en) AS ultimo_abono
+      FROM PAGO_CREDITO p
+     GROUP BY p.cliente_id
+)
+SELECT
+    c.id     AS cliente_id,
+    c.nombre,
+    c.telefono,
+    c.limite_credito,
+    ISNULL(f.total_fiado, 0)   AS total_fiado,
+    ISNULL(a.total_abonado, 0) AS total_abonado,
+    ISNULL(f.total_fiado, 0) - ISNULL(a.total_abonado, 0) AS saldo,
+    c.limite_credito - (ISNULL(f.total_fiado, 0) - ISNULL(a.total_abonado, 0)) AS cupo_disponible,
+    ISNULL(f.ventas_a_credito, 0) AS ventas_a_credito,
+    f.ultima_venta,
+    a.ultimo_abono
+FROM CLIENTE c
+LEFT JOIN fiado   f ON f.cliente_id = c.id
+LEFT JOIN abonado a ON a.cliente_id = c.id
+WHERE c.activo = 1;
 GO
 
 -- =============================================================================

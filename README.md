@@ -4,9 +4,15 @@ Sistema de gestión, inventario y supervisión financiera para dos tiendas de un
 mismo dueño —una ferretería y una plastiquería— que hoy llevan todo a lápiz y
 papel.
 
-Las tiendas trabajan con **conexión intermitente**, así que el sistema está
-diseñado para funcionar sin internet en el mostrador y sincronizar solo cuando
-vuelve la señal.
+Las tiendas están en un pueblo donde la señal se cae seguido y los apagones
+dejan al local sin internet por ratos: no es la excepción, es la condición
+normal de trabajo. Por eso el sistema está diseñado para **seguir vendiendo sin
+internet** en el mostrador y sincronizar cuando vuelve la señal.
+
+Ese requisito es el que justifica `DISPOSITIVO`, `SYNC_LOG`, los
+`uuid_externo` y que el stock se derive de movimientos en vez de guardarse como
+un total que se pisa. Sin él, media docena de decisiones del modelo no se
+entienden.
 
 ---
 
@@ -42,11 +48,12 @@ Una sola aplicación con dos perfiles de uso:
 
 | Componente | Estado |
 |---|---|
-| Esquema de base de datos (SQL Server) | Listo y verificado (33 pruebas) |
-| Datos de prueba | Listos — 100 productos, 2 tiendas |
-| Diagrama entidad-relación | Desactualizado — ver [CAMBIOS-MODELO.md](docs/diagramas/CAMBIOS-MODELO.md) |
-| API de sincronización y reportes | Escrita, **pendiente de portar** a SQL Server |
-| Autenticación y permisos | Escrita, **pendiente de portar** a SQL Server |
+| Esquema de base de datos (SQL Server) | Listo y verificado (46 pruebas, 17 tablas) |
+| Datos de prueba | Listos — 100 productos, 2 tiendas, 2 clientes con crédito |
+| Diagrama entidad-relación | Al día — ver [DECISIONES-MODELO.md](docs/diagramas/DECISIONES-MODELO.md) |
+| API de sincronización y reportes | Escrita para PostgreSQL, **pendiente de portar** a SQL Server |
+| Autenticación y permisos | Escrita para PostgreSQL, **pendiente de portar** a SQL Server |
+| Crédito a clientes y abonos | En el esquema; falta la API |
 | Alta de productos y usuarios | Pendiente |
 | Apertura y cierre de caja | Pendiente |
 | PWA / punto de venta | Pendiente |
@@ -55,6 +62,12 @@ Una sola aplicación con dos perfiles de uso:
 > El proyecto migró de PostgreSQL a SQL Server. La base ya está migrada y
 > verificada; la API todavía usa el driver de PostgreSQL y no corre contra el
 > esquema nuevo. La versión anterior quedó archivada en `db/_postgresql/`.
+>
+> **`npm test` prueba el esquema de SQL Server** (`db/test-esquema.sql`, 46
+> pruebas) y es lo único que corre hoy. `npm run test:api` está **roto desde la
+> migración**: carga `db/schema.sql` —que es T-SQL— dentro de PGlite, que es
+> PostgreSQL, y falla en la primera sentencia. Se arregla al portar la API, no
+> antes.
 
 ## Estructura
 
@@ -82,7 +95,7 @@ ferreplast/
 ├── docs/
 │   ├── SCHEMA.md           decisiones de diseño de la base
 │   ├── diagramas/
-│   │   ├── CAMBIOS-MODELO.md   qué actualizar en el diagrama y por qué
+│   │   ├── DECISIONES-MODELO.md  por qué el modelo es así (defensa)
 │   │   └── modelo relacional 2.svg · .png
 │   └── word/               documento de presentación
 ├── .env.example            plantilla de configuración

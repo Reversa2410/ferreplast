@@ -243,7 +243,12 @@ ahora y evita ese problema después.
 |---|---|---|
 | `CHECK` de lista | `tipo`, `rol`, `metodo_pago`, `estado` | Impide valores inválidos por error de tipeo |
 | `CHECK` de signo | `MOVIMIENTO_INVENTARIO` | Una venta no puede aumentar el stock |
-| `CHECK` de credenciales | `Usuario` | Un admin necesita contraseña; un empleado, PIN y tienda |
+| `CHECK` de credenciales | `Usuario` | Un administrador necesita contraseña; un empleado, PIN |
+| `CHECK` de deudor | `VENTA` | No se puede fiar sin registrar a quién |
+| `CHECK` de rebaja | `VENTA_LINEA` | No se puede descontar más de lo que vale el renglón |
+| `UNIQUE` compuesto | `VENTA_LINEA (venta_id, producto_id)` | Un producto, una línea: la rebaja no queda partida |
+| Clave primaria compuesta | `USUARIO_TIENDA` | Un empleado no se asigna dos veces a la misma tienda |
+| Trigger de límite | `VENTA` | No se fía por encima del cupo del cliente |
 | `CHECK` de coherencia | `VENTA` | El total debe ser subtotal menos descuento |
 | `CHECK` de cierre | `CAJA` | No se puede cerrar un turno sin contar el efectivo |
 | `CHECK` de vigencia | `SESION` | Una sesión no puede caducar antes de haber nacido |
@@ -379,9 +384,18 @@ nadie lo note.
 
 ### El alcance por tienda
 
-El empleado solo opera sobre su tienda; el admin, sobre las dos. Sin esa regla,
-cualquier empleado podría descontar stock del otro local cambiando un
+El empleado solo opera sobre su tienda; el administrador, sobre las dos. Sin esa
+regla, cualquier empleado podría descontar stock del otro local cambiando un
 identificador en la petición.
+
+**De dónde sale "su tienda".** Ya no de `Usuario`. El levantamiento dice que
+algunos empleados trabajan en los dos locales, así que la pertenencia vive en
+`USUARIO_TIENDA` (varias filas por persona) y la tienda desde la que está
+operando ahora vive en `SESION.tienda_id`, elegida al entrar.
+
+Son dos cosas distintas y conviene no confundirlas: *a dónde pertenece* es un
+permiso, *desde dónde está vendiendo* es un hecho del turno. Para el alcance de
+los datos manda el segundo.
 
 La comprobación se hace **por elemento del lote**, no por lote: una tablet puede
 enviar operaciones de las dos tiendas, y la que no corresponde se aparta sola sin
@@ -407,10 +421,16 @@ levantamiento de requerimientos:
 
 - **Proveedores y compras.** Hoy una entrada registra el costo pero no a quién
   se le compró.
-- **Clientes y ventas a crédito.** El `metodo_pago` contempla `credito`, pero no
-  existe la tabla de cuentas por cobrar.
-- **Precios por tienda.** El modelo asume precio único. Si las dos tiendas
-  cobran distinto, hace falta una tabla `precios_por_tienda`.
+- **Precios de mayoreo por producto.** Hoy la rebaja la negocia el empleado y se
+  registra en `VENTA_LINEA.descuento`. Si algún día la dueña fija escalas
+  ("de 12 en adelante, tanto"), hace falta una tabla `PRECIO_MAYOREO`
+  (`producto_id`, `cantidad_minima`, `precio_unitario`) y el sistema las
+  aplicaría solo.
+- **Crédito sin señal.** Decisión consciente: con la conexión caída **no se
+  fía**. Dos tiendas desconectadas podrían pasarse del cupo cada una por su
+  lado, y al sincronizar ya no habría nada que hacer. El costo es real: justo
+  cuando se va la luz es cuando el cliente de confianza quiere llevarse las
+  cosas.
 - **Transferencias entre tiendas.** Mover mercadería de una esquina a la otra
   hoy se representa con dos movimientos sueltos (una salida y una entrada) sin
   vínculo entre sí.
