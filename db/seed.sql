@@ -29,6 +29,8 @@ GO
 -- Se borra en orden inverso al de las dependencias.
 DELETE FROM INTENTO_LOGIN;
 DELETE FROM SESION;
+DELETE FROM USUARIO_TIENDA;
+DELETE FROM PAGO_CREDITO;
 DELETE FROM VENTA_LINEA;
 -- Los movimientos apuntan a ventas: hay que soltarlos antes de borrar VENTA.
 -- Es la unica excepcion permitida al trigger de inmutabilidad, y se consigue
@@ -38,6 +40,7 @@ DISABLE TRIGGER trg_movimientos_inmutables ON MOVIMIENTO_INVENTARIO;
 DELETE FROM MOVIMIENTO_INVENTARIO;
 ENABLE TRIGGER trg_movimientos_inmutables ON MOVIMIENTO_INVENTARIO;
 DELETE FROM VENTA;
+DELETE FROM CLIENTE;
 DELETE FROM CAJA;
 DELETE FROM SYNC_LOG;
 DELETE FROM DISPOSITIVO;
@@ -69,6 +72,7 @@ DECLARE @tabla SYSNAME, @sql NVARCHAR(400);
 DECLARE cur CURSOR LOCAL FAST_FORWARD FOR
     SELECT nombre FROM (VALUES
         ('NEGOCIO'), ('TIENDA'), ('CATEGORIA'), ('PRODUCTO'), ('Usuario'),
+        ('CLIENTE'), ('PAGO_CREDITO'),
         ('DISPOSITIVO'), ('SYNC_LOG'), ('CAJA'), ('VENTA'),
         ('MOVIMIENTO_INVENTARIO'), ('INTENTO_LOGIN')
     ) AS t(nombre);
@@ -281,16 +285,42 @@ GO
 -- Para regenerar estos hash:
 --   node --input-type=module -e "import {hashear} from './src/auth/password.mjs'; console.log(await hashear('loquesea'))"
 --
--- El administrador tiene tienda_id NULL: no pertenece a un local, ve los dos.
+-- El administrador no tiene filas en USUARIO_TIENDA: ver las dos tiendas es
+-- justamente no pertenecer a ninguna.
 -- -----------------------------------------------------------------------------
-INSERT INTO Usuario (negocio_id, tienda_id, nombre, rol, email, password_hash, pin_hash) VALUES
-(1, NULL, 'Carlos Admin', 'admin', 'admin@ferreplast.com',
+INSERT INTO Usuario (negocio_id, nombre, rol, email, password_hash, pin_hash) VALUES
+(1, 'Carlos Admin', 'administrador', 'admin@ferreplast.com',
  'scrypt$16384$8$1$Dqh3JaASO5NwNKaI+I+eLA==$8ZUSwEVybue0Y/N0wAERopYhTm3W5sW1fgO0wMMrB89pM2eOZ6u/GKjhGulYkauyTquCLDrhweYayJW0aYzg2w==',
  NULL),
-(1, 1, 'Juan Ferreteria', 'empleado', NULL, NULL,
+(1, 'Juan Ferreteria', 'empleado', NULL, NULL,
  'scrypt$16384$8$1$DHu4I9gFIz+AdUtwPFQUlw==$bsVbQh6U3xMTPdarVYh0maBnL2r86B2ZMfxbeofAJqfS7D+L2OVGQ+gdt+LORTZdKuFc+Ua7LkA3Mnt6w/zpsQ=='),
-(1, 2, 'Maria Plastiqueria', 'empleado', NULL, NULL,
+(1, 'Maria Plastiqueria', 'empleado', NULL, NULL,
  'scrypt$16384$8$1$3ddyfhlIMTmV6/jby6EbCQ==$S9Fmbw2PrI9yYuSOIIVguivm9myNBVBIw29hjDn3Aw5rDr5asRtDtdz3K/Nrrjkh7tamdWkEtbecoVzlc/A2QQ==');
+GO
+
+-- -----------------------------------------------------------------------------
+-- En que tienda trabaja cada empleado
+--
+-- Juan figura en LAS DOS a proposito: el levantamiento dice que algunos
+-- empleados cubren ambos locales, y este es el caso que el modelo viejo no
+-- podia representar. Maria solo en la plastiqueria.
+-- -----------------------------------------------------------------------------
+INSERT INTO USUARIO_TIENDA (usuario_id, tienda_id) VALUES
+(2, 1),   -- Juan  -> ferreteria
+(2, 2),   -- Juan  -> plastiqueria (el empleado compartido)
+(3, 2);   -- Maria -> plastiqueria
+GO
+
+-- -----------------------------------------------------------------------------
+-- Clientes con credito
+--
+-- Don Pedro queda con el limite por omision (1000) y sin deuda: muestra el
+-- cupo completo disponible. La constructora tiene el limite subido a mano,
+-- que es el caso para el que limite_credito es una columna y no una constante.
+-- -----------------------------------------------------------------------------
+INSERT INTO CLIENTE (negocio_id, nombre, telefono, identificacion, limite_credito) VALUES
+(1, 'Pedro Gonzalez',            '8555-1122', '001-010180-1001A', 1000.00),
+(1, 'Constructora El Progreso',  '8555-3344', 'J0310000012345',   5000.00);
 GO
 
 -- -----------------------------------------------------------------------------
@@ -385,6 +415,21 @@ INSERT INTO VENTA (uuid_externo, tienda_id, usuario_id, caja_id, numero,
 GO
 
 -- -----------------------------------------------------------------------------
+-- Venta a credito
+--
+-- Lleva cliente_id porque CK_VENTA_CLIENTE_CREDITO lo exige: no se puede fiar
+-- al aire. Tiene caja_id (ocurrio durante el turno de Juan) pero NO entra al
+-- efectivo esperado, porque no entro plata al cajon.
+--
+-- No lleva uuid_externo a proposito: el credito es solo online, asi que esta
+-- venta no pudo haber salido de una tablet desconectada.
+-- -----------------------------------------------------------------------------
+INSERT INTO VENTA (tienda_id, usuario_id, caja_id, cliente_id, numero,
+                   subtotal, descuento, total, metodo_pago, ocurrido_en) VALUES
+(1, 2, 1, 2, 1002, 0.00, 0.00, 0.00, 'credito', DATEADD(HOUR, -2, SYSUTCDATETIME()));
+GO
+
+-- -----------------------------------------------------------------------------
 -- Lineas de venta
 --
 -- El costo se toma del producto EN ESTE MOMENTO y queda congelado en la linea.
@@ -398,12 +443,50 @@ INSERT INTO VENTA_LINEA (venta_id, numero, producto_id, cantidad, precio_unitari
 SELECT 1, 2, p.id, 1.000, p.precio_venta, p.precio_costo, ROUND(1 * p.precio_venta, 2)
   FROM PRODUCTO p WHERE p.id = 13;     -- 1 bolsa de cemento
 
-INSERT INTO VENTA_LINEA (venta_id, numero, producto_id, cantidad, precio_unitario, costo_unitario, subtotal)
-SELECT 2, 1, p.id, 1.000, p.precio_venta, p.precio_costo, ROUND(1 * p.precio_venta, 2)
-  FROM PRODUCTO p WHERE p.id = 51;     -- 1 silla
+-- La rebaja de 50 va en la silla, no en la boleta: asi el reporte sabe que
+-- producto dejo menos margen. Antes era un monto suelto en la cabecera y no
+-- habia forma de atribuirlo sin prorratear a ojo.
+INSERT INTO VENTA_LINEA (venta_id, numero, producto_id, cantidad, precio_unitario, costo_unitario, descuento, subtotal)
+SELECT 2, 1, p.id, 1.000, p.precio_venta, p.precio_costo,
+       50.00, ROUND(1 * p.precio_venta, 2) - 50.00
+  FROM PRODUCTO p WHERE p.id = 51;     -- 1 silla con rebaja
 INSERT INTO VENTA_LINEA (venta_id, numero, producto_id, cantidad, precio_unitario, costo_unitario, subtotal)
 SELECT 2, 2, p.id, 1.000, p.precio_venta, p.precio_costo, ROUND(1 * p.precio_venta, 2)
   FROM PRODUCTO p WHERE p.id = 52;     -- 1 mesa
+
+-- La venta a credito: una docena de bolsas de cemento con rebaja por mayoreo.
+-- 12 x 380 = 4560, menos 300 de rebaja = 4260. Entra en el cupo de 5000 de la
+-- constructora; con el limite por omision de 1000 esta venta seria rechazada
+-- por trg_venta_credito_limite, que es justamente lo que tiene que pasar.
+--
+-- El descuento va EN LA LINEA, que es donde ocurre la rebaja: es sobre el
+-- cemento, no sobre la boleta.
+INSERT INTO VENTA_LINEA (venta_id, numero, producto_id, cantidad, precio_unitario, costo_unitario, descuento, subtotal)
+SELECT 3, 1, p.id, 12.000, p.precio_venta, p.precio_costo,
+       300.00, ROUND(12 * p.precio_venta, 2) - 300.00
+  FROM PRODUCTO p WHERE p.id = 13;     -- 12 bolsas de cemento
+GO
+
+-- -----------------------------------------------------------------------------
+-- La cabecera se DERIVA de las lineas
+--
+-- Asi el subtotal, el descuento y el total no pueden contradecir a los
+-- renglones: el descuento de la venta es la suma de las rebajas otorgadas,
+-- nada mas. Es tambien lo que dispara trg_venta_credito_limite sobre la venta
+-- a credito, ahora que ya tiene su importe real.
+-- -----------------------------------------------------------------------------
+UPDATE v
+   SET subtotal  = x.bruto,
+       descuento = x.rebaja,
+       total     = x.bruto - x.rebaja
+  FROM VENTA v
+  JOIN (
+      SELECT venta_id,
+             SUM(ROUND(cantidad * precio_unitario, 2)) AS bruto,
+             SUM(descuento)                            AS rebaja
+        FROM VENTA_LINEA
+       GROUP BY venta_id
+  ) x ON x.venta_id = v.id;
 GO
 
 -- -----------------------------------------------------------------------------
@@ -438,6 +521,40 @@ VALUES
 (2, 55, 3, 'merma',    -1.000,  8.70, 'Vaso plastico roto en bodega',        DATEADD(HOUR, -2, SYSUTCDATETIME())),
 -- Correccion tras conteo fisico: el historial no se edita, se compensa
 (1,  3, 2, 'ajuste',   -2.000, 51.00, 'Faltante detectado en conteo fisico', DATEADD(HOUR, -1, SYSUTCDATETIME()));
+GO
+
+-- -----------------------------------------------------------------------------
+-- Abono a cuenta
+--
+-- La constructora pasa a abonar 200 en efectivo durante el turno de Juan. El
+-- abono va contra la CUENTA, no contra una factura: por eso no tiene venta_id.
+-- -----------------------------------------------------------------------------
+INSERT INTO PAGO_CREDITO (cliente_id, caja_id, usuario_id, monto, metodo_pago, observaciones, ocurrido_en) VALUES
+(2, 1, 2, 200.00, 'efectivo', 'Abono a cuenta', DATEADD(HOUR, -1, SYSUTCDATETIME()));
+GO
+
+-- -----------------------------------------------------------------------------
+-- Cierre real de la caja de Juan
+--
+-- El arqueo se recalcula AHORA que ya existen el abono y la venta a credito.
+-- Es la prueba viva de que v_cuadre_caja cuenta los abonos: los 200 que dejo
+-- la constructora estan en el cajon sin que haya una venta detras. Si alguien
+-- sacara los abonos de la vista, esta caja dejaria de cuadrar.
+--
+-- La venta a credito NO suma: no entro plata.
+-- -----------------------------------------------------------------------------
+UPDATE c
+   SET efectivo_contado = q.esperado,
+       diferencia       = 0.00
+  FROM CAJA c
+  CROSS APPLY (
+      SELECT c.monto_inicial
+           + ISNULL((SELECT SUM(v.total) FROM VENTA v
+                      WHERE v.caja_id = c.id AND v.metodo_pago = 'efectivo' AND v.anulada = 0), 0)
+           + ISNULL((SELECT SUM(p.monto) FROM PAGO_CREDITO p
+                      WHERE p.caja_id = c.id AND p.metodo_pago = 'efectivo'), 0) AS esperado
+  ) q
+ WHERE c.id = 1;
 GO
 
 PRINT 'Datos de prueba cargados.';
