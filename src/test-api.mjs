@@ -806,6 +806,610 @@ console.log('\n16. Limite de intentos de ingreso');
 }
 
 // -----------------------------------------------------------------------------
+console.log('\n17. Catalogo: categorias y productos');
+// -----------------------------------------------------------------------------
+let categoriaNueva;
+let productoNuevo;
+{
+  // La prueba 15 cerro TODAS las sesiones de Maria con /auth/salir/todo, asi
+  // que su token de mas arriba ya no vale. Se renueva aca en lugar de mover
+  // aquella prueba: que cerrar todo deje sin servir un token obtenido antes es
+  // justamente lo que esa prueba verifica.
+  tokenMaria = await entrarComoEmpleado(MARIA, MARIA_PIN, TIENDA_PLA);
+
+  const cats = await pedir('GET', '/categorias', tokenJuanFer);
+  check('GET /categorias responde al empleado', cats.statusCode === 200, cats.body);
+  check('las categorias traen cuantos productos tienen',
+    cats.json().categorias.every((c) => typeof c.productos === 'number'));
+
+  const comoEmpleado = await pedir('POST', '/categorias', tokenJuanFer, { nombre: 'X' });
+  check('el empleado NO puede crear categorias', comoEmpleado.statusCode === 403);
+
+  const cat = await pedir('POST', '/categorias', tokenAdmin, { nombre: 'Ferreteria Fina' });
+  check('el administrador crea una categoria', cat.statusCode === 201, cat.body);
+  categoriaNueva = cat.json().id;
+
+  // ---- Productos ----
+  const sinPermiso = await pedir('POST', '/productos', tokenJuanFer,
+    { nombre: 'Algo', categoria_id: categoriaNueva });
+  check('el empleado NO puede crear productos', sinPermiso.statusCode === 403);
+
+  const nuevo = await pedir('POST', '/productos', tokenAdmin, {
+    nombre: 'Taladro percutor 650W',
+    categoria_id: categoriaNueva,
+    precio_costo: 1800,
+    precio_venta: 2600,
+    unidad_medida: 'Unidad',
+  });
+  check('el administrador crea un producto', nuevo.statusCode === 201, nuevo.body);
+  productoNuevo = nuevo.json().id;
+
+  // EL CASO DEL LEVANTAMIENTO: la mercaderia no viene con codigo.
+  const sinCodigo1 = await pedir('POST', '/productos', tokenAdmin,
+    { nombre: 'Tornillo suelto a granel', categoria_id: categoriaNueva, codigo: '' });
+  const sinCodigo2 = await pedir('POST', '/productos', tokenAdmin,
+    { nombre: 'Clavo suelto a granel', categoria_id: categoriaNueva });
+  check('se pueden cargar DOS productos sin codigo (el caso real del negocio)',
+    sinCodigo1.statusCode === 201 && sinCodigo2.statusCode === 201,
+    `${sinCodigo1.statusCode} / ${sinCodigo2.statusCode}: ${sinCodigo1.body} ${sinCodigo2.body}`);
+  check('el codigo vacio se guarda como nulo, no como cadena vacia',
+    sinCodigo1.json().codigo === null);
+
+  const conCodigo = await pedir('POST', '/productos', tokenAdmin,
+    { nombre: 'Martillo con codigo', categoria_id: categoriaNueva, codigo: 'MART-X1' });
+  const repetido = await pedir('POST', '/productos', tokenAdmin,
+    { nombre: 'Otro martillo', categoria_id: categoriaNueva, codigo: 'MART-X1' });
+  check('un codigo repetido se rechaza con 409',
+    conCodigo.statusCode === 201 && repetido.statusCode === 409,
+    `${conCodigo.statusCode} / ${repetido.statusCode}: ${repetido.body}`);
+  check('el 409 no filtra el nombre del indice',
+    !/UX_|INDEX|PRODUCTO/.test(repetido.body), repetido.body);
+
+  const categoriaMala = await pedir('POST', '/productos', tokenAdmin,
+    { nombre: 'Huerfano', categoria_id: 999999 });
+  check('una categoria inexistente se rechaza con 400', categoriaMala.statusCode === 400,
+    `${categoriaMala.statusCode}: ${categoriaMala.body}`);
+
+  // ---- Lectura y busqueda ----
+  const busqueda = await pedir('GET', '/productos?q=percutor', tokenJuanFer);
+  check('el empleado busca productos por nombre',
+    busqueda.statusCode === 200 && busqueda.json().productos.length === 1,
+    JSON.stringify(busqueda.json().productos?.map((p) => p.nombre)));
+  check('la busqueda trae el stock de la tienda de la sesion',
+    busqueda.json().tienda_id === TIENDA_FER, `tienda ${busqueda.json().tienda_id}`);
+
+  const porCodigo = await pedir('GET', '/productos?q=MART-X1', tokenAdmin);
+  check('la busqueda tambien encuentra por codigo',
+    porCodigo.json().productos.length === 1, JSON.stringify(porCodigo.json().productos));
+
+  const detalle = await pedir('GET', `/productos/${productoNuevo}`, tokenAdmin);
+  check('el detalle de un producto muestra el stock de LAS DOS tiendas',
+    detalle.json().stock.length === 2, JSON.stringify(detalle.json().stock));
+  check('un producto recien creado arranca en cero en las dos',
+    detalle.json().stock.every((s) => Number(s.cantidad) === 0));
+
+  const inexistente = await pedir('GET', '/productos/999999', tokenAdmin);
+  check('un producto inexistente da 404', inexistente.statusCode === 404);
+
+  // ---- Modificacion ----
+  const cambio = await pedir('PATCH', `/productos/${productoNuevo}`, tokenAdmin,
+    { precio_venta: 2750 });
+  check('el administrador cambia un precio', cambio.statusCode === 200, cambio.body);
+  const trasCambio = await pedir('GET', `/productos/${productoNuevo}`, tokenAdmin);
+  check('el precio nuevo queda guardado',
+    Number(trasCambio.json().producto.precio_venta) === 2750,
+    `${trasCambio.json().producto.precio_venta}`);
+
+  const vacio = await pedir('PATCH', `/productos/${productoNuevo}`, tokenAdmin, {});
+  check('un PATCH sin campos da 400 en lugar de un exito falso', vacio.statusCode === 400);
+
+  const porEmpleado = await pedir('PATCH', `/productos/${productoNuevo}`, tokenJuanFer,
+    { precio_venta: 1 });
+  check('el empleado NO puede cambiar precios', porEmpleado.statusCode === 403);
+
+  // ---- Baja logica ----
+  const baja = await pedir('PATCH', `/productos/${sinCodigo2.json().id}`, tokenAdmin,
+    { activo: false });
+  check('un producto se da de baja con activo:false', baja.statusCode === 200, baja.body);
+  const listaTrasBaja = await pedir('GET', '/productos?q=Clavo suelto', tokenAdmin);
+  check('el producto dado de baja desaparece del listado',
+    listaTrasBaja.json().productos.length === 0,
+    JSON.stringify(listaTrasBaja.json().productos));
+  const conInactivos = await pedir('GET', '/productos?q=Clavo suelto&incluir_inactivos=1', tokenAdmin);
+  check('pero sigue existiendo para el historial',
+    conInactivos.json().productos.length === 1);
+
+  // ---- Stock minimo ----
+  const minimo = await pedir('PUT', `/productos/${productoNuevo}/stock-minimo`, tokenAdmin,
+    { tienda_id: TIENDA_FER, cantidad_minima: 2 });
+  check('se fija el stock minimo de un producto que todavia no tiene stock',
+    minimo.statusCode === 200, minimo.body);
+  const trasMinimo = await pedir('GET', `/productos/${productoNuevo}`, tokenAdmin);
+  const enFer = trasMinimo.json().stock.find((s) => s.tienda_id === TIENDA_FER);
+  check('el minimo quedo guardado en la tienda indicada',
+    Number(enFer.cantidad_minima) === 2, JSON.stringify(enFer));
+}
+
+// -----------------------------------------------------------------------------
+console.log('\n18. Movimientos de inventario desde el panel');
+// -----------------------------------------------------------------------------
+{
+  const entrada = await pedir('POST', '/inventario/movimientos', tokenJuanFer, {
+    tienda_id: TIENDA_FER, producto_id: productoNuevo, tipo: 'entrada',
+    cantidad: 6, costo_unitario: 1800, motivo: 'compra inicial',
+  });
+  check('el empleado registra una entrada de mercaderia',
+    entrada.statusCode === 201, entrada.body);
+  check('la respuesta devuelve el stock que quedo',
+    entrada.json().stock_resultante === 6, JSON.stringify(entrada.json()));
+
+  const merma = await pedir('POST', '/inventario/movimientos', tokenJuanFer, {
+    tienda_id: TIENDA_FER, producto_id: productoNuevo, tipo: 'merma',
+    cantidad: -1, motivo: 'se cayo de la estanteria',
+  });
+  check('el empleado registra una merma', merma.statusCode === 201, merma.body);
+  check('la merma baja el stock', merma.json().stock_resultante === 5);
+
+  const ajustePorEmpleado = await pedir('POST', '/inventario/movimientos', tokenJuanFer, {
+    tienda_id: TIENDA_FER, producto_id: productoNuevo, tipo: 'ajuste',
+    cantidad: 50, motivo: 'conteo fisico',
+  });
+  check('el empleado NO puede hacer ajustes de inventario',
+    ajustePorEmpleado.statusCode === 403, ajustePorEmpleado.body);
+
+  const ajustePorAdmin = await pedir('POST', '/inventario/movimientos', tokenAdmin, {
+    tienda_id: TIENDA_FER, producto_id: productoNuevo, tipo: 'ajuste',
+    cantidad: 1, motivo: 'conteo fisico de fin de mes',
+  });
+  check('el administrador si puede', ajustePorAdmin.statusCode === 201, ajustePorAdmin.body);
+
+  const ajusteSinMotivo = await pedir('POST', '/inventario/movimientos', tokenAdmin, {
+    tienda_id: TIENDA_FER, producto_id: productoNuevo, tipo: 'ajuste', cantidad: 1,
+  });
+  check('un ajuste sin motivo se rechaza', ajusteSinMotivo.statusCode === 400,
+    ajusteSinMotivo.body);
+
+  const tiendaAjena = await pedir('POST', '/inventario/movimientos', tokenJuanFer, {
+    tienda_id: TIENDA_PLA, producto_id: productoNuevo, tipo: 'entrada', cantidad: 1,
+  });
+  check('no se puede mover inventario de otra tienda', tiendaAjena.statusCode === 403);
+
+  // La alerta de stock tiene que reaccionar: minimo 2, stock 6.
+  const bajar = await pedir('POST', '/inventario/movimientos', tokenAdmin, {
+    tienda_id: TIENDA_FER, producto_id: productoNuevo, tipo: 'ajuste',
+    cantidad: -5, motivo: 'bajar el stock para probar la alerta',
+  });
+  check('el ajuste negativo deja el stock en 1', bajar.json().stock_resultante === 1,
+    JSON.stringify(bajar.json()));
+  const alertas = await pedir('GET', '/reportes/resumen', tokenAdmin);
+  check('el producto por debajo del minimo aparece en las alertas',
+    alertas.json().alertas_stock.some((a) => a.producto === 'Taladro percutor 650W'),
+    JSON.stringify(alertas.json().alertas_stock.map((a) => a.producto)));
+}
+
+// -----------------------------------------------------------------------------
+console.log('\n19. Caja: apertura y cierre');
+// -----------------------------------------------------------------------------
+let cajaAbierta;
+{
+  // Las dos cajas del seed estan cerradas, asi que no hay ninguna abierta.
+  const antes = await pedir('GET', '/caja/actual', tokenJuanFer);
+  check('al empezar no hay caja abierta', antes.json().abierta === false, antes.body);
+
+  const abrir = await pedir('POST', '/caja/apertura', tokenJuanFer,
+    { tienda_id: TIENDA_FER, monto_inicial: 500 });
+  check('el empleado abre la caja de su tienda', abrir.statusCode === 201, abrir.body);
+  cajaAbierta = abrir.json().caja_id;
+
+  const segunda = await pedir('POST', '/caja/apertura', tokenJuanFer,
+    { tienda_id: TIENDA_FER, monto_inicial: 100 });
+  check('no se puede abrir una SEGUNDA caja en la misma tienda',
+    segunda.statusCode === 409, `${segunda.statusCode}: ${segunda.body}`);
+  check('y el mensaje explica que hay que cerrar la anterior',
+    /cerrarla/.test(segunda.json().error), segunda.json().error);
+
+  const enOtraTienda = await pedir('POST', '/caja/apertura', tokenJuanFer,
+    { tienda_id: TIENDA_PLA, monto_inicial: 100 });
+  check('el empleado no abre caja en la otra tienda', enOtraTienda.statusCode === 403);
+
+  const ahora2 = await pedir('GET', '/caja/actual', tokenJuanFer);
+  check('la caja abierta ya aparece como actual', ahora2.json().abierta === true);
+  check('arranca con el monto inicial y nada vendido',
+    Number(ahora2.json().caja.monto_inicial) === 500
+    && Number(ahora2.json().caja.vendido_efectivo) === 0,
+    JSON.stringify(ahora2.json().caja));
+}
+
+// -----------------------------------------------------------------------------
+console.log('\n20. Venta con conexion');
+// -----------------------------------------------------------------------------
+{
+  const venta = {
+    tienda_id: TIENDA_FER, metodo_pago: 'efectivo',
+    subtotal: PRECIO * 2, descuento: 0, total: PRECIO * 2,
+    lineas: [{
+      producto_id: PRODUCTO, cantidad: 2, precio_unitario: PRECIO,
+      costo_unitario: COSTO, descuento: 0, subtotal: PRECIO * 2,
+    }],
+  };
+
+  const antes = await stockDe(PRODUCTO, TIENDA_FER);
+  const r = await pedir('POST', '/ventas', tokenJuanFer, venta);
+  check('el empleado registra una venta con conexion', r.statusCode === 201, r.body);
+  check('la venta entra sola en la caja abierta, sin que el cliente la indique',
+    r.json().caja_id === cajaAbierta, `caja ${r.json().caja_id} vs ${cajaAbierta}`);
+  check('la venta descuenta el stock', await stockDe(PRODUCTO, TIENDA_FER) === antes - 2);
+
+  const ventaId = r.json().id;
+  const detalle = await pedir('GET', `/ventas/${ventaId}`, tokenJuanFer);
+  check('el comprobante se puede volver a leer', detalle.statusCode === 200, detalle.body);
+  check('el comprobante trae su detalle', detalle.json().lineas.length === 1);
+  check('el total del comprobante es el esperado',
+    Number(detalle.json().venta.total) === Math.round(PRECIO * 2 * 100) / 100,
+    `${detalle.json().venta.total}`);
+
+  const ajena = await pedir('GET', `/ventas/${ventaId}`, tokenMaria);
+  check('una empleada de la otra tienda no ve esa venta', ajena.statusCode === 404,
+    `codigo ${ajena.statusCode}`);
+
+  const enTiendaAjena = await pedir('POST', '/ventas', tokenJuanFer,
+    { ...venta, tienda_id: TIENDA_PLA });
+  check('no se puede vender en la otra tienda', enTiendaAjena.statusCode === 403);
+
+  const listado = await pedir('GET', '/ventas', tokenJuanFer);
+  check('el listado de ventas solo trae las de su tienda',
+    listado.json().ventas.every((v) => v.tienda_id === TIENDA_FER),
+    JSON.stringify(listado.json().ventas.map((v) => v.tienda_id)));
+
+  const listadoAdmin = await pedir('GET', '/ventas', tokenAdmin);
+  check('el administrador ve las de las dos tiendas',
+    new Set(listadoAdmin.json().ventas.map((v) => v.tienda_id)).size === 2);
+
+  // Caja cerrada: una venta en efectivo no tiene donde sumar el dinero.
+  const enPla = await pedir('POST', '/ventas', tokenMaria, { ...venta, tienda_id: TIENDA_PLA });
+  check('sin caja abierta, una venta en efectivo se rechaza con 409',
+    enPla.statusCode === 409, `${enPla.statusCode}: ${enPla.body}`);
+  check('y el mensaje dice que hay que abrir la caja',
+    /caja/.test(enPla.json().error), enPla.json().error);
+
+  const conTarjeta = await pedir('POST', '/ventas', tokenMaria,
+    { ...venta, tienda_id: TIENDA_PLA, metodo_pago: 'tarjeta' });
+  check('pero una venta con tarjeta no necesita caja abierta',
+    conTarjeta.statusCode === 201, conTarjeta.body);
+}
+
+// -----------------------------------------------------------------------------
+console.log('\n21. Credito: lo que el sync no puede hacer');
+// -----------------------------------------------------------------------------
+{
+  // Constructora El Progreso: limite 5000, saldo 4060, cupo 940.
+  const dentroDelCupo = {
+    tienda_id: TIENDA_FER, metodo_pago: 'credito', cliente_id: CLIENTE_CONSTRUCTORA,
+    subtotal: 500, descuento: 0, total: 500,
+    lineas: [{
+      producto_id: PRODUCTO, cantidad: 1, precio_unitario: 500,
+      costo_unitario: COSTO, descuento: 0, subtotal: 500,
+    }],
+  };
+
+  const ok = await pedir('POST', '/ventas', tokenJuanFer, dentroDelCupo);
+  check('CON CONEXION si se puede fiar (lo que /sync/push rechaza)',
+    ok.statusCode === 201, ok.body);
+
+  const estado = await pedir('GET', `/clientes/${CLIENTE_CONSTRUCTORA}/estado-cuenta`, tokenJuanFer);
+  check('el saldo del cliente subio con lo fiado',
+    Number(estado.json().cliente.saldo) === 4560,
+    `saldo ${estado.json().cliente.saldo}`);
+  check('el cupo disponible bajo', Number(estado.json().cliente.cupo_disponible) === 440);
+
+  // Ahora el cupo es 440: 600 lo pasa, y el trigger tiene que frenarlo.
+  const pasaElLimite = await pedir('POST', '/ventas', tokenJuanFer, {
+    ...dentroDelCupo,
+    subtotal: 600, total: 600,
+    lineas: [{ ...dentroDelCupo.lineas[0], precio_unitario: 600, subtotal: 600 }],
+  });
+  check('EL TRIGGER FRENA la venta que pasa el limite de credito',
+    pasaElLimite.statusCode === 409, `${pasaElLimite.statusCode}: ${pasaElLimite.body}`);
+  check('el mensaje del rechazo es el del esquema, legible por una persona',
+    /limite del cliente/.test(pasaElLimite.json().error), pasaElLimite.json().error);
+
+  // Y lo importante: la transaccion se revirtio ENTERA.
+  const trasRechazo = await pedir('GET', `/clientes/${CLIENTE_CONSTRUCTORA}/estado-cuenta`, tokenJuanFer);
+  check('la venta rechazada no dejo nada a medias: el saldo no cambio',
+    Number(trasRechazo.json().cliente.saldo) === 4560,
+    `saldo ${trasRechazo.json().cliente.saldo}`);
+  check('tampoco quedo la venta suelta',
+    trasRechazo.json().ventas_fiadas.every((v) => Number(v.total) !== 600),
+    JSON.stringify(trasRechazo.json().ventas_fiadas.map((v) => v.total)));
+
+  const clienteAjeno = await pedir('POST', '/ventas', tokenJuanFer,
+    { ...dentroDelCupo, cliente_id: 999999 });
+  check('fiar a un cliente inexistente se rechaza con 400',
+    clienteAjeno.statusCode === 400, clienteAjeno.body);
+}
+
+// -----------------------------------------------------------------------------
+console.log('\n22. Clientes y abonos');
+// -----------------------------------------------------------------------------
+let clienteNuevo;
+{
+  const lista = await pedir('GET', '/clientes', tokenJuanFer);
+  check('el empleado ve la lista de clientes con su saldo',
+    lista.statusCode === 200 && lista.json().clientes.every((c) => c.saldo !== undefined),
+    lista.body.slice(0, 200));
+
+  const nuevo = await pedir('POST', '/clientes', tokenJuanFer,
+    { nombre: 'Rosa Jimenez', telefono: '8555-9900' });
+  check('el empleado puede dar de alta un cliente', nuevo.statusCode === 201, nuevo.body);
+  check('el cliente nuevo nace con el limite por omision de 1000',
+    nuevo.json().limite_credito === 1000, `${nuevo.json().limite_credito}`);
+  clienteNuevo = nuevo.json().id;
+
+  const subirLimite = await pedir('PATCH', `/clientes/${clienteNuevo}`, tokenJuanFer,
+    { limite_credito: 90000 });
+  check('el empleado NO puede cambiar el limite de credito',
+    subirLimite.statusCode === 403, subirLimite.body);
+
+  const porAdmin = await pedir('PATCH', `/clientes/${clienteNuevo}`, tokenAdmin,
+    { limite_credito: 2500 });
+  check('el administrador si puede', porAdmin.statusCode === 200, porAdmin.body);
+  check('la respuesta muestra el cupo que quedo',
+    Number(porAdmin.json().estado.cupo_disponible) === 2500,
+    JSON.stringify(porAdmin.json().estado));
+
+  // ---- Abonos ----
+  const abono = await pedir('POST', `/clientes/${CLIENTE_CONSTRUCTORA}/abonos`, tokenJuanFer,
+    { monto: 1000, metodo_pago: 'efectivo' });
+  check('el empleado registra un abono', abono.statusCode === 201, abono.body);
+  check('el abono entra solo en la caja abierta',
+    abono.json().caja_id === cajaAbierta, `${abono.json().caja_id}`);
+  check('la respuesta dice el saldo que le queda al cliente',
+    abono.json().saldo_restante === 3560, `${abono.json().saldo_restante}`);
+
+  const parcial = await pedir('POST', `/clientes/${CLIENTE_CONSTRUCTORA}/abonos`, tokenJuanFer,
+    { monto: 60.5, metodo_pago: 'efectivo' });
+  check('LOS ABONOS SON PARCIALES: se acepta cualquier monto',
+    parcial.statusCode === 201 && parcial.json().saldo_restante === 3499.5,
+    `${parcial.statusCode}: ${parcial.json().saldo_restante}`);
+
+  const cero = await pedir('POST', `/clientes/${CLIENTE_CONSTRUCTORA}/abonos`, tokenJuanFer,
+    { monto: 0 });
+  check('un abono de cero se rechaza', cero.statusCode === 400);
+
+  const aInexistente = await pedir('POST', '/clientes/999999/abonos', tokenJuanFer,
+    { monto: 10 });
+  check('un abono a un cliente inexistente da 404', aInexistente.statusCode === 404);
+
+  const credito = await pedir('POST', `/clientes/${CLIENTE_CONSTRUCTORA}/abonos`, tokenJuanFer,
+    { monto: 10, metodo_pago: 'credito' });
+  check('no se puede abonar "al credito"', credito.statusCode === 400, credito.body);
+
+  const cuenta = await pedir('GET', `/clientes/${CLIENTE_CONSTRUCTORA}/estado-cuenta`, tokenAdmin);
+  check('el estado de cuenta lista las ventas fiadas y los abonos',
+    cuenta.json().ventas_fiadas.length >= 2 && cuenta.json().abonos.length >= 3,
+    `${cuenta.json().ventas_fiadas.length} fiadas, ${cuenta.json().abonos.length} abonos`);
+  check('cada abono dice quien lo recibio',
+    cuenta.json().abonos.every((a) => a.recibido_por !== undefined));
+}
+
+// -----------------------------------------------------------------------------
+console.log('\n23. Cierre de caja con el dinero del turno');
+// -----------------------------------------------------------------------------
+{
+  const actual = await pedir('GET', '/caja/actual', tokenJuanFer);
+  const esperado = Number(actual.json().caja.esperado);
+  check('lo esperado incluye las ventas en efectivo Y los abonos del turno',
+    Number(actual.json().caja.vendido_efectivo) > 0
+    && Number(actual.json().caja.abonado_efectivo) === 1060.5,
+    JSON.stringify(actual.json().caja));
+
+  const porOtro = await pedir('POST', `/caja/${cajaAbierta}/cierre`, tokenMaria,
+    { efectivo_contado: esperado });
+  check('un empleado no cierra la caja de otra tienda', porOtro.statusCode === 403,
+    `${porOtro.statusCode}: ${porOtro.body}`);
+
+  const cerrar = await pedir('POST', `/caja/${cajaAbierta}/cierre`, tokenJuanFer,
+    { efectivo_contado: esperado, observaciones: 'turno normal' });
+  check('el empleado cierra su caja', cerrar.statusCode === 200, cerrar.body);
+  check('la diferencia la calculo el servidor, no el empleado',
+    cerrar.json().diferencia === 0 && cerrar.json().resultado === 'cuadra',
+    JSON.stringify(cerrar.json()));
+
+  const devuelta = await pedir('POST', `/caja/${cajaAbierta}/cierre`, tokenJuanFer,
+    { efectivo_contado: esperado });
+  check('cerrar dos veces la misma caja da 409', devuelta.statusCode === 409);
+
+  // Un faltante: se abre otra caja y se cuenta de menos.
+  const otra = await pedir('POST', '/caja/apertura', tokenJuanFer,
+    { tienda_id: TIENDA_FER, monto_inicial: 1000 });
+  const faltante = await pedir('POST', `/caja/${otra.json().caja_id}/cierre`, tokenJuanFer,
+    { efectivo_contado: 940 });
+  check('un faltante se informa con signo negativo',
+    faltante.json().diferencia === -60 && faltante.json().resultado === 'faltante',
+    JSON.stringify(faltante.json()));
+
+  const cuadre = await pedir('GET', `/caja/${cajaAbierta}`, tokenAdmin);
+  // Dos abonos entraron en esta caja (1000 y 60.5); el tercero del cliente es
+  // el que trae el seed, y pertenece a la caja 1.
+  check('el detalle de la caja lista sus ventas y sus abonos',
+    cuadre.json().ventas.length > 0 && cuadre.json().abonos.length === 2,
+    `${cuadre.json().ventas.length} ventas, ${cuadre.json().abonos.length} abonos`);
+  check('la caja cerrada cuadra en la vista', cuadre.json().caja.cuadra === true,
+    JSON.stringify(cuadre.json().caja));
+}
+
+// -----------------------------------------------------------------------------
+console.log('\n24. Anulacion de ventas');
+// -----------------------------------------------------------------------------
+{
+  const antes = await stockDe(PRODUCTO, TIENDA_FER);
+  const abrir = await pedir('POST', '/caja/apertura', tokenJuanFer,
+    { tienda_id: TIENDA_FER, monto_inicial: 0 });
+
+  const venta = await pedir('POST', '/ventas', tokenJuanFer, {
+    tienda_id: TIENDA_FER, metodo_pago: 'efectivo',
+    subtotal: PRECIO, descuento: 0, total: PRECIO,
+    lineas: [{
+      producto_id: PRODUCTO, cantidad: 1, precio_unitario: PRECIO,
+      costo_unitario: COSTO, descuento: 0, subtotal: PRECIO,
+    }],
+  });
+  check('se registra la venta que se va a anular', venta.statusCode === 201, venta.body);
+  const ventaId = venta.json().id;
+
+  const porEmpleado = await pedir('POST', `/ventas/${ventaId}/anular`, tokenJuanFer,
+    { motivo: 'me equivoque' });
+  check('el empleado NO puede anular una venta', porEmpleado.statusCode === 403,
+    porEmpleado.body);
+
+  const sinMotivo = await pedir('POST', `/ventas/${ventaId}/anular`, tokenAdmin, {});
+  check('anular sin motivo se rechaza', sinMotivo.statusCode === 400, sinMotivo.body);
+
+  const anular = await pedir('POST', `/ventas/${ventaId}/anular`, tokenAdmin,
+    { motivo: 'el cliente devolvio la mercaderia' });
+  check('el administrador anula la venta', anular.statusCode === 200, anular.body);
+  check('la mercaderia volvio al stock', await stockDe(PRODUCTO, TIENDA_FER) === antes,
+    `${antes} esperado, hay ${await stockDe(PRODUCTO, TIENDA_FER)}`);
+
+  const otraVez = await pedir('POST', `/ventas/${ventaId}/anular`, tokenAdmin,
+    { motivo: 'de nuevo' });
+  check('anular dos veces da 409', otraVez.statusCode === 409);
+
+  const detalle = await pedir('GET', `/ventas/${ventaId}`, tokenAdmin);
+  check('LA VENTA NO SE BORRO: sigue existiendo, marcada como anulada',
+    detalle.statusCode === 200 && detalle.json().venta.anulada === true,
+    JSON.stringify(detalle.json().venta.anulada));
+  check('el motivo quedo registrado',
+    /devolvio la mercaderia/.test(detalle.json().venta.observaciones ?? ''),
+    detalle.json().venta.observaciones);
+  check('el movimiento de devolucion quedo en el historial del producto',
+    (await pedir('GET', `/reportes/movimientos/${PRODUCTO}`, tokenAdmin))
+      .json().movimientos.some((m) => m.tipo === 'devolucion'));
+
+  await pedir('POST', `/caja/${abrir.json().caja_id}/cierre`, tokenJuanFer,
+    { efectivo_contado: 0 });
+}
+
+// -----------------------------------------------------------------------------
+console.log('\n25. Usuarios');
+// -----------------------------------------------------------------------------
+{
+  const porEmpleado = await pedir('GET', '/usuarios', tokenJuanFer);
+  check('el empleado NO ve la lista de usuarios', porEmpleado.statusCode === 403);
+
+  const lista = await pedir('GET', '/usuarios', tokenAdmin);
+  check('el administrador ve la lista', lista.statusCode === 200, lista.body);
+  check('la lista NO expone ningun hash',
+    !/scrypt|hash":"/.test(lista.body), lista.body.slice(0, 200));
+  check('pero si dice quien tiene PIN y quien clave',
+    lista.json().usuarios.every((u) => typeof u.tiene_pin === 'boolean'));
+  check('y en que tiendas trabaja cada uno',
+    lista.json().usuarios.find((u) => u.nombre.startsWith('Juan')).tiendas.includes(','),
+    JSON.stringify(lista.json().usuarios.map((u) => u.tiendas)));
+
+  const sinPin = await pedir('POST', '/usuarios', tokenAdmin,
+    { nombre: 'Sin Credenciales', rol: 'empleado', tiendas: [TIENDA_FER] });
+  check('un empleado sin PIN se rechaza', sinPin.statusCode === 400, sinPin.body);
+
+  const sinTienda = await pedir('POST', '/usuarios', tokenAdmin,
+    { nombre: 'Sin Tienda', rol: 'empleado', pin: '4321' });
+  check('un empleado sin tienda se rechaza', sinTienda.statusCode === 400, sinTienda.body);
+
+  const nuevo = await pedir('POST', '/usuarios', tokenAdmin, {
+    nombre: 'Ana Mostrador', rol: 'empleado', pin: '4321',
+    tiendas: [TIENDA_FER, TIENDA_PLA],
+  });
+  check('se crea un empleado asignado a LAS DOS tiendas',
+    nuevo.statusCode === 201, nuevo.body);
+  const anaId = nuevo.json().id;
+  check('la respuesta no devuelve el PIN', !/4321/.test(nuevo.body), nuevo.body);
+
+  const entraEnFer = await pedir('POST', '/auth/login/pin', null,
+    { usuario_id: anaId, tienda_id: TIENDA_FER, pin: '4321' });
+  const entraEnPla = await pedir('POST', '/auth/login/pin', null,
+    { usuario_id: anaId, tienda_id: TIENDA_PLA, pin: '4321' });
+  check('la empleada nueva puede entrar en las dos tiendas',
+    entraEnFer.statusCode === 200 && entraEnPla.statusCode === 200,
+    `${entraEnFer.statusCode} / ${entraEnPla.statusCode}`);
+
+  // Quitarle una tienda tiene que cerrarle las sesiones.
+  const quitar = await pedir('PATCH', `/usuarios/${anaId}`, tokenAdmin,
+    { tiendas: [TIENDA_FER] });
+  check('se le quita una tienda', quitar.statusCode === 200, quitar.body);
+  check('y eso le cierra las sesiones abiertas', quitar.json().sesiones_cerradas >= 2,
+    `${quitar.json().sesiones_cerradas}`);
+  const yaNoEntra = await pedir('POST', '/auth/login/pin', null,
+    { usuario_id: anaId, tienda_id: TIENDA_PLA, pin: '4321' });
+  check('ya no puede entrar en la tienda que le quitaron',
+    yaNoEntra.statusCode === 403, `${yaNoEntra.statusCode}: ${yaNoEntra.body}`);
+
+  const seMismo = await pedir('PATCH', `/usuarios/${(await pedir('GET', '/auth/yo', tokenAdmin)).json().usuario.id}`,
+    tokenAdmin, { activo: false });
+  check('el administrador no puede darse de baja a si mismo',
+    seMismo.statusCode === 409, seMismo.body);
+
+  // ---- Reinicio de PIN ----
+  const reiniciar = await pedir('POST', `/usuarios/${anaId}/pin`, tokenAdmin, { pin: '8765' });
+  check('el administrador reinicia el PIN de un empleado',
+    reiniciar.statusCode === 200, reiniciar.body);
+  const conNuevo = await pedir('POST', '/auth/login/pin', null,
+    { usuario_id: anaId, tienda_id: TIENDA_FER, pin: '8765' });
+  check('el PIN nuevo sirve', conNuevo.statusCode === 200, conNuevo.body);
+  const conViejo = await pedir('POST', '/auth/login/pin', null,
+    { usuario_id: anaId, tienda_id: TIENDA_FER, pin: '4321' });
+  check('el PIN viejo ya no sirve', conViejo.statusCode === 401);
+
+  const aUnAdmin = await pedir('POST', '/usuarios/1/pin', tokenAdmin, { pin: '1111' });
+  check('no se le pone PIN a un administrador por esta via',
+    aUnAdmin.statusCode === 404, aUnAdmin.body);
+}
+
+// -----------------------------------------------------------------------------
+console.log('\n26. Cambio de la propia clave');
+// -----------------------------------------------------------------------------
+{
+  const token = await entrarComoEmpleado(MARIA, MARIA_PIN, TIENDA_PLA);
+
+  const mal = await pedir('POST', '/mi-pin', token, { actual: '0000', nuevo: '1111' });
+  check('cambiar el PIN con el actual equivocado da 401', mal.statusCode === 401, mal.body);
+
+  const claveEnCuentaDePin = await pedir('POST', '/mi-clave', token,
+    { actual: 'x', nueva: 'unaclavelarga' });
+  check('una cuenta de PIN no cambia contrasenia', claveEnCuentaDePin.statusCode === 409,
+    claveEnCuentaDePin.body);
+
+  const bien = await pedir('POST', '/mi-pin', token, { actual: MARIA_PIN, nuevo: '2468' });
+  check('el empleado cambia su propio PIN', bien.statusCode === 200, bien.body);
+  check('el cambio cierra TODAS sus sesiones, incluida la actual',
+    bien.json().debe_volver_a_entrar === true && bien.json().sesiones_cerradas >= 1,
+    JSON.stringify(bien.json()));
+
+  const tokenViejo = await pedir('GET', '/auth/yo', token);
+  check('el token con el que lo cambio ya no sirve', tokenViejo.statusCode === 401);
+
+  const conNuevo = await pedir('POST', '/auth/login/pin', null,
+    { usuario_id: MARIA, tienda_id: TIENDA_PLA, pin: '2468' });
+  check('entra con el PIN nuevo', conNuevo.statusCode === 200, conNuevo.body);
+
+  // El administrador cambia su contrasenia y la deja como estaba, para que el
+  // resto de las pruebas y el seed sigan siendo coherentes.
+  const tokenA = await entrarComoAdmin();
+  const cambio = await pedir('POST', '/mi-clave', tokenA,
+    { actual: ADMIN_CLAVE, nueva: 'otraclavelarga2026' });
+  check('el administrador cambia su contrasenia', cambio.statusCode === 200, cambio.body);
+  const conVieja = await pedir('POST', '/auth/login/admin', null,
+    { email: ADMIN_EMAIL, password: ADMIN_CLAVE });
+  check('la contrasenia vieja ya no sirve', conVieja.statusCode === 401);
+  const conNueva = await pedir('POST', '/auth/login/admin', null,
+    { email: ADMIN_EMAIL, password: 'otraclavelarga2026' });
+  check('la nueva si', conNueva.statusCode === 200, conNueva.body);
+
+  const corta = await pedir('POST', '/mi-clave', conNueva.json().token,
+    { actual: 'otraclavelarga2026', nueva: 'corta' });
+  check('una contrasenia de menos de 8 caracteres se rechaza', corta.statusCode === 400);
+}
+
+// -----------------------------------------------------------------------------
 // Cierre
 // -----------------------------------------------------------------------------
 console.log('\n=============================================================');

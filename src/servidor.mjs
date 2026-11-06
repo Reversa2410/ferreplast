@@ -12,6 +12,11 @@ import cors from '@fastify/cors';
 import rutasAuth from './rutas/auth.mjs';
 import rutasSync from './rutas/sync.mjs';
 import rutasReportes from './rutas/reportes.mjs';
+import rutasCatalogo from './rutas/catalogo.mjs';
+import rutasVentas from './rutas/ventas.mjs';
+import rutasCaja from './rutas/caja.mjs';
+import rutasClientes from './rutas/clientes.mjs';
+import rutasUsuarios from './rutas/usuarios.mjs';
 import { registrarGuardia } from './auth/guardia.mjs';
 
 // -----------------------------------------------------------------------------
@@ -47,6 +52,11 @@ export async function crearApp({ db, logger = false }) {
   await app.register(rutasAuth, { db });
   await app.register(rutasSync, { db });
   await app.register(rutasReportes, { db });
+  await app.register(rutasCatalogo, { db });
+  await app.register(rutasVentas, { db });
+  await app.register(rutasCaja, { db });
+  await app.register(rutasClientes, { db });
+  await app.register(rutasUsuarios, { db });
 
   // Manejador de errores: registra el detalle en el servidor pero no se lo
   // devuelve al cliente, para no filtrar la estructura interna de la base.

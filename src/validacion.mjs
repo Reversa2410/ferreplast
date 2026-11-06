@@ -129,8 +129,7 @@ export const EsquemaLineaVenta = z.object({
 // elegirian el mismo: la segunda venta en llegar seria rechazada por un
 // problema que el vendedor no puede entender ni arreglar.
 // -----------------------------------------------------------------------------
-export const EsquemaVenta = z.object({
-  uuid_externo: uuid(),
+const camposVenta = {
   tienda_id: id(),
   usuario_id: id().nullish(),
   caja_id: id().nullish(),
@@ -140,9 +139,13 @@ export const EsquemaVenta = z.object({
   descuento: importe().default(0),
   total: importe(),
   observaciones: z.string().nullish(),
-  ocurrido_en: z.iso.datetime({ offset: true }),
   lineas: z.array(EsquemaLineaVenta).min(1, 'una venta necesita al menos una linea'),
-})
+};
+
+// Las reglas valen para los dos caminos de entrada, asi que se declaran una
+// sola vez: si una venta con conexion pudiera saltarse una comprobacion que la
+// sincronizacion si hace, el camino con senial seria el inseguro.
+const conReglasDeVenta = (esquema) => esquema
   .refine(
     (v) => dosDecimales(v.total) === dosDecimales(v.subtotal - v.descuento),
     { message: 'el total no coincide con subtotal menos descuento', path: ['total'] },
@@ -172,6 +175,33 @@ export const EsquemaVenta = z.object({
     (v) => new Set(v.lineas.map((l) => l.producto_id)).size === v.lineas.length,
     { message: 'un producto no puede repetirse en dos lineas; sume la cantidad', path: ['lineas'] },
   );
+
+// Venta que llega por sincronizacion.
+//
+// uuid_externo es OBLIGATORIO: sin el no hay forma de reconocer un reenvio, y
+// una venta sin conexion se reenvia por definicion. ocurrido_en tambien, porque
+// la venta pudo pasar hace tres dias y la hora del servidor no sirve.
+export const EsquemaVenta = conReglasDeVenta(z.object({
+  uuid_externo: uuid(),
+  ocurrido_en: z.iso.datetime({ offset: true }),
+  ...camposVenta,
+}));
+
+// Venta que se registra con conexion, desde el mostrador.
+//
+// Las dos cosas que alla eran obligatorias aca son opcionales: la respuesta
+// llega en el momento, asi que no hace falta clave de reenvio, y la venta esta
+// pasando ahora, asi que la hora del servidor es la correcta. Se aceptan igual
+// para que el cliente pueda mandar siempre el mismo objeto.
+export const EsquemaVentaDirecta = conReglasDeVenta(z.object({
+  uuid_externo: uuid().nullish(),
+  ocurrido_en: z.iso.datetime({ offset: true }).nullish(),
+  ...camposVenta,
+}));
+
+export const EsquemaAnulacion = z.object({
+  motivo: z.string().min(3, 'anular una venta exige decir por que').max(255),
+});
 
 // -----------------------------------------------------------------------------
 // Carga completa de sincronizacion (push)
@@ -228,6 +258,192 @@ export const EsquemaCambioPassword = z.object({
 export const EsquemaCambioPin = z.object({
   actual: z.string().regex(/^\d{4,8}$/, 'el PIN son de 4 a 8 digitos'),
   nuevo: z.string().regex(/^\d{4,8}$/, 'el PIN son de 4 a 8 digitos'),
+});
+
+// -----------------------------------------------------------------------------
+// Catalogo: productos y categorias
+// -----------------------------------------------------------------------------
+
+// El codigo es OPCIONAL a proposito.
+//
+// El levantamiento dice que la mercaderia "no viene con ninguna clase de
+// codigo". Exigirlo obligaria a inventar uno para cada articulo antes de poder
+// cargarlo, que es justo el trabajo que frena la carga del catalogo. La base
+// tiene un indice unico FILTRADO (solo donde el codigo no es nulo), asi que
+// puede haber muchos productos sin codigo y ningun codigo repetido.
+//
+// La cadena vacia se convierte en null: un formulario web manda "" cuando el
+// campo quedo sin llenar, y dos productos con codigo "" chocarian contra el
+// indice unico por un campo que nadie lleno.
+const codigoOpcional = z.string().trim().max(50)
+  .transform((s) => (s === '' ? null : s))
+  .nullish();
+
+const texto = (max) => z.string().trim().min(1).max(max);
+
+export const EsquemaProductoNuevo = z.object({
+  codigo: codigoOpcional,
+  nombre: texto(150),
+  categoria_id: id(),
+  precio_costo: importe().default(0),
+  precio_venta: importe().default(0),
+  unidad_medida: z.string().trim().max(50).default('Unidad'),
+});
+
+// Para modificar: todo opcional, pero al menos un campo.
+//
+// Sin ese minimo, un PATCH con el cuerpo vacio responderia 200 sin haber
+// cambiado nada, que es la clase de exito falso que esconde un error en el
+// cliente.
+export const EsquemaProductoCambio = z.object({
+  codigo: codigoOpcional,
+  nombre: texto(150).optional(),
+  categoria_id: id().optional(),
+  precio_costo: importe().optional(),
+  precio_venta: importe().optional(),
+  unidad_medida: z.string().trim().max(50).optional(),
+  activo: z.boolean().optional(),
+}).refine(
+  (p) => Object.keys(p).length > 0,
+  { message: 'no se indico ningun campo para modificar' },
+);
+
+export const EsquemaCategoriaNueva = z.object({
+  nombre: texto(100),
+  padre_id: id().nullish(),
+});
+
+// Minimo de reposicion por tienda. Es lo que alimenta las alertas de stock.
+export const EsquemaStockMinimo = z.object({
+  tienda_id: id(),
+  cantidad_minima: z.number().nonnegative().finite(),
+});
+
+// Movimiento registrado a mano desde el panel (entrada de mercaderia, merma,
+// ajuste de conteo). No lleva uuid_externo: nadie lo va a reenviar.
+export const EsquemaMovimientoManual = z.object({
+  tienda_id: id(),
+  producto_id: id(),
+  tipo: z.enum(['entrada', 'merma', 'ajuste', 'devolucion']),
+  cantidad: z.number().finite().refine((n) => n !== 0, 'la cantidad no puede ser cero'),
+  costo_unitario: importe().nullish(),
+  motivo: z.string().trim().max(255).nullish(),
+})
+  .refine(
+    (m) => !(['entrada', 'devolucion'].includes(m.tipo) && m.cantidad <= 0),
+    { message: 'una entrada o devolucion debe tener cantidad positiva', path: ['cantidad'] },
+  )
+  .refine(
+    (m) => !(m.tipo === 'merma' && m.cantidad >= 0),
+    { message: 'una merma debe tener cantidad negativa', path: ['cantidad'] },
+  )
+  // El ajuste corrige en cualquier direccion, asi que el signo no se puede
+  // deducir: por eso es el unico que exige explicar el motivo.
+  .refine(
+    (m) => m.tipo !== 'ajuste' || (m.motivo != null && m.motivo.length >= 3),
+    { message: 'un ajuste de inventario exige decir por que', path: ['motivo'] },
+  );
+
+// -----------------------------------------------------------------------------
+// Caja
+// -----------------------------------------------------------------------------
+
+export const EsquemaAperturaCaja = z.object({
+  tienda_id: id(),
+  monto_inicial: importe().default(0),
+  observaciones: z.string().trim().max(500).nullish(),
+});
+
+// Al cerrar, el empleado cuenta el efectivo que hay en el cajon y lo escribe.
+//
+// NO se le pide la diferencia: la calcula el servidor contra las ventas en
+// efectivo y los abonos. Si la escribiera el empleado, el numero que la duenia
+// usa para detectar un faltante lo pondria justamente quien lo tendria.
+export const EsquemaCierreCaja = z.object({
+  efectivo_contado: importe(),
+  observaciones: z.string().trim().max(500).nullish(),
+});
+
+// -----------------------------------------------------------------------------
+// Clientes y abonos
+// -----------------------------------------------------------------------------
+
+export const EsquemaClienteNuevo = z.object({
+  nombre: texto(150),
+  telefono: z.string().trim().max(30).nullish(),
+  identificacion: z.string().trim().max(30)
+    .transform((s) => (s === '' ? null : s))
+    .nullish(),
+});
+
+// El limite de credito va aparte y solo lo mueve el administrador: es la unica
+// decision de esta tabla que es plata, y no le corresponde al mostrador.
+export const EsquemaClienteCambio = z.object({
+  nombre: texto(150).optional(),
+  telefono: z.string().trim().max(30).nullish(),
+  identificacion: z.string().trim().max(30)
+    .transform((s) => (s === '' ? null : s))
+    .nullish(),
+  limite_credito: importe().optional(),
+  activo: z.boolean().optional(),
+}).refine(
+  (c) => Object.keys(c).length > 0,
+  { message: 'no se indico ningun campo para modificar' },
+);
+
+// Abono a cuenta. Son PARCIALES por decision del negocio: el cliente paga lo
+// que puede cuando puede, y el saldo se deduce de la suma.
+export const EsquemaAbono = z.object({
+  monto: z.number().positive().finite(),
+  metodo_pago: z.enum(METODOS_ABONO).default('efectivo'),
+  caja_id: id().nullish(),
+  observaciones: z.string().trim().max(500).nullish(),
+});
+
+// -----------------------------------------------------------------------------
+// Usuarios
+// -----------------------------------------------------------------------------
+
+// Crear un usuario exige las credenciales que su rol necesita, igual que el
+// CHECK de la tabla (CK_USUARIO_CREDENCIALES). Aca el mensaje dice que falta;
+// la base, si llegara, nombraria la restriccion.
+export const EsquemaUsuarioNuevo = z.object({
+  nombre: texto(100),
+  rol: z.enum(ROLES),
+  email: z.email().max(150).nullish(),
+  password: z.string().min(8, 'la contrasenia necesita al menos 8 caracteres').max(200).nullish(),
+  pin: z.string().regex(/^\d{4,8}$/, 'el PIN son de 4 a 8 digitos').nullish(),
+  // Las tiendas en las que trabaja. Un empleado necesita al menos una o no
+  // podria entrar a ninguna parte.
+  tiendas: z.array(id()).default([]),
+})
+  .refine(
+    (u) => u.rol !== 'administrador' || (u.email != null && u.password != null),
+    { message: 'un administrador necesita email y contrasenia', path: ['email'] },
+  )
+  .refine(
+    (u) => u.rol !== 'empleado' || u.pin != null,
+    { message: 'un empleado necesita un PIN', path: ['pin'] },
+  )
+  .refine(
+    (u) => u.rol !== 'empleado' || u.tiendas.length > 0,
+    { message: 'un empleado necesita al menos una tienda asignada', path: ['tiendas'] },
+  );
+
+export const EsquemaUsuarioCambio = z.object({
+  nombre: texto(100).optional(),
+  email: z.email().max(150).nullish(),
+  activo: z.boolean().optional(),
+  tiendas: z.array(id()).optional(),
+}).refine(
+  (u) => Object.keys(u).length > 0,
+  { message: 'no se indico ningun campo para modificar' },
+);
+
+// Reinicio de credenciales por el administrador: no se le pide la clave actual
+// porque justamente se usa cuando el empleado la olvido.
+export const EsquemaReinicioPin = z.object({
+  pin: z.string().regex(/^\d{4,8}$/, 'el PIN son de 4 a 8 digitos'),
 });
 
 // -----------------------------------------------------------------------------
