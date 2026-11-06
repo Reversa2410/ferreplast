@@ -3,26 +3,25 @@
 //
 // El token que recibe el cliente son 32 bytes al azar en base64url. No lleva
 // informacion adentro: es una llave opaca que solo sirve para encontrar la fila
-// correspondiente en la tabla sesiones.
+// correspondiente en la tabla SESION.
 //
 // En la base NO se guarda el token sino su SHA-256. El razonamiento completo
-// esta en el comentario de la tabla, en db/schema.sql (3.12).
+// esta en el comentario de la tabla, en db/schema.sql.
 // =============================================================================
 
 import { randomBytes, createHash } from 'node:crypto';
 
-// Cuanto dura una sesion segun quien entra.
+// Cuanto dura una sesion segun quien entra, en minutos.
 //
 // El empleado trabaja todo el dia en la misma tablet, muchas veces sin senial:
 // pedirle el PIN cada hora seria inusable, y si la sesion caduca estando sin
 // conexion no puede renovarla. Doce horas cubre un turno completo.
 //
-// El admin entra desde el navegador a mirar numeros, posiblemente desde una
-// computadora compartida. Dos horas.
-const DURACION = {
-  empleado:  12 * 60 * 60 * 1000,
-  encargado: 12 * 60 * 60 * 1000,
-  admin:      2 * 60 * 60 * 1000,
+// El administrador entra desde el navegador a mirar numeros, posiblemente desde
+// una computadora compartida. Dos horas.
+const MINUTOS = {
+  empleado: 12 * 60,
+  administrador: 2 * 60,
 };
 
 /** SHA-256 en hexadecimal: 64 caracteres, que es el largo de la columna. */
@@ -35,19 +34,37 @@ export function hashToken(token) {
  *
  * Es la unica vez que el token existe fuera del dispositivo del usuario: se
  * devuelve aca y no se vuelve a poder leer, porque la base solo guarda el hash.
+ *
+ * `tiendaId` es la tienda que el empleado eligio al entrar. Queda grabada en la
+ * sesion y es la que define el alcance de todo lo que haga en ese turno. Para
+ * el administrador es null: opera sobre las dos.
+ *
+ * POR QUE EL VENCIMIENTO SE CALCULA EN LA BASE Y NO EN JAVASCRIPT:
+ * la tabla exige expira_en > created_at, y created_at lo pone la base con
+ * SYSUTCDATETIME(). Calcular el vencimiento aca mezcla dos relojes -- el del
+ * proceso y el del servidor -- y la restriccion se rompe si difieren. Con
+ * DATEADD sobre SYSUTCDATETIME() los dos extremos salen del mismo reloj.
  */
-export async function crearSesion(db, usuario, dispositivoId = null) {
+export async function crearSesion(db, usuario, { dispositivoId = null, tiendaId = null } = {}) {
   // 32 bytes = 256 bits de entropia. Adivinarlo no es un escenario a considerar.
   const token = randomBytes(32).toString('base64url');
-  const expiraEn = new Date(Date.now() + (DURACION[usuario.rol] ?? DURACION.admin));
+  const minutos = MINUTOS[usuario.rol] ?? MINUTOS.administrador;
 
-  await db.query(
-    `INSERT INTO sesiones (token_hash, usuario_id, dispositivo_id, expira_en)
-     VALUES ($1, $2, $3, $4)`,
-    [hashToken(token), usuario.id, dispositivoId, expiraEn],
+  const { rows } = await db.query(
+    `INSERT INTO SESION (token_hash, usuario_id, dispositivo_id, tienda_id, expira_en)
+     OUTPUT INSERTED.expira_en
+     VALUES (@token_hash, @usuario_id, @dispositivo_id, @tienda_id,
+             DATEADD(MINUTE, @minutos, SYSUTCDATETIME()))`,
+    {
+      token_hash: hashToken(token),
+      usuario_id: usuario.id,
+      dispositivo_id: dispositivoId,
+      tienda_id: tiendaId,
+      minutos,
+    },
   );
 
-  return { token, expira_en: expiraEn.toISOString() };
+  return { token, expira_en: rows[0].expira_en.toISOString() };
 }
 
 /**
@@ -57,34 +74,43 @@ export async function crearSesion(db, usuario, dispositivoId = null) {
  * van en el WHERE y no en el codigo a proposito: asi no existe el camino en el
  * que alguien agrega una comprobacion nueva y se olvida de alguna. O la fila
  * cumple todo, o no viene.
+ *
+ * tienda_id sale de la SESION, no del usuario: desde que un empleado puede
+ * estar asignado a las dos tiendas, "de que tienda es" no es una propiedad de
+ * la persona sino de su turno.
  */
 export async function usuarioDeToken(db, token) {
   if (!token) return null;
 
   const { rows } = await db.query(
-    `SELECT u.id, u.nombre, u.rol, u.tienda_id, u.negocio_id, u.email,
-            s.token_hash, s.expira_en, s.dispositivo_id
-       FROM sesiones s
-       JOIN usuarios u ON u.id = s.usuario_id
-      WHERE s.token_hash  = $1
+    `SELECT u.id, u.nombre, u.rol, u.negocio_id, u.email,
+            s.tienda_id, s.expira_en, s.dispositivo_id
+       FROM SESION  s
+       JOIN Usuario u ON u.id = s.usuario_id
+      WHERE s.token_hash  = @token_hash
         AND s.revocada_en IS NULL
-        AND s.expira_en   > NOW()
-        AND u.activo`,
-    [hashToken(token)],
+        AND s.expira_en   > SYSUTCDATETIME()
+        AND u.activo      = 1`,
+    { token_hash: hashToken(token) },
   );
 
   return rows[0] ?? null;
 }
 
-/** Cierra una sesion concreta (el boton de salir). */
+/**
+ * Cierra una sesion concreta (el boton de salir).
+ *
+ * Devuelve si habia algo que cerrar. El filtro por revocada_en IS NULL hace
+ * que cerrar dos veces la misma sesion no vuelva a mover la fecha: la primera
+ * vez es la que quedo registrada.
+ */
 export async function revocarSesion(db, token) {
-  const { rows } = await db.query(
-    `UPDATE sesiones SET revocada_en = NOW()
-      WHERE token_hash = $1 AND revocada_en IS NULL
-      RETURNING token_hash`,
-    [hashToken(token)],
+  const { rowCount } = await db.query(
+    `UPDATE SESION SET revocada_en = SYSUTCDATETIME()
+      WHERE token_hash = @token_hash AND revocada_en IS NULL`,
+    { token_hash: hashToken(token) },
   );
-  return rows.length > 0;
+  return rowCount > 0;
 }
 
 /**
@@ -96,9 +122,9 @@ export async function revocarSesion(db, token) {
  */
 export async function revocarSesionesDe(db, usuarioId) {
   const { rowCount } = await db.query(
-    `UPDATE sesiones SET revocada_en = NOW()
-      WHERE usuario_id = $1 AND revocada_en IS NULL`,
-    [usuarioId],
+    `UPDATE SESION SET revocada_en = SYSUTCDATETIME()
+      WHERE usuario_id = @usuario_id AND revocada_en IS NULL`,
+    { usuario_id: usuarioId },
   );
   return rowCount;
 }
