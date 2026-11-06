@@ -96,10 +96,16 @@
    Do instead: convertir en JS (`new Date(iso)`) y pasar el Date; el driver lo
    manda en UTC. Si hay que hacerlo en SQL,
    `CAST(CAST(@x AS DATETIMEOFFSET) AT TIME ZONE 'UTC' AS DATETIME2(3))`.
-4. **[2026-11-03] `SET QUOTED_IDENTIFIER ON` es obligatorio para indices filtrados**
-   SSMS lo pone solo; sqlcmd NO. El mismo script funciona con F5 y falla por
-   linea de comandos con "CREATE INDEX failed ... SET options".
-   Do instead: declararlo al principio del script, no confiar en el cliente.
+4. **[2026-11-06] `SET QUOTED_IDENTIFIER ON` hace falta para CREAR el indice
+   filtrado Y PARA ESCRIBIR en la tabla que lo tiene**
+   SSMS lo pone solo; sqlcmd NO. Crear falla con "CREATE INDEX failed ... SET
+   options"; un `UPDATE SESION` suelto desde sqlcmd falla con el Msg 1934, que
+   habla de vistas indexadas y datos XML y no menciona el indice filtrado que
+   es la causa. Tablas afectadas: SESION, CLIENTE, PRODUCTO, VENTA,
+   MOVIMIENTO_INVENTARIO, CAJA, PAGO_CREDITO, INTENTO_LOGIN.
+   Do instead: encabezar TODO script y TODA consulta `-Q` de sqlcmd con
+   `SET QUOTED_IDENTIFIER ON;`. La API no lo necesita: el driver ODBC ya lo
+   deja en ON.
 5. **[2026-11-03] Los triggers se disparan por SENTENCIA, no por fila**
    `inserted` trae TODAS las filas. Un trigger escrito para una sola pierde
    datos en silencio cuando llega un lote de sincronizacion.
