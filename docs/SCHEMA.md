@@ -431,6 +431,23 @@ levantamiento de requerimientos:
   lado, y al sincronizar ya no habría nada que hacer. El costo es real: justo
   cuando se va la luz es cuando el cliente de confianza quiere llevarse las
   cosas.
+- **La fecha de los reportes está en UTC, no en hora local.** `v_ventas_diarias`
+  agrupa por `CAST(ocurrido_en AS DATE)`, y `ocurrido_en` se guarda en UTC.
+  Nicaragua es UTC-6, así que una venta de las 18:30 de la tarde (00:30 UTC del
+  día siguiente) se cuenta en el día equivocado — y para una ferretería que
+  cierra a la tarde, eso desplaza las últimas ventas de cada día. **Es un error
+  real en la pantalla principal de la dueña**, no una sutileza. El arreglo es
+  en la vista, no en la API:
+
+  ```sql
+  CAST(ocurrido_en AT TIME ZONE 'UTC'
+                   AT TIME ZONE 'Central America Standard Time' AS DATE)
+  ```
+
+  Queda sin aplicar porque cambia números que las pruebas del esquema ya
+  verifican, y conviene hacerlo junto con la revisión de esas pruebas en lugar
+  de mezclado con otro cambio. Está anotado también en
+  `src/rutas/reportes.mjs`.
 - **Transferencias entre tiendas.** Mover mercadería de una esquina a la otra
   hoy se representa con dos movimientos sueltos (una salida y una entrada) sin
   vínculo entre sí.
