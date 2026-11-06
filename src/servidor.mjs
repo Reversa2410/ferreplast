@@ -2,8 +2,9 @@
 // Servidor HTTP
 //
 // crearApp() recibe el cliente de base de datos por parametro en lugar de
-// crearlo adentro. Eso es lo que permite que las pruebas le pasen PGlite y que
-// en produccion reciba una conexion a Neon, sin cambiar una linea de las rutas.
+// crearlo adentro. Eso es lo que permite que las pruebas apunten a una base de
+// prueba descartable y que en produccion apunte a FerreplastDB, sin cambiar una
+// linea de las rutas.
 // =============================================================================
 
 import Fastify from 'fastify';
@@ -16,8 +17,9 @@ import { registrarGuardia } from './auth/guardia.mjs';
 // -----------------------------------------------------------------------------
 // AUTENTICACION
 //
-// Toda ruta exige sesion salvo las cuatro de la lista en auth/guardia.mjs
-// (salud, lista de empleados de una tienda y las dos de ingreso).
+// Toda ruta exige sesion salvo las cinco de la lista en auth/guardia.mjs
+// (salud, lista de tiendas, lista de empleados de una tienda y las dos de
+// ingreso).
 //
 // El guardia se registra ANTES que las rutas a proposito: un hook de Fastify
 // solo alcanza a lo que se registra despues de el dentro del mismo ambito. Si
@@ -63,14 +65,21 @@ export async function crearApp({ db, logger = false }) {
 // Arranque real (solo si se ejecuta este archivo directamente)
 // -----------------------------------------------------------------------------
 if (process.argv[1]?.endsWith('servidor.mjs')) {
-  const { crearClientePg } = await import('./db.mjs');
+  const { crearClienteSqlServer } = await import('./db.mjs');
 
-  if (!process.env.DATABASE_URL) {
-    console.error('Falta DATABASE_URL. Copie .env.example como .env y complete la cadena de conexion.');
+  // No se exige ninguna variable de entorno: por defecto apunta a FerreplastDB
+  // en el SQL Server local con autenticacion de Windows, que es el caso de
+  // desarrollo. DB_SERVIDOR y DB_NOMBRE lo cambian cuando hace falta.
+  let db;
+  try {
+    db = await crearClienteSqlServer();
+  } catch (e) {
+    console.error('No se pudo conectar a SQL Server:', e.message);
+    console.error('Revise que el servicio este corriendo y que exista la base '
+      + `${process.env.DB_NOMBRE || 'FerreplastDB'} (npm run db:crear).`);
     process.exit(1);
   }
 
-  const db = await crearClientePg(process.env.DATABASE_URL);
   const app = await crearApp({ db, logger: true });
   const puerto = Number(process.env.PORT) || 3001;
 

@@ -14,11 +14,20 @@
 
 import { usuarioDeToken } from './sesiones.mjs';
 
+/** Los dos unicos roles del sistema. */
+export const ADMIN = 'administrador';
+export const EMPLEADO = 'empleado';
+
 // Las unicas rutas que responden sin sesion. Se nombran por su patron de
 // Fastify ('/auth/empleados/:tiendaId'), no por la URL concreta, para que no
 // dependa del valor de los parametros.
+//
+// La lista de tiendas es publica porque la pantalla de ingreso del empleado
+// empieza por elegir en cual esta trabajando, y eso pasa antes de tener sesion.
+// Expone el nombre de dos locales que tienen un cartel en la puerta.
 const RUTAS_PUBLICAS = new Set([
   'GET /salud',
+  'GET /tiendas',
   'GET /auth/empleados/:tiendaId',
   'POST /auth/login/pin',
   'POST /auth/login/admin',
@@ -87,7 +96,7 @@ export function registrarGuardia(app, db) {
 /**
  * preHandler que exige uno de los roles indicados.
  *
- *   app.get('/reportes/resumen', { preHandler: exigirRol('admin') }, ...)
+ *   app.get('/reportes/resumen', { preHandler: exigirRol(ADMIN) }, ...)
  */
 export function exigirRol(...roles) {
   return async (peticion, respuesta) => {
@@ -102,11 +111,22 @@ export function exigirRol(...roles) {
 /**
  * Dice si el usuario puede operar sobre una tienda.
  *
- * El admin ve y opera sobre las dos. El empleado y el encargado, solo sobre la
- * suya: sin esto, cualquier empleado podria descontar stock de la otra tienda
- * con solo cambiar un identificador en la peticion.
+ * El administrador ve y opera sobre las dos. El empleado, solo sobre la que
+ * eligio al entrar: sin esto, cualquier empleado podria descontar stock de la
+ * otra tienda con solo cambiar un numero en la peticion.
+ *
+ * La tienda del empleado sale de su SESION, no de su ficha: desde que puede
+ * estar asignado a las dos (USUARIO_TIENDA), lo que manda es la que eligio en
+ * este turno. Que este asignado a la otra no le sirve mientras no vuelva a
+ * entrar eligiendola.
+ *
+ * La comparacion es entre numeros a proposito: el id llega como texto cuando
+ * viene de la URL, y 1 === '1' es falso. Un alcance que falla hacia el lado
+ * permisivo seria un agujero; este falla hacia el lado restrictivo, pero
+ * convertir explicitamente evita las dos cosas.
  */
 export function puedeOperarEn(usuario, tiendaId) {
-  if (usuario.rol === 'admin') return true;
-  return usuario.tienda_id != null && usuario.tienda_id === tiendaId;
+  if (usuario.rol === ADMIN) return true;
+  if (usuario.tienda_id == null || tiendaId == null) return false;
+  return Number(usuario.tienda_id) === Number(tiendaId);
 }
