@@ -9,16 +9,18 @@
 // habia que convertirlos. El driver de SQL Server devuelve los DECIMAL como
 // numeros de JavaScript, asi que ya no hace falta.
 //
-// PENDIENTE -- LA FECHA DE LOS REPORTES ESTA EN UTC, NO EN HORA LOCAL.
-// La vista v_ventas_diarias agrupa por CAST(ocurrido_en AS DATE), y ocurrido_en
-// se guarda en UTC. Nicaragua es UTC-6, asi que una venta de las 18:30 de la
-// tarde (00:30 UTC del dia siguiente) se cuenta en el dia equivocado. Para una
-// ferreteria que cierra a la tarde eso desplaza las ultimas ventas de cada dia.
-// El arreglo es en la vista, no aca:
-//     CAST(ocurrido_en AT TIME ZONE 'UTC'
-//                      AT TIME ZONE 'Central America Standard Time' AS DATE)
-// Se deja anotado y no corregido porque cambia numeros que las pruebas del
-// esquema ya verifican, y es una decision del modelo, no del porte.
+// LAS FECHAS SON LAS LOCALES DE NICARAGUA, Y LA CONVERSION NO ESTA ACA.
+// La base guarda UTC; Nicaragua es UTC-6. Un dia de reporte es un dia del
+// negocio -- desde que abre hasta que cierra --, no un dia UTC, asi que
+// v_ventas_diarias.fecha ya viene convertida y "hoy" sale de
+// dbo.fn_fecha_local(). Este archivo no nombra ninguna zona horaria a
+// proposito: si la conversion viviera mitad en la base y mitad en JavaScript,
+// bastaria cambiar una de las dos para que los numeros dejaran de cuadrar sin
+// que nada fallara. Esta toda en db/schema.sql, seccion 3.4.
+//
+// Por lo mismo, "hoy" NO se calcula con new Date() del proceso: el reloj del
+// servidor Node y el de SQL Server pueden estar en zonas distintas, y el dia
+// que el reporte dice tiene que ser el mismo que el dia por el que agrupo.
 // =============================================================================
 
 import { exigirRol, ADMIN } from '../auth/guardia.mjs';
@@ -47,13 +49,22 @@ export default async function rutasReportes(app, { db }) {
   app.get('/reportes/resumen', async (peticion) => {
     const fecha = peticion.query.fecha ?? null; // null = hoy
 
+    // El dia que se va a reportar se resuelve en la base, una sola vez, y se
+    // devuelve: asi la respuesta dice exactamente por que dia agrupo, y el
+    // cliente no tiene que adivinarlo ni recalcularlo con su propio reloj.
+    const { rows: dia } = await db.query(
+      'SELECT ISNULL(CAST(@fecha AS DATE), dbo.fn_fecha_local(SYSUTCDATETIME())) AS fecha',
+      { fecha },
+    );
+    const fechaLocal = dia[0].fecha;
+
     const { rows: porTienda } = await db.query(
       `SELECT tienda_id, tienda, fecha, cantidad_ventas, total_vendido,
               costo_mercaderia, ganancia_bruta, ticket_promedio
          FROM v_ventas_diarias
-        WHERE fecha = ISNULL(CAST(@fecha AS DATE), CAST(SYSUTCDATETIME() AS DATE))
+        WHERE fecha = @fecha
         ORDER BY tienda`,
-      { fecha },
+      { fecha: fechaLocal },
     );
 
     const { rows: alertas } = await db.query(
@@ -81,7 +92,9 @@ export default async function rutasReportes(app, { db }) {
     const totalGanancia = porTienda.reduce((a, t) => a + Number(t.ganancia_bruta), 0);
 
     return {
-      fecha: fecha ?? new Date().toISOString().slice(0, 10),
+      // Una columna DATE vuelve como Date a medianoche UTC, asi que recortar el
+      // ISO da la fecha del calendario sin que la zona del proceso la mueva.
+      fecha: fechaLocal.toISOString().slice(0, 10),
       consolidado: {
         total_vendido: totalVendido,
         ganancia_bruta: totalGanancia,

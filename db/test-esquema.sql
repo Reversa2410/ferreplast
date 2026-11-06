@@ -837,6 +837,112 @@ VALUES ('credito', 'el mismo producto no se repite en una venta', @ok, @det);
 GO
 
 -- =============================================================================
+-- 13. ZONA HORARIA -- que el dia del reporte sea el dia del negocio
+--
+-- Estas pruebas existen por un error que estuvo en el esquema y no fallaba
+-- nunca: la vista agrupaba por CAST(ocurrido_en AS DATE), que es la fecha UTC,
+-- y Nicaragua es UTC-6. Las ventas de la tarde se contaban en el dia
+-- siguiente. No habia ninguna excepcion ni ningun numero absurdo: solo el
+-- total del dia corrido.
+--
+-- Se usa una fecha de enero a proposito, bien lejos de "hoy": si se probara
+-- con la fecha actual, un resultado correcto y uno incorrecto podrian caer en
+-- el mismo dia y la prueba pasaria por casualidad.
+-- =============================================================================
+DECLARE @ok BIT, @det NVARCHAR(400), @n INT, @importe DECIMAL(18,2);
+
+-- 18:30 del 14 de enero en Nicaragua = 00:30 UTC del 15.
+DECLARE @tarde       DATETIME2(3) = '2026-01-15T00:30:00';
+-- 23:59 del 14 de enero en Nicaragua = 05:59 UTC del 15.
+DECLARE @noche       DATETIME2(3) = '2026-01-15T05:59:00';
+DECLARE @dia_local   DATE = '2026-01-14';
+DECLARE @dia_utc     DATE = '2026-01-15';
+
+-- -----------------------------------------------------------------------------
+-- La zona sigue siendo UTC-6 y sin horario de verano.
+--
+-- Nicaragua lo tuvo hasta 2006. Si el sistema operativo trajera una regla
+-- nueva, los numeros cambiarian solos y esta prueba es la que lo diria.
+-- -----------------------------------------------------------------------------
+SELECT @det = CONCAT('desfase ', current_utc_offset, ', horario de verano ', is_currently_dst)
+  FROM sys.time_zone_info WHERE name = 'Central America Standard Time';
+SET @ok = CASE WHEN @det = 'desfase -06:00, horario de verano 0' THEN 1 ELSE 0 END;
+INSERT INTO #resultado (seccion, nombre, ok, detalle)
+VALUES ('zona horaria', 'Nicaragua sigue en UTC-6 sin horario de verano', @ok, @det);
+
+-- -----------------------------------------------------------------------------
+-- Las dos funciones de conversion
+-- -----------------------------------------------------------------------------
+SET @ok = CASE WHEN dbo.fn_fecha_local(@tarde) = @dia_local THEN 1 ELSE 0 END;
+SET @det = CONCAT('18:30 locales guardadas como ', CONVERT(VARCHAR(20), @tarde, 120),
+                  ' -> dia ', dbo.fn_fecha_local(@tarde), ' (UTC diria ', @dia_utc, ')');
+INSERT INTO #resultado (seccion, nombre, ok, detalle)
+VALUES ('zona horaria', 'una venta de la tarde pertenece al dia local', @ok, @det);
+
+SET @ok = CASE WHEN dbo.fn_fecha_local(@noche) = @dia_local THEN 1 ELSE 0 END;
+SET @det = CONCAT('23:59 locales -> dia ', dbo.fn_fecha_local(@noche));
+INSERT INTO #resultado (seccion, nombre, ok, detalle)
+VALUES ('zona horaria', 'una venta de la noche tampoco se adelanta', @ok, @det);
+
+-- El dia local empieza a las 06:00 UTC, no a las 00:00.
+SET @ok = CASE WHEN dbo.fn_inicio_utc_del_dia(@dia_local) = '2026-01-14T06:00:00'
+               THEN 1 ELSE 0 END;
+SET @det = CONCAT('el dia local ', @dia_local, ' empieza en UTC a las ',
+                  CONVERT(VARCHAR(20), dbo.fn_inicio_utc_del_dia(@dia_local), 120));
+INSERT INTO #resultado (seccion, nombre, ok, detalle)
+VALUES ('zona horaria', 'fn_inicio_utc_del_dia ubica el corte del dia', @ok, @det);
+
+-- Las dos funciones tienen que ser inversas una de la otra: si no, un reporte
+-- que agrupa y otro que filtra darian conjuntos distintos para el mismo dia.
+SET @ok = CASE WHEN @tarde >= dbo.fn_inicio_utc_del_dia(@dia_local)
+               AND  @tarde <  dbo.fn_inicio_utc_del_dia(DATEADD(DAY, 1, @dia_local))
+               AND  @noche >= dbo.fn_inicio_utc_del_dia(@dia_local)
+               AND  @noche <  dbo.fn_inicio_utc_del_dia(DATEADD(DAY, 1, @dia_local))
+               THEN 1 ELSE 0 END;
+INSERT INTO #resultado (seccion, nombre, ok, detalle)
+VALUES ('zona horaria', 'agrupar por dia y filtrar por rango dan lo mismo', @ok, NULL);
+
+-- -----------------------------------------------------------------------------
+-- LA PRUEBA QUE IMPORTA: la vista, con ventas de verdad.
+--
+-- Dos ventas que en Nicaragua son del mismo dia (18:30 y 23:59) pero que en
+-- UTC caen las dos en el dia siguiente. La vista tiene que juntarlas en el 14
+-- y no crear ninguna fila para el 15.
+-- -----------------------------------------------------------------------------
+BEGIN TRY
+    BEGIN TRAN;
+
+    INSERT INTO VENTA (tienda_id, usuario_id, numero, subtotal, descuento, total,
+                       metodo_pago, ocurrido_en)
+    VALUES (1, 2, 990001, 100.00, 0.00, 100.00, 'efectivo', @tarde),
+           (1, 2, 990002, 250.00, 0.00, 250.00, 'efectivo', @noche);
+
+    SELECT @n = cantidad_ventas, @importe = total_vendido
+      FROM v_ventas_diarias
+     WHERE tienda_id = 1 AND fecha = @dia_local;
+
+    DECLARE @filas_en_utc INT;
+    SELECT @filas_en_utc = COUNT(*)
+      FROM v_ventas_diarias
+     WHERE tienda_id = 1 AND fecha = @dia_utc;
+
+    ROLLBACK;
+
+    SET @ok = CASE WHEN @n = 2 AND @importe = 350.00 AND @filas_en_utc = 0
+                   THEN 1 ELSE 0 END;
+    SET @det = CONCAT('en el dia local: ', ISNULL(@n, 0), ' ventas por ',
+                      ISNULL(@importe, 0), ' | filas en el dia UTC: ', @filas_en_utc);
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK;
+    SET @ok = 0;
+    SET @det = CONCAT('error: ', ERROR_MESSAGE());
+END CATCH
+INSERT INTO #resultado (seccion, nombre, ok, detalle)
+VALUES ('zona horaria', 'v_ventas_diarias agrupa por el dia del negocio', @ok, @det);
+GO
+
+-- =============================================================================
 -- RESUMEN
 -- =============================================================================
 PRINT '';

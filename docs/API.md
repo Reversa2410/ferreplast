@@ -1,7 +1,7 @@
 # API de Ferreplast
 
 > Motor: Fastify sobre SQL Server. 44 endpoints, verificados por
-> [`src/test-api.mjs`](../src/test-api.mjs) (234 pruebas).
+> [`src/test-api.mjs`](../src/test-api.mjs) (247 pruebas).
 >
 > Este documento es el contrato que necesita el cliente. Las razones de cada
 > decisión están en los comentarios del código, no acá: lo que sigue es qué
@@ -200,9 +200,15 @@ negarlo no lo borra. El cupo queda negativo y no se le puede fiar más.
 Los cálculos viven en las vistas de la base, no en la API: así el mismo número
 sale igual desde acá, desde SSMS o desde cualquier herramienta de reportes.
 
-> **Cuidado con la fecha.** `v_ventas_diarias` agrupa por fecha **UTC** y
-> Nicaragua es UTC-6, así que las ventas de la tarde se cuentan en el día
-> siguiente. Es un pendiente conocido; ver [SCHEMA.md](SCHEMA.md), sección 10.
+**Las fechas son días del negocio, no días UTC.** Un día va de medianoche a
+medianoche en Nicaragua (UTC-6), así que una venta de las 18:30 cuenta en su
+día y no en el siguiente. Vale para `fecha` en `/reportes/resumen`, para
+`desde`/`hasta` en `/reportes/ventas` y en `/ventas`, y para el día que
+`/reportes/resumen` usa cuando no se le pasa ninguno.
+
+`/reportes/resumen` devuelve en `fecha` el día por el que agrupó, así que el
+cliente no tiene que calcularlo con su propio reloj. El razonamiento está en
+[SCHEMA.md](SCHEMA.md), sección 10.
 
 ### Usuarios
 
