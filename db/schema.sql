@@ -89,9 +89,13 @@ GO
 -- (hay productos que se venden por metro y por libra).
 --
 -- FECHAS EN UTC. Todas las columnas de fecha son DATETIME2 y guardan UTC, con
--- SYSUTCDATETIME() como valor por omision. La conversion a la hora local pasa
--- al mostrar. Guardar hora local es el origen clasico del reporte que cambia
--- segun quien lo abre.
+-- SYSUTCDATETIME() como valor por omision. Guardar hora local es el origen
+-- clasico del reporte que cambia segun quien lo abre.
+--
+-- La contrapartida es que la conversion a hora local hay que hacerla, y
+-- olvidarla no da ningun error: solo numeros corridos seis horas. Vive en la
+-- SECCION 3.4, y todo reporte que agrupe o filtre por DIA tiene que pasar por
+-- ahi. Agrupar por CAST(ocurrido_en AS DATE) es el error, no la solucion.
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
@@ -934,6 +938,73 @@ END;
 GO
 
 -- =============================================================================
+-- 3.4 ZONA HORARIA -- de UTC a la hora de Nicaragua, y de vuelta
+--
+-- EL PROBLEMA QUE ESTO RESUELVE, QUE NO ERA TEORICO:
+-- todas las fechas se guardan en UTC. Nicaragua es UTC-6, asi que una venta de
+-- las 18:30 de la tarde queda guardada como las 00:30 del dia SIGUIENTE. Un
+-- reporte que agrupe por CAST(ocurrido_en AS DATE) cuenta esa venta en el dia
+-- equivocado, y para una ferreteria que cierra a la tarde eso corre las
+-- ultimas ventas de todos los dias. El error va en los dos sentidos: las 05:59
+-- UTC son las 23:59 del dia anterior, asi que tambien adelanta las de la noche.
+--
+-- POR QUE 'Central America Standard Time' Y NO RESTAR SEIS HORAS:
+-- restar un numero fijo funciona hasta el dia que no funciona, y entonces nadie
+-- recuerda de donde salio el numero. El nombre de la zona se explica solo y,
+-- si Nicaragua volviera a tener horario de verano -- lo tuvo hasta 2006 --,
+-- Windows actualiza la regla y esto sigue dando bien sin tocar el esquema.
+--
+-- LA ZONA APARECE TRES VECES EN ESTE ARCHIVO: en las dos funciones de abajo y
+-- en v_ventas_diarias. No se puede reducir a una:
+--
+--   * Las FUNCIONES convierten una vez por consulta (que dia es hoy, donde
+--     empieza el dia que pidio el usuario). Ahi una funcion escalar no cuesta
+--     nada y centraliza.
+--   * La VISTA convierte una vez POR VENTA, dentro de un GROUP BY. Ahi la
+--     funcion escalar seria un desastre: se midio con sys.sql_modules y da
+--     inline_type = 0, o sea que SQL Server NO la puede incrustar en el plan y
+--     la ejecutaria fila por fila sobre el historial entero. Por eso la vista
+--     lleva la expresion escrita a mano.
+--
+-- Si algun dia hay que cambiar de zona, son esas tres.
+-- =============================================================================
+
+-- -----------------------------------------------------------------------------
+-- Que dia local era, en Nicaragua, un momento guardado en UTC.
+-- -----------------------------------------------------------------------------
+CREATE OR ALTER FUNCTION fn_fecha_local(@momento DATETIME2(3))
+RETURNS DATE
+AS
+BEGIN
+    RETURN CAST(@momento AT TIME ZONE 'UTC'
+                         AT TIME ZONE 'Central America Standard Time' AS DATE);
+END;
+GO
+
+-- -----------------------------------------------------------------------------
+-- En que momento UTC empieza un dia local.
+--
+-- Es la operacion inversa, y hace falta para filtrar por rango de fechas sin
+-- convertir cada fila: en lugar de comparar la fecha local de cada venta
+-- contra lo que pidio el usuario, se traducen UNA vez los dos extremos del
+-- rango a UTC y se comparan contra la columna tal como esta guardada. Asi el
+-- filtro puede usar el indice IX_VENTA_FECHA.
+--
+-- El extremo superior se calcula pidiendo el inicio del dia SIGUIENTE y
+-- comparando con "<". Sumar 23:59:59 dejaria afuera lo que pasara en el ultimo
+-- segundo, que es el error clasico de los rangos de fechas.
+-- -----------------------------------------------------------------------------
+CREATE OR ALTER FUNCTION fn_inicio_utc_del_dia(@fecha_local DATE)
+RETURNS DATETIME2(3)
+AS
+BEGIN
+    RETURN CAST(CAST(@fecha_local AS DATETIME2(3))
+                    AT TIME ZONE 'Central America Standard Time'
+                    AT TIME ZONE 'UTC' AS DATETIME2(3));
+END;
+GO
+
+-- =============================================================================
 -- 4. VISTAS -- los reportes del panel
 --
 -- El calculo vive en la BASE y no en la aplicacion, para que el mismo numero
@@ -988,7 +1059,12 @@ WITH costos AS (
 SELECT
     v.tienda_id,
     t.nombre                  AS tienda,
-    CAST(v.ocurrido_en AS DATE) AS fecha,
+    -- La fecha es la LOCAL de Nicaragua, no la UTC. Ver la seccion 3.4: con
+    -- CAST(v.ocurrido_en AS DATE) las ventas de la tarde se contaban en el dia
+    -- siguiente. La expresion va escrita a mano y no como funcion porque esto
+    -- corre una vez por venta (ver el comentario de la seccion 3.4).
+    CAST(v.ocurrido_en AT TIME ZONE 'UTC'
+                       AT TIME ZONE 'Central America Standard Time' AS DATE) AS fecha,
     COUNT(*)                  AS cantidad_ventas,
     SUM(v.total)              AS total_vendido,
     SUM(ISNULL(c.costo, 0))   AS costo_mercaderia,
@@ -1000,7 +1076,9 @@ JOIN TIENDA t ON t.id = v.tienda_id
 -- con costo cero, en lugar de desaparecer silenciosamente.
 LEFT JOIN costos c ON c.venta_id = v.id
 WHERE v.anulada = 0
-GROUP BY v.tienda_id, t.nombre, CAST(v.ocurrido_en AS DATE);
+GROUP BY v.tienda_id, t.nombre,
+         CAST(v.ocurrido_en AT TIME ZONE 'UTC'
+                            AT TIME ZONE 'Central America Standard Time' AS DATE);
 GO
 
 -- -----------------------------------------------------------------------------

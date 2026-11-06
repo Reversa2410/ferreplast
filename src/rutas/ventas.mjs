@@ -135,8 +135,17 @@ export default async function rutasVentas(app, { db }) {
          LEFT JOIN CLIENTE cl ON cl.id = v.cliente_id
         WHERE (@tienda_id   IS NULL OR v.tienda_id   = @tienda_id)
           AND (@metodo_pago IS NULL OR v.metodo_pago = @metodo_pago)
-          AND (@desde IS NULL OR v.ocurrido_en >= CAST(@desde AS DATETIME2))
-          AND (@hasta IS NULL OR v.ocurrido_en <  DATEADD(DAY, 1, CAST(@hasta AS DATETIME2)))
+          -- desde y hasta son dias LOCALES de Nicaragua, y ocurrido_en esta en
+          -- UTC: comparar uno contra otro directamente corre el rango seis
+          -- horas. Se traducen los dos extremos a UTC una sola vez (ver
+          -- db/schema.sql, seccion 3.4), lo que ademas deja el filtro apoyado
+          -- en IX_VENTA_FECHA en lugar de convertir cada fila.
+          AND (@desde IS NULL
+               OR v.ocurrido_en >= dbo.fn_inicio_utc_del_dia(CAST(@desde AS DATE)))
+          -- El limite superior es el inicio del dia siguiente, con "<": sumar
+          -- 23:59:59 dejaria afuera la venta del ultimo segundo.
+          AND (@hasta IS NULL
+               OR v.ocurrido_en <  dbo.fn_inicio_utc_del_dia(DATEADD(DAY, 1, CAST(@hasta AS DATE))))
         ORDER BY v.ocurrido_en DESC
         OFFSET @salto ROWS FETCH NEXT @toma ROWS ONLY`,
       {
