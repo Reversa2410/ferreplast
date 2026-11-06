@@ -289,7 +289,7 @@ recién cuando el arqueo no cuadra por centavos y nadie entiende por qué.
 
 ## 8. Verificación
 
-El esquema no se da por bueno porque compile. `db/test-esquema.sql` corre **33
+El esquema no se da por bueno porque compile. `db/test-esquema.sql` corre **52
 pruebas** contra la base cargada: cada una intenta algo que debería ser
 imposible y verifica que la base lo rechace, o hace algo válido y comprueba que
 el resultado sea correcto. Ninguna deja rastro —cada una escribe dentro de una
@@ -325,9 +325,31 @@ Las pruebas ya encontraron errores reales:
   envolviendo esa sentencia en `sp_executesql`, para que el error ocurra en
   ejecución y se pueda capturar.
 
+- **El día del reporte estaba en UTC.** La vista de ventas diarias agrupaba
+  por `CAST(ocurrido_en AS DATE)`, que es la fecha UTC, y Nicaragua es UTC-6:
+  las ventas de la tarde se contaban en el día siguiente. Este no lo encontró
+  una prueba —lo encontró leer la vista buscando otra cosa—, y es el que más
+  enseña: **no producía ningún error**. Nada que mirar, ninguna excepción, solo
+  el total del día corrido unas horas en la pantalla principal. El detalle
+  completo está en la sección 10.
+
 Ese último punto es la misma trampa que vale para todo el archivo: **SQL Server
 compila el lote entero antes de ejecutar una sola línea**. Sin separadores `GO`,
 un error de sintaxis al final del script impide que se cree la primera tabla.
+
+### Una prueba que no falla cuando debería no prueba nada
+
+Al arreglar la zona horaria escribí la prueba de regresión y pasó. Eso no decía
+nada todavía: una prueba que pasa antes y después del arreglo no verifica el
+arreglo. Volví la vista a agrupar por UTC a propósito, en una base descartable,
+y recién cuando la prueba **falló** —"0 ventas en el día local, 1 fila en el día
+UTC"— quedó claro que servía.
+
+El primer intento de esa comprobación tampoco sirvió, por una razón que vale
+anotar: puse `SET QUOTED_IDENTIFIER ON` delante del `CREATE OR ALTER VIEW`
+en el mismo lote, y **`CREATE VIEW` tiene que ser la única sentencia de su
+lote**. El `ALTER` nunca se aplicó, así que la prueba "siguió pasando" contra
+la vista ya arreglada y por un momento pareció que la prueba era inútil.
 
 ---
 
@@ -414,7 +436,79 @@ clave foránea garantiza que exista, no que sea de ahí.
 
 ---
 
-## 10. Pendientes
+## 10. El día del reporte es el día del negocio
+
+Todas las fechas se guardan en UTC, que es la decisión correcta: guardar hora
+local es el origen clásico del reporte que cambia según quién lo abre.
+
+La contrapartida es que **la conversión a hora local hay que hacerla, y
+olvidarla no produce ningún error**. Eso es exactamente lo que pasó: la vista
+`v_ventas_diarias` agrupaba por `CAST(ocurrido_en AS DATE)` —la fecha UTC—
+y Nicaragua es UTC-6. Una venta de las 18:30 de la tarde queda guardada como las
+00:30 del día siguiente, así que se contaba en el día equivocado. Para una
+ferretería que cierra a la tarde, eso corría las últimas ventas de **todos** los
+días, en la pantalla que la dueña mira primero.
+
+No había excepción, ni número absurdo, ni nada que mirar: solo el total del día
+corrido unas horas.
+
+El error va en los dos sentidos. Las 05:59 UTC son las 23:59 del día anterior,
+así que la agrupación UTC también adelantaba las ventas de la noche.
+
+### Dónde vive la conversión
+
+En la base, en la sección 3.4 de `schema.sql`, y en ningún otro lado. Dos
+funciones:
+
+| Función | Para qué |
+|---|---|
+| `fn_fecha_local(momento)` | qué día local fue un instante guardado en UTC |
+| `fn_inicio_utc_del_dia(fecha)` | en qué instante UTC empieza un día local |
+
+La API no nombra ninguna zona horaria. Es deliberado: si la conversión viviera
+mitad en la base y mitad en JavaScript, bastaría cambiar una de las dos para que
+los números dejaran de cuadrar sin que nada fallara.
+
+### Por qué la vista no usa la función
+
+La zona horaria aparece **tres veces** en `schema.sql`: en las dos funciones y
+en `v_ventas_diarias`. Se podría reducir a una haciendo que la vista llame a
+`fn_fecha_local`, y sería un error:
+
+- Las **funciones** convierten una vez por consulta. Ahí no cuestan nada.
+- La **vista** convierte una vez por venta, dentro de un `GROUP BY`.
+
+Y una función escalar ahí es un desastre medible: `sys.sql_modules` reporta
+`inline_type = 0` para `fn_fecha_local`, o sea que SQL Server **no** puede
+incrustarla en el plan de ejecución y la ejecutaría fila por fila sobre el
+historial entero de ventas, para siempre.
+
+Así que la vista lleva la expresión escrita a mano, y el comentario de la
+sección 3.4 dice que son tres y por qué.
+
+### Por qué `AT TIME ZONE` y no restar seis horas
+
+Restar un número fijo funciona hasta el día que no funciona, y entonces nadie
+recuerda de dónde salió el número. El nombre de la zona se explica solo y, si
+Nicaragua volviera a tener horario de verano —lo tuvo hasta 2006—, el sistema
+operativo actualiza la regla y los reportes siguen dando bien sin tocar el
+esquema. Hay una prueba que verifica que la zona siga siendo UTC-6 sin horario
+de verano, justamente para que un cambio de regla se note.
+
+### El rango de fechas es el otro camino
+
+`GET /ventas` filtra sobre `ocurrido_en`, que está en UTC, no sobre la vista.
+Ahí no se convierte cada fila: se traducen **una vez** los dos extremos del
+rango con `fn_inicio_utc_del_dia`, lo que además deja el filtro apoyado en el
+índice `IX_VENTA_FECHA`.
+
+El extremo superior es el inicio del día siguiente, comparado con `<`. Sumar
+23:59:59 dejaría afuera lo que pasara en el último segundo, que es el error
+clásico de los rangos de fechas. Hay una prueba para eso también.
+
+---
+
+## 11. Pendientes
 
 Cosas conscientemente fuera del alcance actual, a decidir con los datos del
 levantamiento de requerimientos:
@@ -431,23 +525,6 @@ levantamiento de requerimientos:
   lado, y al sincronizar ya no habría nada que hacer. El costo es real: justo
   cuando se va la luz es cuando el cliente de confianza quiere llevarse las
   cosas.
-- **La fecha de los reportes está en UTC, no en hora local.** `v_ventas_diarias`
-  agrupa por `CAST(ocurrido_en AS DATE)`, y `ocurrido_en` se guarda en UTC.
-  Nicaragua es UTC-6, así que una venta de las 18:30 de la tarde (00:30 UTC del
-  día siguiente) se cuenta en el día equivocado — y para una ferretería que
-  cierra a la tarde, eso desplaza las últimas ventas de cada día. **Es un error
-  real en la pantalla principal de la dueña**, no una sutileza. El arreglo es
-  en la vista, no en la API:
-
-  ```sql
-  CAST(ocurrido_en AT TIME ZONE 'UTC'
-                   AT TIME ZONE 'Central America Standard Time' AS DATE)
-  ```
-
-  Queda sin aplicar porque cambia números que las pruebas del esquema ya
-  verifican, y conviene hacerlo junto con la revisión de esas pruebas en lugar
-  de mezclado con otro cambio. Está anotado también en
-  `src/rutas/reportes.mjs`.
 - **Transferencias entre tiendas.** Mover mercadería de una esquina a la otra
   hoy se representa con dos movimientos sueltos (una salida y una entrada) sin
   vínculo entre sí.

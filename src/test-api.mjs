@@ -1407,6 +1407,142 @@ console.log('\n26. Cambio de la propia clave');
   const corta = await pedir('POST', '/mi-clave', conNueva.json().token,
     { actual: 'otraclavelarga2026', nueva: 'corta' });
   check('una contrasenia de menos de 8 caracteres se rechaza', corta.statusCode === 400);
+
+  // Se deja la contrasenia como estaba y se renueva el token: cambiarla revoco
+  // todas las sesiones del administrador, incluida la de las pruebas de arriba.
+  await pedir('POST', '/mi-clave', conNueva.json().token,
+    { actual: 'otraclavelarga2026', nueva: ADMIN_CLAVE });
+  tokenAdmin = await entrarComoAdmin();
+  check('la contrasenia del seed quedo restaurada', typeof tokenAdmin === 'string');
+}
+
+// -----------------------------------------------------------------------------
+console.log('\n27. Zona horaria: el dia del reporte es el dia del negocio');
+//
+// Esta seccion existe por un error que estuvo en el esquema sin fallar nunca:
+// las vistas agrupaban por fecha UTC y Nicaragua es UTC-6, asi que las ventas
+// de la tarde se contaban en el dia siguiente. No habia excepcion ni numero
+// absurdo, solo el total del dia corrido.
+//
+// Prueba el viaje completo: la tablet manda la hora local con su desplazamiento,
+// se guarda en UTC, y el reporte la devuelve al dia del negocio.
+// -----------------------------------------------------------------------------
+{
+  // 18:30 y 23:40 del 14 de enero en Nicaragua. En UTC las dos caen el 15.
+  const TARDE = '2026-01-14T18:30:00-06:00';
+  const NOCHE = '2026-01-14T23:40:00-06:00';
+  const DIA_LOCAL = '2026-01-14';
+  const DIA_UTC = '2026-01-15';
+
+  const linea = (precio) => ({
+    producto_id: PRODUCTO, cantidad: 1, precio_unitario: precio,
+    costo_unitario: COSTO, descuento: 0, subtotal: precio,
+  });
+  const venta = (uuid, cuando, precio) => ({
+    uuid_externo: uuid, tienda_id: TIENDA_FER, usuario_id: JUAN,
+    metodo_pago: 'efectivo', subtotal: precio, descuento: 0, total: precio,
+    ocurrido_en: cuando, lineas: [linea(precio)],
+  });
+
+  const envio = await pedir('POST', '/sync/push', tokenJuanFer, {
+    ventas: [venta(randomUUID(), TARDE, 100), venta(randomUUID(), NOCHE, 250)],
+  });
+  check('entran las dos ventas de la tarde y la noche',
+    envio.json().ventas.aceptados === 2, JSON.stringify(envio.json().ventas));
+
+  // Lo que la base guardo tiene que ser el instante UTC, no la hora de pared.
+  const { rows: guardadas } = await db.query(
+    `SELECT ocurrido_en, dbo.fn_fecha_local(ocurrido_en) AS fecha_local
+       FROM VENTA WHERE numero IN (
+         SELECT TOP 2 numero FROM VENTA WHERE tienda_id = @t ORDER BY id DESC)
+        AND tienda_id = @t`,
+    { t: TIENDA_FER },
+  );
+  check('la hora con desplazamiento se guardo convertida a UTC',
+    guardadas.every((v) => v.ocurrido_en.toISOString().startsWith('2026-01-15')),
+    JSON.stringify(guardadas.map((v) => v.ocurrido_en.toISOString())));
+  check('pero su fecha local es la del dia anterior',
+    guardadas.every((v) => v.fecha_local.toISOString().startsWith(DIA_LOCAL)),
+    JSON.stringify(guardadas.map((v) => v.fecha_local)));
+
+  // EL REPORTE: las dos ventas en el dia local, ninguna en el dia UTC.
+  const enLocal = await pedir('GET', `/reportes/resumen?fecha=${DIA_LOCAL}`, tokenAdmin);
+  const fer = enLocal.json().por_tienda.find((t) => t.tienda_id === TIENDA_FER);
+  check('el reporte del dia local cuenta las dos ventas',
+    fer?.cantidad_ventas === 2 && Number(fer?.total_vendido) === 350,
+    JSON.stringify(fer));
+
+  const enUtc = await pedir('GET', `/reportes/resumen?fecha=${DIA_UTC}`, tokenAdmin);
+  check('el reporte del dia UTC no cuenta ninguna',
+    enUtc.json().por_tienda.length === 0, JSON.stringify(enUtc.json().por_tienda));
+
+  check('la respuesta dice por que dia agrupo',
+    enLocal.json().fecha === DIA_LOCAL, enLocal.json().fecha);
+
+  // La serie diaria, que filtra sobre la misma columna de la vista.
+  const serie = await pedir('GET',
+    `/reportes/ventas?desde=${DIA_LOCAL}&hasta=${DIA_LOCAL}`, tokenAdmin);
+  check('la serie diaria encuentra el dia local',
+    serie.json().ventas.some((v) => Number(v.total_vendido) === 350),
+    JSON.stringify(serie.json().ventas));
+
+  // EL FILTRO DE RANGO, que compara contra la columna UTC y por eso traduce los
+  // extremos: es el camino que no pasa por la vista.
+  const rango = await pedir('GET',
+    `/ventas?desde=${DIA_LOCAL}&hasta=${DIA_LOCAL}&tienda_id=${TIENDA_FER}`, tokenAdmin);
+  check('el rango de /ventas encuentra las dos, aunque en UTC sean del dia siguiente',
+    rango.json().ventas.length === 2, `${rango.json().ventas.length} ventas`);
+
+  const rangoUtc = await pedir('GET',
+    `/ventas?desde=${DIA_UTC}&hasta=${DIA_UTC}&tienda_id=${TIENDA_FER}`, tokenAdmin);
+  check('y pedir el dia UTC no devuelve ninguna',
+    rangoUtc.json().ventas.length === 0, `${rangoUtc.json().ventas.length} ventas`);
+
+  // El limite del dia: la venta de las 23:40 no se puede escapar al dia
+  // siguiente, que es el error que aparece cuando el rango se arma sumando
+  // 23:59:59 en lugar de usar el inicio del dia siguiente.
+  const soloDiaSiguiente = await pedir('GET',
+    `/ventas?desde=2026-01-15&hasta=2026-01-15&tienda_id=${TIENDA_FER}`, tokenAdmin);
+  check('ninguna se escapa al dia siguiente',
+    soloDiaSiguiente.json().ventas.length === 0,
+    `${soloDiaSiguiente.json().ventas.length} ventas`);
+
+  // "Hoy" por omision.
+  //
+  // CUIDADO CON COMO SE PRUEBA ESTO: comparar contra la fecha UTC solo
+  // distingue algo entre medianoche y las 06:00 UTC, que son las unicas seis
+  // horas del dia en que las dos fechas diferen. Corriendo a cualquier otra
+  // hora, una API que usara la fecha UTC pasaria la prueba igual.
+  //
+  // Asi que se compara contra lo que dice la BASE, que es lo que la vista usa
+  // para agrupar. Eso prueba el cableado -- que la ruta pregunta lo correcto --
+  // y las pruebas del esquema ya prueban que la funcion convierte bien.
+  const { rows: segunLaBase } = await db.query(
+    `SELECT dbo.fn_fecha_local(SYSUTCDATETIME()) AS local,
+            CAST(SYSUTCDATETIME() AS DATE)       AS utc`,
+  );
+  const localDeLaBase = segunLaBase[0].local.toISOString().slice(0, 10);
+  const utcDeLaBase = segunLaBase[0].utc.toISOString().slice(0, 10);
+
+  const hoy = await pedir('GET', '/reportes/resumen', tokenAdmin);
+  check('sin fecha, el resumen agrupa por el mismo dia local que la vista',
+    hoy.json().fecha === localDeLaBase,
+    `la API dice ${hoy.json().fecha}, la base ${localDeLaBase}`);
+
+  // Y se deja constancia de si esta corrida pudo distinguirlo o no, para que
+  // nadie lea un OK de arriba como mas fuerte de lo que es.
+  console.log(localDeLaBase === utcDeLaBase
+    ? `        (nota: a esta hora el dia local y el UTC coinciden en ${localDeLaBase};`
+      + ' la distincion la cubren las pruebas del esquema)'
+    : `        (nota: ahora mismo el dia local es ${localDeLaBase} y el UTC ${utcDeLaBase}:`
+      + ' esta corrida si los distingue)');
+
+  // Un camino independiente del de la base: la hora de Nicaragua calculada en
+  // JavaScript. Nicaragua no tiene horario de verano, asi que restar seis horas
+  // es exacto, y si los dos lados coinciden la conversion es la misma.
+  const hoyEnJs = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  check('la base y JavaScript calculan el mismo dia de Nicaragua',
+    localDeLaBase === hoyEnJs, `base ${localDeLaBase}, JavaScript ${hoyEnJs}`);
 }
 
 // -----------------------------------------------------------------------------

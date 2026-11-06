@@ -48,10 +48,10 @@ Una sola aplicación con dos perfiles de uso:
 
 | Componente | Estado |
 |---|---|
-| Esquema de base de datos (SQL Server) | Listo y verificado (46 pruebas, 17 tablas) |
+| Esquema de base de datos (SQL Server) | Listo y verificado (52 pruebas, 17 tablas) |
 | Datos de prueba | Listos — 100 productos, 2 tiendas, 2 clientes con crédito |
 | Diagrama entidad-relación | Al día — ver [DECISIONES-MODELO.md](docs/diagramas/DECISIONES-MODELO.md) |
-| API sobre SQL Server | Lista y verificada (234 pruebas, 44 endpoints) |
+| API sobre SQL Server | Lista y verificada (247 pruebas, 44 endpoints) |
 | Autenticación y permisos | Lista — sesiones, PIN, alcance por tienda, límite de intentos |
 | Sincronización offline | Lista — idempotente por `uuid_externo` |
 | Crédito a clientes y abonos | Listo — solo con conexión, por diseño |
@@ -66,8 +66,8 @@ Una sola aplicación con dos perfiles de uso:
 > `db/_postgresql/` como referencia.
 >
 > **`npm test` corre las dos suites.** `npm run db:test` prueba el esquema
-> contra la `FerreplastDB` local (46 pruebas) y `npm run test:api` prueba la
-> API (234 pruebas). La segunda es independiente y no puede tocar los datos
+> contra la `FerreplastDB` local (52 pruebas) y `npm run test:api` prueba la
+> API (247 pruebas). La segunda es independiente y no puede tocar los datos
 > de trabajo: crea `FerreplastPruebaApi`, le aplica el esquema y los datos,
 > corre, y la borra.
 >
@@ -81,7 +81,7 @@ ferreplast/
 ├── db/
 │   ├── schema.sql          definición completa de la base (T-SQL)
 │   ├── seed.sql            datos de prueba
-│   ├── test-esquema.sql    46 pruebas del esquema
+│   ├── test-esquema.sql    52 pruebas del esquema
 │   └── _postgresql/        versión anterior, archivada como referencia
 ├── src/
 │   ├── servidor.mjs        construcción de la aplicación HTTP
@@ -104,7 +104,7 @@ ferreplast/
 │   │   ├── clientes.mjs    clientes a crédito y abonos
 │   │   ├── usuarios.mjs    alta de usuarios y cambio de claves
 │   │   └── reportes.mjs    panel del dueño
-│   └── test-api.mjs        234 pruebas de la API
+│   └── test-api.mjs        247 pruebas de la API
 ├── docs/
 │   ├── API.md              contrato de la API (lo que necesita el cliente)
 │   ├── SCHEMA.md           decisiones de diseño de la base

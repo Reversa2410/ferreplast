@@ -63,19 +63,34 @@
    `$env:Path += ';C:\Program Files\Git\cmd'`.
    La identidad ya esta configurada en el repo (`Reversa2410`): no tocar
    `--global`.
-4. **[2026-11-06] Los here-doc largos de bash fallan en esta sesion**
+4. **[2026-11-06] `CREATE VIEW` / `CREATE FUNCTION` tiene que ser la UNICA
+   sentencia de su lote**
+   Un `-Q "SET QUOTED_IDENTIFIER ON; CREATE OR ALTER VIEW ..."` NO crea la
+   vista, y sqlcmd puede devolver 0 igual: el cambio se da por hecho y no
+   ocurrio. Costo una conclusion equivocada ("la prueba no detecta el error",
+   cuando lo que no se habia aplicado era el error).
+   Do instead: los SET van en su propio lote separado por `GO`, o sea en un
+   archivo con `-i`, no en un `-Q`. Despues confirmar con
+   `OBJECT_DEFINITION(OBJECT_ID('...')) LIKE '%...%'`.
+5. **[2026-11-06] Una prueba de regresion no vale hasta verla FALLAR**
+   Escribir la prueba despues del arreglo y verla pasar no demuestra nada.
+   Do instead: deshacer el arreglo en una base descartable, confirmar que la
+   prueba falla con el detalle esperado, y recien entonces restaurar. Para
+   tocar un archivo del repo en el medio, copiarlo al scratchpad primero
+   (`git checkout --` se llevaria los cambios sin commitear).
+6. **[2026-11-06] Los here-doc largos de bash fallan en esta sesion**
    Un `cat > archivo <<'EOF'` con un archivo de codigo entero corta con
    "unexpected EOF while looking for matching quote". Pasa tambien con los
    here-strings de PowerShell junto al PATH.
    Do instead: escribir archivos con la herramienta Write. Para mensajes de
    commit, `git commit -F archivo`.
-5. **[2026-11-06] No hay `pkill` ni Python en esta maquina**
+7. **[2026-11-06] No hay `pkill` ni Python en esta maquina**
    Do instead: para matar un proceso por puerto,
    `Get-NetTCPConnection -LocalPort N -State Listen` y `Stop-Process -Id`.
    Para scripts de apoyo, Node (`.mjs`), no Python.
-6. **[2026-11-03] PowerShell 5.1: sin `&&`, sin `??`, sin ternario**
+8. **[2026-11-03] PowerShell 5.1: sin `&&`, sin `??`, sin ternario**
    Do instead: encadenar con `;` o `if ($?) { ... }`.
-7. **[2026-11-03] Los PDF de `docs/diagramas/` usan fuentes CID**
+9. **[2026-11-03] Los PDF de `docs/diagramas/` usan fuentes CID**
    Do instead: no extraer su texto con regex sobre los streams; abrirlos en el
    panel del navegador (`file:///...`) y mirar la captura.
 
@@ -197,12 +212,18 @@
 9. **[2026-11-03] Agregar ventas con sus lineas causa fan-out**
    Do instead: agregar las lineas en un CTE previo (una fila por venta) y
    recien ahi unir con la cabecera. Ya mordio una vez: ganancia inflada de 60 a 185.
-10. **[2026-11-06] Los reportes diarios agrupan por fecha UTC, no local**
-   `v_ventas_diarias` usa `CAST(ocurrido_en AS DATE)` y Nicaragua es UTC-6:
-   una venta de las 18:30 cae en el dia siguiente. PENDIENTE sin resolver,
-   anotado en `src/rutas/reportes.mjs`.
-   Do instead: el arreglo es en la vista, con
-   `AT TIME ZONE 'UTC' AT TIME ZONE 'Central America Standard Time'`.
+10. **[2026-11-06] Todo reporte por DIA convierte a hora local, y la zona vive
+   solo en la base**
+   Se guarda UTC y Nicaragua es UTC-6, asi que agrupar por
+   `CAST(ocurrido_en AS DATE)` cuenta las ventas de la tarde en el dia
+   siguiente -- sin ningun error, solo el total corrido. Ya mordio.
+   Do instead: `dbo.fn_fecha_local(momento)` para saber el dia de un instante
+   y `dbo.fn_inicio_utc_del_dia(fecha)` para los extremos de un rango (asi el
+   filtro usa IX_VENTA_FECHA en lugar de convertir cada fila). La API NO nombra
+   zonas horarias: la zona esta 3 veces y las 3 en `db/schema.sql` (seccion
+   3.4 y `v_ventas_diarias`). La vista lleva la expresion a mano porque
+   `fn_fecha_local` tiene `inline_type = 0`: dentro de un GROUP BY correria
+   fila por fila.
 
 ## User Directives
 1. **[2026-11-03] Todo el proyecto esta en espaniol, sin tildes en el codigo**
