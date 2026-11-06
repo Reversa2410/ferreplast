@@ -18,6 +18,12 @@
 const UMBRAL = 5;             // fallos permitidos dentro de la ventana
 const VENTANA_MINUTOS = 15;
 
+// La columna identificador es VARCHAR(150). El valor es el email del
+// administrador o el id del empleado, asi que se normaliza a texto en un solo
+// lugar: si un lado guardara 7 y el otro buscara "7", la ventana no contaria
+// nada y el limite no existiria, sin que nada falle.
+const comoIdentificador = (valor) => String(valor).slice(0, 150);
+
 /**
  * Deja constancia de un intento, haya salido bien o mal.
  *
@@ -27,9 +33,14 @@ const VENTANA_MINUTOS = 15;
 export async function registrarIntento(db, { identificador, tiendaId = null, exitoso, ip = null }, log) {
   try {
     await db.query(
-      `INSERT INTO intentos_login (identificador, tienda_id, exitoso, ip)
-       VALUES ($1, $2, $3, $4)`,
-      [String(identificador).slice(0, 150), tiendaId, exitoso, ip],
+      `INSERT INTO INTENTO_LOGIN (identificador, tienda_id, exitoso, ip)
+       VALUES (@identificador, @tienda_id, @exitoso, @ip)`,
+      {
+        identificador: comoIdentificador(identificador),
+        tienda_id: tiendaId,
+        exitoso: exitoso ? 1 : 0,
+        ip,
+      },
     );
   } catch (e) {
     log?.warn({ err: e }, 'no se pudo registrar el intento de ingreso');
@@ -45,12 +56,12 @@ export async function registrarIntento(db, { identificador, tiendaId = null, exi
  */
 export async function estaBloqueado(db, identificador) {
   const { rows } = await db.query(
-    `SELECT COUNT(*)::int AS fallos
-       FROM intentos_login
-      WHERE identificador = $1
-        AND NOT exitoso
-        AND created_at > NOW() - ($2 || ' minutes')::interval`,
-    [String(identificador).slice(0, 150), String(VENTANA_MINUTOS)],
+    `SELECT COUNT(*) AS fallos
+       FROM INTENTO_LOGIN
+      WHERE identificador = @identificador
+        AND exitoso       = 0
+        AND created_at    > DATEADD(MINUTE, -@ventana, SYSUTCDATETIME())`,
+    { identificador: comoIdentificador(identificador), ventana: VENTANA_MINUTOS },
   );
 
   const fallos = rows[0]?.fallos ?? 0;
@@ -69,8 +80,9 @@ export async function estaBloqueado(db, identificador) {
 export async function limpiarFallos(db, identificador, log) {
   try {
     await db.query(
-      `DELETE FROM intentos_login WHERE identificador = $1 AND NOT exitoso`,
-      [String(identificador).slice(0, 150)],
+      `DELETE FROM INTENTO_LOGIN
+        WHERE identificador = @identificador AND exitoso = 0`,
+      { identificador: comoIdentificador(identificador) },
     );
   } catch (e) {
     log?.warn({ err: e }, 'no se pudieron limpiar los intentos fallidos');
