@@ -716,6 +716,8 @@ console.log('\n13. Cuadre de caja');
 // -----------------------------------------------------------------------------
 console.log('\n14. Bitacora de sincronizacion');
 // -----------------------------------------------------------------------------
+// Con entradas y no ajustes: desde la seccion 32 un empleado no puede ajustar
+// por la cola, y lo que esta seccion mira es la bitacora, no el tipo.
 {
   const { rows: antes } = await db.query('SELECT COUNT(*) AS n FROM SYNC_LOG');
 
@@ -723,7 +725,7 @@ console.log('\n14. Bitacora de sincronizacion');
     dispositivo_id: DISPOSITIVO_FER,
     movimientos: [{
       uuid_externo: randomUUID(), tienda_id: TIENDA_FER, producto_id: PRODUCTO,
-      usuario_id: JUAN, tipo: 'ajuste', cantidad: 1, ocurrido_en: ahora(),
+      usuario_id: JUAN, tipo: 'entrada', cantidad: 1, ocurrido_en: ahora(),
     }],
   });
 
@@ -735,7 +737,7 @@ console.log('\n14. Bitacora de sincronizacion');
     dispositivo_id: 999999,
     movimientos: [{
       uuid_externo: randomUUID(), tienda_id: TIENDA_FER, producto_id: PRODUCTO,
-      usuario_id: JUAN, tipo: 'ajuste', cantidad: 1, ocurrido_en: ahora(),
+      usuario_id: JUAN, tipo: 'entrada', cantidad: 1, ocurrido_en: ahora(),
     }],
   });
   check('un dispositivo no registrado no hace fracasar la sincronizacion',
@@ -1850,6 +1852,82 @@ console.log('\n31. Panel del duenio: la pagina, sus calculos y lo que lee de la 
   // El panel es del administrador: un empleado con sesion no ve los reportes.
   const deEmpleado = await pedir('GET', '/reportes/resumen', tokenJuanFer);
   check('un empleado no puede leer los reportes del panel', deEmpleado.statusCode === 403, `${deEmpleado.statusCode}`);
+}
+
+// -----------------------------------------------------------------------------
+console.log('\n32. Entradas de mercaderia desde la tablet, por la cola');
+// -----------------------------------------------------------------------------
+// La tablet registra la mercaderia que llega igual que las ventas: primero en
+// su cola, despues por /sync/push. Eso sirve sin senial, pero abre una puerta
+// que el camino con conexion tenia cerrada: el AJUSTE (lo unico que puede
+// hacer desaparecer mercaderia sin una venta) es solo del administrador en
+// POST /inventario/movimientos, y por /sync/push no habia regla.
+{
+  const L = await import('../cliente/logica.js');
+  const juan = await entrarComoEmpleado(JUAN, JUAN_PIN, TIENDA_FER);
+  const antes = await stockDe(PRODUCTO, TIENDA_FER);
+
+  // Un ajuste mandado por un empleado por la cola: tiene que rechazarse.
+  const ajuste = { uuid_externo: L.nuevoUuid(), tienda_id: TIENDA_FER, producto_id: PRODUCTO,
+                   usuario_id: JUAN, tipo: 'ajuste', cantidad: -5, motivo: 'se perdio',
+                   ocurrido_en: new Date().toISOString() };
+  const rAjuste = (await pedir('POST', '/sync/push', juan, { movimientos: [ajuste] })).json();
+  check('un empleado no puede hacer un ajuste por la cola',
+    rAjuste.movimientos?.rechazados?.length === 1 && rAjuste.movimientos.aceptados === 0,
+    JSON.stringify(rAjuste.movimientos));
+  check('y el stock no se movio', await stockDe(PRODUCTO, TIENDA_FER) === antes);
+
+  // El administrador si puede (el mismo criterio que con conexion).
+  const admin = await entrarComoAdmin();
+  const rAdmin = (await pedir('POST', '/sync/push', admin,
+    { movimientos: [{ ...ajuste, uuid_externo: L.nuevoUuid(), cantidad: 1, motivo: 'conteo fisico' }] })).json();
+  check('el administrador si puede ajustar por la cola', rAdmin.movimientos?.aceptados === 1,
+    JSON.stringify(rAdmin.movimientos));
+
+  // La entrada que arma la tablet: dos productos, con costo y proveedor.
+  const { rows: [otro] } = await db.query(
+    'SELECT TOP 1 id FROM PRODUCTO WHERE id <> @p AND activo = 1 ORDER BY id', { p: PRODUCTO });
+  const lineas = [{ producto_id: PRODUCTO, cantidad: 24, costo_unitario: 12.5 },
+                  { producto_id: otro.id, cantidad: 2.5, costo_unitario: 100 }];
+  const entrada = L.armarEntrada({ lineas, tienda_id: TIENDA_FER, usuario_id: JUAN,
+                                   motivo: 'Factura 0451, Distribuidora Central' });
+  const { EsquemaMovimiento } = await import('./validacion.mjs');
+  check('la entrada armada por la tablet pasa la validacion del servidor',
+    entrada.length === 2 && entrada.every((m) => EsquemaMovimiento.safeParse(m).success),
+    JSON.stringify(entrada.map((m) => EsquemaMovimiento.safeParse(m).error?.issues?.[0])));
+
+  const stockAntes = await stockDe(PRODUCTO, TIENDA_FER);
+  const r1 = (await pedir('POST', '/sync/push', juan, { movimientos: entrada })).json();
+  const a1 = L.aplicarRespuestaMovimientos(entrada, r1);
+  check('la entrada entra por la cola y sale de ella',
+    r1.movimientos.aceptados === 2 && a1.confirmados.length === 2 && a1.apartados.length === 0,
+    JSON.stringify(r1.movimientos));
+  check('el stock sube lo que entro', await stockDe(PRODUCTO, TIENDA_FER) === stockAntes + 24);
+
+  const r2 = (await pedir('POST', '/sync/push', juan, { movimientos: entrada })).json();
+  check('reenviar la entrada no la duplica', r2.movimientos.duplicados === 2
+    && await stockDe(PRODUCTO, TIENDA_FER) === stockAntes + 24, JSON.stringify(r2.movimientos));
+
+  const { rows: [guardado] } = await db.query(
+    `SELECT motivo, costo_unitario FROM MOVIMIENTO_INVENTARIO WHERE uuid_externo = @u`,
+    { u: entrada[0].uuid_externo });
+  check('queda con su costo y con el proveedor como motivo',
+    Number(guardado.costo_unitario) === 12.5 && /Distribuidora Central/.test(guardado.motivo), JSON.stringify(guardado));
+
+  // Lo rechazado se aparta y lo que el servidor no menciona... no existe con
+  // 200: /sync/push procesa todos los elementos, asi que lo que no esta en
+  // rechazados entro o ya estaba.
+  const malo = { ...entrada[0], uuid_externo: L.nuevoUuid(), tienda_id: TIENDA_PLA };
+  const r3 = (await pedir('POST', '/sync/push', juan, { movimientos: [malo] })).json();
+  const a3 = L.aplicarRespuestaMovimientos([malo], r3);
+  check('una entrada de otra tienda se aparta con su motivo',
+    a3.apartados.length === 1 && a3.apartados[0].motivo === 'permiso', JSON.stringify(r3.movimientos));
+
+  check('la tablet no arma una entrada sin cantidad o con costo negativo',
+    L.problemasDeEntrada([{ nombre: 'x', cantidad: 0, costo_unitario: 1 }]).length === 1
+    && L.problemasDeEntrada([{ nombre: 'x', cantidad: 1, costo_unitario: -1 }]).length === 1
+    && L.problemasDeEntrada([]).length === 1
+    && L.problemasDeEntrada([{ nombre: 'x', cantidad: 3, costo_unitario: 0 }]).length === 0);
 }
 
 // -----------------------------------------------------------------------------
