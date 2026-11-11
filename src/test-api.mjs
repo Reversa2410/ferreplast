@@ -1404,6 +1404,11 @@ console.log('\n26. Cambio de la propia clave');
     { usuario_id: MARIA, tienda_id: TIENDA_PLA, pin: '2468' });
   check('entra con el PIN nuevo', conNuevo.statusCode === 200, conNuevo.body);
 
+  // Y lo deja como estaba, igual que la contrasenia del administrador mas
+  // abajo: si no, toda seccion posterior que entre como Maria falla.
+  const devuelto = await pedir('POST', '/mi-pin', conNuevo.json().token, { actual: '2468', nuevo: MARIA_PIN });
+  check('el PIN del seed quedo restaurado', devuelto.statusCode === 200, devuelto.body);
+
   // El administrador cambia su contrasenia y la deja como estaba, para que el
   // resto de las pruebas y el seed sigan siendo coherentes.
   const tokenA = await entrarComoAdmin();
@@ -1998,6 +2003,78 @@ console.log('\n33. Mermas: lo que se rompe o vence, sin dejar el stock en negati
     && p([{ nombre: 'x', cantidad: 1, existencia: 4 }], '  ').length === 1
     && p([]).length === 1
     && p([{ nombre: 'x', cantidad: 4, existencia: 4 }]).length === 0);
+}
+
+// -----------------------------------------------------------------------------
+console.log('\n34. Tablets: alta, envios y baja');
+// -----------------------------------------------------------------------------
+// El panel muestra cuando envio cada tablet por ultima vez. Para que sirva, la
+// tablet tiene que poder darse de alta, mandar su id, y ese id tiene que ser
+// creible: si cualquiera pudiera marcar como "al dia" la tablet de la otra
+// tienda, el aviso de "esta tablet no envia hace horas" no valdria nada.
+{
+  const juan = await entrarComoEmpleado(JUAN, JUAN_PIN, TIENDA_FER);
+  const maria = await entrarComoEmpleado(MARIA, MARIA_PIN, TIENDA_PLA);
+  const admin = await entrarComoAdmin();
+  const minutosDe = async (id) => {
+    const { rows } = await db.query(
+      'SELECT DATEDIFF(SECOND, ultimo_sync, SYSUTCDATETIME()) AS s FROM DISPOSITIVO WHERE id = @id', { id });
+    return rows[0]?.s;
+  };
+  const logsDe = async (id) => (await db.query(
+    'SELECT COUNT(*) AS n FROM SYNC_LOG WHERE dispositivo_id = @id', { id })).rows[0].n;
+
+  // Alta desde la tablet: la tienda sale de la sesion.
+  const alta = await pedir('POST', '/dispositivos', juan, { nombre: 'Tablet mostrador' });
+  check('un empleado da de alta su tablet', alta.statusCode === 201
+    && alta.json().tienda_id === TIENDA_FER && alta.json().id > 0, alta.body);
+  const miTablet = alta.json().id;
+  check('no puede darla de alta en la otra tienda',
+    (await pedir('POST', '/dispositivos', juan, { nombre: 'x', tienda_id: TIENDA_PLA })).statusCode === 403);
+  check('sin nombre no se da de alta',
+    (await pedir('POST', '/dispositivos', juan, { nombre: '' })).statusCode === 400);
+  check('el administrador tiene que decir de que tienda es',
+    (await pedir('POST', '/dispositivos', admin, { nombre: 'x' })).statusCode === 400);
+  check('y con la tienda, la da de alta',
+    (await pedir('POST', '/dispositivos', admin, { nombre: 'Tablet bodega 2', tienda_id: TIENDA_PLA })).statusCode === 201);
+
+  // Envio vacio: la tablet esta encendida y con senial pero no vendio nada.
+  // Tiene que contar como "al dia", sin llenar la bitacora de filas vacias.
+  await db.query('UPDATE DISPOSITIVO SET ultimo_sync = DATEADD(HOUR, -3, SYSUTCDATETIME()) WHERE id = @id', { id: miTablet });
+  const logsAntes = await logsDe(miTablet);
+  const latido = await pedir('POST', '/sync/push', juan, { dispositivo_id: miTablet, ventas: [], movimientos: [] });
+  check('un envio sin nada pone la tablet al dia', latido.statusCode === 200 && await minutosDe(miTablet) < 60,
+    `${await minutosDe(miTablet)} s`);
+  check('pero no deja una fila vacia en la bitacora', await logsDe(miTablet) === logsAntes);
+
+  // El id tiene que ser de una tienda de quien envia.
+  const { rows: [dePla] } = await db.query(
+    "SELECT id FROM DISPOSITIVO WHERE tienda_id = @t AND nombre = 'Caja Principal - Plastiqueria'", { t: TIENDA_PLA });
+  await db.query('UPDATE DISPOSITIVO SET ultimo_sync = DATEADD(HOUR, -3, SYSUTCDATETIME()) WHERE id = @id', { id: dePla.id });
+  const ajeno = await pedir('POST', '/sync/push', juan, { dispositivo_id: dePla.id, ventas: [], movimientos: [] });
+  check('un empleado no puede poner al dia la tablet de la otra tienda',
+    ajeno.statusCode === 200 && await minutosDe(dePla.id) > 3600, `${await minutosDe(dePla.id)} s`);
+  await pedir('POST', '/sync/push', maria, { dispositivo_id: dePla.id, ventas: [], movimientos: [] });
+  check('la de su tienda si', await minutosDe(dePla.id) < 60);
+
+  // Baja: una tablet perdida deja de contar.
+  check('un empleado no puede dar de baja una tablet',
+    (await pedir('PATCH', `/dispositivos/${miTablet}`, juan, { activo: false })).statusCode === 403);
+  const baja = await pedir('PATCH', `/dispositivos/${miTablet}`, admin, { activo: false });
+  check('el administrador da de baja una tablet', baja.statusCode === 200, baja.body);
+  const estado = (await pedir('GET', '/sync/estado', admin)).json().dispositivos;
+  check('y deja de aparecer en el panel', !estado.some((d) => d.id === miTablet));
+  await db.query('UPDATE DISPOSITIVO SET ultimo_sync = DATEADD(HOUR, -3, SYSUTCDATETIME()) WHERE id = @id', { id: miTablet });
+  await pedir('POST', '/sync/push', juan, { dispositivo_id: miTablet, ventas: [], movimientos: [] });
+  check('los envios de una tablet dada de baja no la ponen al dia', await minutosDe(miTablet) > 3600);
+
+  // El ingreso con el id de una tablet de otra tienda no la ata a la sesion.
+  const r = await pedir('POST', '/auth/login/pin', undefined,
+    { usuario_id: JUAN, tienda_id: TIENDA_FER, pin: JUAN_PIN, dispositivo_id: dePla.id });
+  const { rows: [ses] } = await db.query(
+    'SELECT TOP 1 dispositivo_id FROM SESION WHERE usuario_id = @u ORDER BY created_at DESC', { u: JUAN });
+  check('el ingreso con una tablet de otra tienda no la registra en la sesion',
+    r.statusCode === 200 && ses.dispositivo_id == null, `${r.statusCode} ${JSON.stringify(ses)}`);
 }
 
 // -----------------------------------------------------------------------------

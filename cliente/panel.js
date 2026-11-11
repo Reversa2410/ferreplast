@@ -609,23 +609,32 @@ async function vistaTablets() {
   const { dispositivos } = await traer('/sync/estado');
   contenido().innerHTML = `
     <div class="encabezado-vista"><h1>Tablets</h1></div>
-    <p class="tenue">Cuándo envió cada tablet sus ventas por última vez. Una tablet que lleva horas sin enviar
-      puede estar sin señal o apagada: sus ventas todavía no aparecen en el panel.</p>
+    <p class="tenue">Cuándo se comunicó cada tablet por última vez. Encendida y con señal, avisa una vez por
+      minuto aunque no venda nada. Una que lleva horas sin comunicarse puede estar sin señal o apagada:
+      lo que vendió todavía no aparece en el panel.</p>
     <section class="bloque">${dispositivos.length ? `<table class="tabla">
-      <thead><tr><th>Tablet</th><th>Tienda</th><th>Último envío</th><th>Estado</th></tr></thead>
+      <thead><tr><th>Tablet</th><th>Tienda</th><th>Último aviso</th><th>Estado</th><th></th></tr></thead>
       <tbody>${dispositivos.map((d) => {
         const e = L.estadoSincronizacion(d.minutos_sin_sincronizar);
         return `<tr class="${e.clase}"><td><strong>${esc(d.nombre)}</strong></td><td>${esc(d.tienda)}</td>
           <td>${d.ultimo_sync ? L.fechaHora(d.ultimo_sync) : 'nunca'}</td>
-          <td><span class="etiqueta-${e.clase || 'neutra'}">${esc(e.texto)}</span></td></tr>`;
+          <td><span class="etiqueta-${e.clase || 'neutra'}">${esc(e.texto)}</span></td>
+          <td class="d"><button class="btn btn-chico btn-peligro" data-accion="baja-tablet" data-id="${d.id}"
+            data-nombre="${esc(d.nombre)}">Dar de baja</button></td></tr>`;
       }).join('')}</tbody>
     </table>` : '<p class="vacio">No hay tablets registradas.</p>'}
-    <p class="tenue">Solo aparecen las tablets dadas de alta en el sistema.</p></section>`;
-  // PENDIENTE: el punto de venta (cliente/app.js) manda /sync/push sin
-  // dispositivo_id, asi que sus envios no actualizan DISPOSITIVO.ultimo_sync
-  // ni esta lista. Hace falta:
-  //   - dar de alta cada tablet (hoy no hay ruta para crear un DISPOSITIVO);
-  //   - que la tablet guarde su id y lo mande en cada envio.
+    <p class="tenue">Cada tablet se da de alta sola la primera vez que alguien entra en ella. Dé de baja la que
+      se perdió o se reemplazó: deja de aparecer aquí, y si alguien la vuelve a usar, sus ventas entran igual
+      pero no la marcan como al día. Para cortar además las sesiones abiertas en ella, cambie el PIN de quien la usaba.</p>
+    </section>`;
+}
+
+async function bajaTablet(id, nombre) {
+  if (!confirm(`¿Dar de baja la tablet "${nombre}"? Deja de aparecer en esta lista.`)) return;
+  const { status, datos } = await api('PATCH', `/dispositivos/${id}`, { activo: false });
+  if (status !== 200) return avisar(datos.error ?? `No se pudo dar de baja (${status}).`, true);
+  avisar(`Tablet "${nombre}" dada de baja.`);
+  mostrarVista();
 }
 
 // =============================================================================
@@ -655,6 +664,7 @@ const acciones = {
   'ver-cliente': conError((d) => verCliente(Number(d.id))),
   'guardar-limite': conError((d) => guardarLimite(Number(d.id))),
   'ver-caja': conError((d) => verCaja(Number(d.id))),
+  'baja-tablet': conError((d) => bajaTablet(Number(d.id), d.nombre)),
   pagina: (d) => {
     est.filtros.ventas.pagina = Math.max(1, est.filtros.ventas.pagina + Number(d.delta));
     mostrarVista();

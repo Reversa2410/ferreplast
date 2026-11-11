@@ -30,6 +30,7 @@ import { verificar } from '../auth/password.mjs';
 import { crearSesion, revocarSesion, revocarSesionesDe } from '../auth/sesiones.mjs';
 import { registrarIntento, estaBloqueado, limpiarFallos } from '../auth/intentos.mjs';
 import { ADMIN, EMPLEADO } from '../auth/guardia.mjs';
+import { dispositivoValido } from './dispositivos.mjs';
 
 // Un unico mensaje para todos los fallos de credenciales.
 //
@@ -201,8 +202,12 @@ export default async function rutasAuth(app, { db }) {
       { identificador: usuario_id, tiendaId: tienda_id, exitoso: true, ip }, peticion.log);
     await limpiarFallos(db, usuario_id, peticion.log);
 
+    // La tablet se registra en la sesion solo si es de esta tienda y esta
+    // activa. Antes se guardaba cualquier id (prueba 34). Uno que no cumple se
+    // ignora: no es motivo para dejar al empleado sin poder entrar.
+    const dispositivo = await dispositivoValido(db, null, dispositivo_id, tienda_id);
     const sesion = await crearSesion(db, usuario, {
-      dispositivoId: dispositivo_id ?? null,
+      dispositivoId: dispositivo?.id ?? null,
       tiendaId: tienda_id,
     });
     await db.query(
