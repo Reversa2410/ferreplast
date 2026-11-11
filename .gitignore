@@ -35,3 +35,7 @@ desktop.ini
 *.dump
 *.backup
 /db/local/
+
+# Respaldos comprimidos del proyecto. El repositorio ya es el respaldo: un zip
+# con node_modules adentro pesa decenas de megabytes y queda viejo enseguida.
+*.zip

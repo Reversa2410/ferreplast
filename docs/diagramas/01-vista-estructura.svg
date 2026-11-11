@@ -1,135 +1,119 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="760" viewBox="0 0 1180 760" role="img" aria-label="Vista de estructura: el negocio agrupa tiendas, usuarios, categorías y productos; el stock resuelve la relación muchos a muchos entre tienda y producto; cada tienda tiene dispositivos que registran bitácora de sincronización.">
-  <title>Vista de estructura: negocio, catalogo e inventario</title>
-  <rect x="0" y="0" width="1180" height="760" fill="#FFFFFF"/>
-        <defs>
-          <marker id="fa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-            <path d="M0,0 L10,5 L0,10 z" fill="#1F5673"/>
-          </marker>
-          <marker id="fb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-            <path d="M0,0 L10,5 L0,10 z" fill="#A8551F"/>
-          </marker>
-        </defs>
-
-        <!-- NEGOCIO -->
-        <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="470" y="26" width="220" height="26"/>
-        <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="470" y="52" width="220" height="60"/>
-        <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="580" y="45" text-anchor="middle">NEGOCIO</text>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="484" y="71">id</text>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="484" y="87">nombre, propietario</text>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="484" y="103">moneda, activo</text>
-
-        <!-- CATEGORIA -->
-        <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="60" y="212" width="200" height="26"/>
-        <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="60" y="238" width="200" height="60"/>
-        <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="160" y="231" text-anchor="middle">CATEGORIA</text>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="74" y="257">id</text>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="74" y="273">nombre</text>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="74" y="289">padre_id (FK)</text>
-
-        <!-- TIENDA -->
-        <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="470" y="212" width="220" height="26"/>
-        <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="470" y="238" width="220" height="76"/>
-        <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="580" y="231" text-anchor="middle">TIENDA</text>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="484" y="257">id</text>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="484" y="273">nombre, tipo</text>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="484" y="289">direccion, prefijo</text>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="484" y="305">negocio_id (FK)</text>
-
-        <!-- USUARIO -->
-        <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="900" y="212" width="220" height="26"/>
-        <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="900" y="238" width="220" height="76"/>
-        <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="1010" y="231" text-anchor="middle">USUARIO</text>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="914" y="257">id</text>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="914" y="273">nombre, rol</text>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="914" y="289">email, pin_hash</text>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="914" y="305">tienda_id (FK)</text>
-
-        <!-- ISA stub -->
-        <line stroke="#A8551F" stroke-width="1.6" fill="none" x1="1010" y1="314" x2="1010" y2="344"/>
-        <polygon points="1010,344 1042,382 978,382" fill="#F6E8DC" stroke="#A8551F" stroke-width="1.5"/>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-weight="600" fill="#A8551F" x="1010" y="371" text-anchor="middle" font-size="10">ISA</text>
-        <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="1010" y="400" text-anchor="middle">especialización → Fig. 3</text>
-
-        <!-- PRODUCTO -->
-        <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="60" y="414" width="200" height="26"/>
-        <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="60" y="440" width="200" height="76"/>
-        <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="160" y="433" text-anchor="middle">PRODUCTO</text>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="74" y="459">id</text>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="74" y="475">codigo, nombre</text>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="74" y="491">precio_costo/venta</text>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="74" y="507">unidad_medida</text>
-
-        <!-- STOCK (asociativa) -->
-        <rect fill="#F6E8DC" stroke="#A8551F" stroke-width="1.6" x="330" y="414" width="190" height="26"/>
-        <rect fill="#F6E8DC" stroke="#A8551F" stroke-width="1.6" x="330" y="440" width="190" height="76"/>
-        <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="425" y="433" text-anchor="middle">STOCK</text>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="344" y="459">tienda_id+producto_id</text>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#2F6B4F" font-style="italic" x="344" y="475">cantidad (derivado)</text>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="344" y="491">cantidad_minima</text>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="344" y="507">updated_at</text>
-
-        <!-- DISPOSITIVO -->
-        <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="770" y="470" width="210" height="26"/>
-        <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="770" y="496" width="210" height="60"/>
-        <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="875" y="489" text-anchor="middle">DISPOSITIVO</text>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="784" y="515">id</text>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="784" y="531">nombre</text>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="784" y="547">ultimo_sync</text>
-
-        <!-- SYNC_LOG -->
-        <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="770" y="632" width="210" height="26"/>
-        <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="770" y="658" width="210" height="60"/>
-        <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="875" y="651" text-anchor="middle">SYNC_LOG</text>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="784" y="677">id</text>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="784" y="693">registros_enviados</text>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="784" y="709">registros_duplicados</text>
-
-        <!-- R1 NEGOCIO -> TIENDA -->
-        <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M580,112 V212" marker-end="url(#fa)"/>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="590" y="152">1 : N</text>
-        <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="590" y="168">posee</text>
-
-        <!-- R4 NEGOCIO -> CATEGORIA -->
-        <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M470,66 H120 V212" marker-end="url(#fa)"/>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="200" y="58">1 : N</text>
-        <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="248" y="58">clasifica</text>
-
-        <!-- R2 NEGOCIO -> USUARIO -->
-        <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M690,66 H1010 V212" marker-end="url(#fa)"/>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="800" y="58">1 : N</text>
-        <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="848" y="58">emplea</text>
-
-        <!-- R6 NEGOCIO -> PRODUCTO -->
-        <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M470,96 H24 V478 H60" marker-end="url(#fa)"/>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="30" y="256" transform="rotate(-90 30 256)">1 : N</text>
-        <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="30" y="322" transform="rotate(-90 30 322)">oferta</text>
-
-        <!-- R5 CATEGORIA recursiva -->
-        <path stroke="#A8551F" stroke-width="1.6" fill="none" d="M260,254 H296 V196 H200 V212" marker-end="url(#fb)"/>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#A8551F" x="304" y="230">1 : N</text>
-        <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="304" y="246">contiene</text>
-
-        <!-- R7 CATEGORIA -> PRODUCTO -->
-        <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M160,298 V414" marker-end="url(#fa)"/>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="170" y="348">0 : N</text>
-        <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="170" y="364">agrupa</text>
-
-        <!-- R8a PRODUCTO -> STOCK -->
-        <path stroke="#A8551F" stroke-width="1.6" fill="none" d="M260,478 H330" marker-end="url(#fb)"/>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#A8551F" x="272" y="470">1 : N</text>
-
-        <!-- R8b TIENDA -> STOCK -->
-        <path stroke="#A8551F" stroke-width="1.6" fill="none" d="M530,314 V478 H520" marker-end="url(#fb)"/>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#A8551F" x="540" y="400">1 : N</text>
-        <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="540" y="416">almacena</text>
-
-        <!-- R21 TIENDA -> DISPOSITIVO -->
-        <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M690,272 H730 V526 H770" marker-end="url(#fa)"/>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="700" y="264">1 : N</text>
-        <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="740" y="500">instala</text>
-
-        <!-- R22 DISPOSITIVO -> SYNC_LOG -->
-        <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M875,556 V632" marker-end="url(#fa)"/>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="885" y="588">1 : N</text>
-        <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="885" y="604">bitácora</text>
-      </svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="1820" height="720" viewBox="0 0 1820 720" role="img" aria-label="Vista de estructura del modelo: el negocio posee las tiendas, emplea a los usuarios y da credito a los clientes. El catalogo es unico; STOCK resuelve la relacion muchos a muchos entre tienda y producto, y USUARIO_TIENDA la de usuario y tienda. CATEGORIA se contiene a si misma.">
+  <title>Vista de estructura: negocio, catalogo y personas</title>
+  <rect x="0" y="0" width="1820" height="720" fill="#FFFFFF"/>
+  <defs>
+    <marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#1F5673"/>
+    </marker>
+    <marker id="mb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#A8551F"/>
+    </marker>
+  </defs>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="28" font-weight="700" fill="#12181F" letter-spacing="0.8" x="40" y="48">Vista de estructura</text>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="16" font-weight="500" fill="#3D4954" x="40" y="72">Negocio, tiendas, catálogo y personas</text>
+  <line stroke="#C9D2DA" stroke-width="1" x1="60" y1="654" x2="1760" y2="654"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="60" y="672">LEYENDA</text>
+  <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="60" y="684" width="34" height="22"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="12.5" font-weight="500" fill="#3D4954" x="106" y="700">Entidad fuerte</text>
+  <rect fill="#F6E8DC" stroke="#A8551F" stroke-width="1.6" x="238" y="684" width="34" height="22"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="12.5" font-weight="500" fill="#3D4954" x="284" y="700">Entidad asociativa</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#2F6B4F" font-style="italic" x="444" y="699">attr</text>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="12.5" font-weight="500" fill="#3D4954" x="490" y="700">Atributo derivado o calculado</text>
+  <line stroke="#1F5673" stroke-width="1.4" fill="none" x1="727" y1="695" x2="761" y2="695" marker-end="url(#ma)"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="12.5" font-weight="500" fill="#3D4954" x="773" y="700">Relación 1:N (la flecha apunta al lado N)</text>
+  <line stroke="#A8551F" stroke-width="1.6" fill="none" x1="1094" y1="695" x2="1128" y2="695" marker-end="url(#mb)"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="12.5" font-weight="500" fill="#3D4954" x="1140" y="700">Construcción extendida</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="1336" y="699">id</text>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="12.5" font-weight="500" fill="#3D4954" x="1374" y="700">Clave primaria</text>
+  <path stroke="#A8551F" stroke-width="1.6" fill="none" d="M320,170 H340 V130 H300 V150" marker-end="url(#mb)"/>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M160,250 V420" marker-end="url(#ma)"/>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M810,250 V420" marker-end="url(#ma)"/>
+  <path stroke="#A8551F" stroke-width="1.6" fill="none" d="M780,480 H680" marker-end="url(#mb)"/>
+  <path stroke="#A8551F" stroke-width="1.6" fill="none" d="M320,490 H420" marker-end="url(#mb)"/>
+  <path stroke="#A8551F" stroke-width="1.6" fill="none" d="M1040,480 H1140" marker-end="url(#mb)"/>
+  <path stroke="#A8551F" stroke-width="1.6" fill="none" d="M1500,440 H1400" marker-end="url(#mb)"/>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M1020,250 V400 H1520 V420" marker-end="url(#ma)"/>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M1040,210 H1500" marker-end="url(#ma)"/>
+  <!-- CATEGORIA -->
+  <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="60" y="176" width="260" height="74"/>
+  <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="60" y="150" width="260" height="26"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="190" y="168" text-anchor="middle">CATEGORIA</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="74" y="195">id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="74" y="211">nombre</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="74" y="227">padre_id (FK)</text>
+  <!-- NEGOCIO -->
+  <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="780" y="176" width="260" height="74"/>
+  <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="780" y="150" width="260" height="26"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="910" y="168" text-anchor="middle">NEGOCIO</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="794" y="195">id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="794" y="211">nombre, propietario</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="794" y="227">moneda, activo</text>
+  <!-- CLIENTE -->
+  <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="1500" y="176" width="260" height="114"/>
+  <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="1500" y="150" width="260" height="26"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="1630" y="168" text-anchor="middle">CLIENTE</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="1514" y="195">id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1514" y="211">nombre, telefono</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1514" y="227">identificacion</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1514" y="243">limite_credito</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#2F6B4F" font-style="italic" x="1514" y="259">saldo (derivado)</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1514" y="275">negocio_id (FK)</text>
+  <!-- PRODUCTO -->
+  <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="60" y="446" width="260" height="114"/>
+  <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="60" y="420" width="260" height="26"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="190" y="438" text-anchor="middle">PRODUCTO</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="74" y="465">id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="74" y="481">codigo, nombre</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="74" y="497">precio_costo</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="74" y="513">precio_venta</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="74" y="529">unidad_medida</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="74" y="545">categoria_id (FK)</text>
+  <!-- STOCK -->
+  <rect fill="#F6E8DC" stroke="#A8551F" stroke-width="1.6" x="420" y="446" width="260" height="84"/>
+  <rect fill="#F6E8DC" stroke="#A8551F" stroke-width="1.6" x="420" y="420" width="260" height="26"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="550" y="438" text-anchor="middle">STOCK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="434" y="465">tienda_id + producto_id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#2F6B4F" font-style="italic" x="434" y="481">cantidad (derivado)</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="434" y="497">cantidad_minima</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#2F6B4F" font-style="italic" x="434" y="513">necesita_reposicion (calc.)</text>
+  <!-- TIENDA -->
+  <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="780" y="446" width="260" height="84"/>
+  <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="780" y="420" width="260" height="26"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="910" y="438" text-anchor="middle">TIENDA</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="794" y="465">id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="794" y="481">nombre, tipo</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="794" y="497">direccion, prefijo</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="794" y="513">negocio_id (FK)</text>
+  <!-- USUARIO_TIENDA -->
+  <rect fill="#F6E8DC" stroke="#A8551F" stroke-width="1.6" x="1140" y="446" width="260" height="54"/>
+  <rect fill="#F6E8DC" stroke="#A8551F" stroke-width="1.6" x="1140" y="420" width="260" height="26"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="1270" y="438" text-anchor="middle">USUARIO_TIENDA</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="1154" y="465">usuario_id + tienda_id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1154" y="481">created_at</text>
+  <!-- USUARIO -->
+  <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="1500" y="446" width="260" height="84"/>
+  <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="1500" y="420" width="260" height="26"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="1630" y="438" text-anchor="middle">USUARIO</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="1514" y="465">id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1514" y="481">nombre, rol</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1514" y="497">activo, ultimo_acceso</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1514" y="513">negocio_id (FK)</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#A8551F" x="347" y="136">0..1 : N</text>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="347" y="152">contiene</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="167" y="341">1 : N</text>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="167" y="357">agrupa</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="817" y="341">1 : N</text>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="817" y="357">posee</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#A8551F" x="699" y="457">1 : N</text>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="699" y="473">almacena</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#A8551F" x="346" y="467">1 : N</text>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="346" y="483">existe en</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#A8551F" x="1063" y="457">1 : N</text>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="1063" y="473">cuenta con</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#A8551F" x="1413" y="417">1 : N</text>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="1413" y="433">trabaja en</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="1199" y="393">1 : N</text>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="1243" y="393">emplea</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="1234" y="203">1 : N</text>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="1278" y="203">da credito a</text>
+</svg>
