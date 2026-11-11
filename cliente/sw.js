@@ -10,7 +10,7 @@
 // hace que las tablets descarguen la version nueva.
 // =============================================================================
 
-const VERSION = 'pv-4';
+const VERSION = 'pv-5';
 const ARCHIVOS = [
   './', 'index.html', 'estilos.css', 'app.js', 'logica.js',
   'manifest.webmanifest', 'icono.svg',
