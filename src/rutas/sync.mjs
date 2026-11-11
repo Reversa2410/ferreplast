@@ -34,6 +34,7 @@ import {
 } from '../validacion.mjs';
 import { exigirRol, puedeOperarEn, ADMIN } from '../auth/guardia.mjs';
 import { insertarMovimiento, insertarVenta } from '../dominio/ventas.mjs';
+import { dispositivoValido } from './dispositivos.mjs';
 
 const LIMITE_LOTE = 500;
 
@@ -202,22 +203,36 @@ export default async function rutasSync(app, { db }) {
 
     // Bitacora de sincronizacion: permite detectar desde el panel que una
     // tablet dejo de sincronizar, que suele ser el primer sintoma de problema.
-    if (cuerpo.dispositivo_id) {
+    //
+    // Solo cuenta si la tablet existe, esta activa y es de una tienda de quien
+    // envia. Antes se aceptaba cualquier id: un empleado de la ferreteria podia
+    // poner "al dia" la tablet de la plastiqueria, y el aviso del panel dejaba
+    // de valer (prueba 34). Un id que no cumple se ignora: las ventas del lote
+    // son reales y entran igual.
+    //
+    // Un envio VACIO (la tablet no tiene nada que mandar) tambien la pone al
+    // dia: esta encendida y con senial. Pero no deja fila en SYNC_LOG, que
+    // con un aviso por minuto se llenaria de filas sin contenido.
+    const dispositivo = await dispositivoValido(db, peticion.usuario, cuerpo.dispositivo_id);
+    if (dispositivo) {
       try {
-        await db.query(
-          `INSERT INTO SYNC_LOG
-               (dispositivo_id, registros_enviados, registros_aceptados, registros_duplicados)
-           VALUES (@dispositivo_id, @enviados, @aceptados, @duplicados)`,
-          {
-            dispositivo_id: Number(cuerpo.dispositivo_id),
-            enviados: movimientos.length + ventas.length,
-            aceptados: resMovimientos.aceptados + resVentas.aceptados,
-            duplicados: resMovimientos.duplicados + resVentas.duplicados,
-          },
-        );
+        const enviados = movimientos.length + ventas.length;
+        if (enviados > 0) {
+          await db.query(
+            `INSERT INTO SYNC_LOG
+                 (dispositivo_id, registros_enviados, registros_aceptados, registros_duplicados)
+             VALUES (@dispositivo_id, @enviados, @aceptados, @duplicados)`,
+            {
+              dispositivo_id: dispositivo.id,
+              enviados,
+              aceptados: resMovimientos.aceptados + resVentas.aceptados,
+              duplicados: resMovimientos.duplicados + resVentas.duplicados,
+            },
+          );
+        }
         await db.query(
           'UPDATE DISPOSITIVO SET ultimo_sync = SYSUTCDATETIME() WHERE id = @id',
-          { id: Number(cuerpo.dispositivo_id) },
+          { id: dispositivo.id },
         );
       } catch (e) {
         // Un dispositivo no registrado no debe hacer fracasar la sincronizacion
