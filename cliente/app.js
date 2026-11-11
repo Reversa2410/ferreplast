@@ -42,7 +42,7 @@ const estado = {
   colaMov: guardado.leer('colaMov', []),          // entradas de mercaderia por mandar
   movApartados: guardado.leer('movApartados', []),// entradas rechazadas por el servidor
   entradas: guardado.leer('entradas', []),        // ultimas entradas registradas aca
-  entrada: { lineas: [], motivo: '', buscar: '' },// la que se esta armando
+  entrada: { tipo: 'entrada', lineas: [], motivo: '', buscar: '' }, // la que se esta armando
   historial: guardado.leer('historial', []),      // ultimas ventas, con su numero
   carrito: [],
   metodo: 'efectivo',
@@ -998,12 +998,24 @@ function mostrarFactura(f, { pendiente = false, oficial = false } = {}) {
 // =============================================================================
 function abrirEntrada() {
   const ent = estado.entrada;
-  abrirModal(`<h2>Entrada de mercadería</h2>
-    <p class="tenue">Lo que llega del proveedor a ${esc(estado.tienda?.nombre ?? 'esta tienda')}.
-      Se suma al inventario${estado.enLinea ? '' : ' y se envía cuando vuelva la señal'}.</p>
-    <div class="campo"><label for="entrada-motivo">Proveedor o número de factura</label>
+  const merma = ent.tipo === 'merma';
+  const tienda = esc(estado.tienda?.nombre ?? 'esta tienda');
+  abrirModal(`<h2>Inventario</h2>
+    <div class="metodos" role="group" aria-label="Tipo de movimiento">
+      <button class="${merma ? '' : 'activo'}" data-accion="entrada-tipo" data-tipo="entrada">Llegó mercadería</button>
+      <button class="${merma ? 'activo' : ''}" data-accion="entrada-tipo" data-tipo="merma">Merma (roto, vencido…)</button>
+    </div>
+    <p class="tenue">${merma
+      ? `Lo que se rompió, venció o se dañó en ${tienda}. Sale del inventario sin venderse.`
+      : `Lo que llega del proveedor a ${tienda}. Se suma al inventario.`}${estado.enLinea ? '' : ' Sin señal: se envía cuando vuelva.'}</p>
+    ${merma ? `<div class="campo"><label for="entrada-motivo">¿Qué pasó?</label>
+      <div class="chips-motivo">${['Roto', 'Vencido', 'Dañado en bodega', 'Defectuoso de fábrica'].map((m) =>
+        `<button class="btn btn-chico ${ent.motivo === m ? 'btn-primario' : ''}" data-accion="motivo-merma" data-motivo="${m}">${m}</button>`).join('')}</div>
       <input id="entrada-motivo" data-campo="entrada-motivo" maxlength="255" autocomplete="off"
-        placeholder="Ej.: Factura 0451, Distribuidora Central" value="${esc(ent.motivo)}"></div>
+        placeholder="O escriba el detalle" value="${esc(ent.motivo)}"></div>`
+    : `<div class="campo"><label for="entrada-motivo">Proveedor o número de factura</label>
+      <input id="entrada-motivo" data-campo="entrada-motivo" maxlength="255" autocomplete="off"
+        placeholder="Ej.: Factura 0451, Distribuidora Central" value="${esc(ent.motivo)}"></div>`}
     <div class="campo"><label for="entrada-buscar">Agregar producto</label>
       <input id="entrada-buscar" data-campo="entrada-buscar" type="search" autocomplete="off"
         placeholder="Buscar por nombre o código" value="${esc(ent.buscar)}"></div>
@@ -1011,7 +1023,7 @@ function abrirEntrada() {
     <div id="entrada-lineas"></div>
     <div class="acciones">
       <button class="btn" data-accion="cerrar-modal">Cancelar</button>
-      <button class="btn btn-exito" data-accion="registrar-entrada" id="entrada-registrar">Registrar entrada</button>
+      <button class="btn ${merma ? 'btn-peligro' : 'btn-exito'}" data-accion="registrar-entrada" id="entrada-registrar">${merma ? 'Dar de baja' : 'Registrar entrada'}</button>
     </div>
     ${htmlUltimasEntradas()}`);
   // El foco va al proveedor si esta vacio: es lo primero que se copia de la
@@ -1039,6 +1051,14 @@ function agregarAEntrada(id) {
   if (!p) return;
   const ent = estado.entrada;
   const i = ent.lineas.findIndex((l) => l.producto_id === id);
+  if (ent.tipo === 'merma') {
+    // No se da de baja lo que no hay: el stock quedaria en negativo.
+    const pedida = L.r2((i >= 0 ? ent.lineas[i].cantidad : 0) + 1);
+    const r = L.limitarAExistencia(pedida, p.stock, p.nombre, p.unidad_medida);
+    if (r.aviso) avisar(r.aviso, true);
+    if (r.cantidad <= 0) return;
+    if (i >= 0) { ent.lineas[i].cantidad = r.cantidad; dibujarLineasEntrada(); return; }
+  }
   // El mismo producto dos veces se suma en una linea: dos lineas del mismo
   // articulo en una entrada solo sirven para equivocarse al revisarla.
   if (i >= 0) ent.lineas[i].cantidad = L.r2(ent.lineas[i].cantidad + 1);
@@ -1063,23 +1083,26 @@ function dibujarLineasEntrada() {
   const caja = document.getElementById('entrada-lineas');
   if (!caja) return;
   const ls = estado.entrada.lineas;
+  const merma = estado.entrada.tipo === 'merma';
   const boton = document.getElementById('entrada-registrar');
-  if (boton) boton.textContent = ls.length ? `Registrar entrada (${ls.length} producto${ls.length === 1 ? '' : 's'})` : 'Registrar entrada';
+  const accion = merma ? 'Dar de baja' : 'Registrar entrada';
+  if (boton) boton.textContent = ls.length ? `${accion} (${ls.length} producto${ls.length === 1 ? '' : 's'})` : accion;
   if (!ls.length) { caja.innerHTML = '<p class="vacio">Busque un producto y tóquelo para agregarlo.</p>'; return; }
   caja.innerHTML = `<table class="detalle entrada">
-    <thead><tr><th>Producto</th><th>Cantidad</th><th>Costo unitario</th><th>Importe</th><th></th></tr></thead>
+    <thead><tr><th>Producto</th><th>Cantidad</th><th>${merma ? 'Costo' : 'Costo unitario'}</th><th>${merma ? 'Pérdida' : 'Importe'}</th><th></th></tr></thead>
     <tbody>${ls.map((l, i) => `<tr>
       <td>${esc(l.nombre)}<br><span class="tenue">hay ${L.cantidadTexto(productoDe(l.producto_id)?.stock ?? 0)} ${esc(l.unidad)}</span></td>
       <td><input type="number" inputmode="decimal" min="0" step="any" value="${l.cantidad}"
         data-campo="entrada-cantidad" data-i="${i}" aria-label="Cantidad de ${esc(l.nombre)}"></td>
-      <td><input type="number" inputmode="decimal" min="0" step="any" value="${l.costo_unitario}"
+      <td>${merma ? `<span class="num">${L.dinero(l.costo_unitario)}</span>`
+        : `<input type="number" inputmode="decimal" min="0" step="any" value="${l.costo_unitario}"
         data-campo="entrada-costo" data-i="${i}" aria-label="Costo de ${esc(l.nombre)}">
-        <span class="aviso-costo tenue" data-aviso-costo="${i}">${avisoCosto(l)}</span></td>
+        <span class="aviso-costo tenue" data-aviso-costo="${i}">${avisoCosto(l)}</span>`}</td>
       <td class="num" data-importe="${i}">${L.dinero(L.r2(l.cantidad * l.costo_unitario))}</td>
       <td><button class="quitar" data-accion="entrada-quitar" data-i="${i}" aria-label="Quitar ${esc(l.nombre)}">Quitar</button></td>
     </tr>`).join('')}</tbody>
   </table>
-  <p class="total-entrada">Costo total: <strong class="num" id="entrada-total">${L.dinero(totalEntrada())}</strong></p>`;
+  <p class="total-entrada">${merma ? 'Pérdida a costo' : 'Costo total'}: <strong class="num" id="entrada-total">${L.dinero(totalEntrada())}</strong></p>`;
 }
 
 const totalEntrada = () => estado.entrada.lineas.reduce((a, l) => L.r2(a + L.r2(l.cantidad * l.costo_unitario)), 0);
@@ -1102,7 +1125,16 @@ function cambioEnEntrada(campo, el) {
   const i = Number(el.dataset.i);
   if (!ent.lineas[i]) return;
   const valor = el.value === '' ? null : Number(el.value);
-  if (campo === 'entrada-cantidad') ent.lineas[i].cantidad = valor ?? 0;
+  if (campo === 'entrada-cantidad') {
+    let cantidad = valor ?? 0;
+    // En una merma se recorta a lo que hay mientras se escribe.
+    if (ent.tipo === 'merma' && cantidad > 0) {
+      const p = productoDe(ent.lineas[i].producto_id);
+      const r = L.limitarAExistencia(cantidad, p?.stock ?? 0, ent.lineas[i].nombre, p?.unidad_medida);
+      if (r.cantidad < cantidad) { avisar(r.aviso, true); cantidad = r.cantidad; el.value = cantidad; }
+    }
+    ent.lineas[i].cantidad = cantidad;
+  }
   if (campo === 'entrada-costo') ent.lineas[i].costo_unitario = valor;
   // Se actualizan importe, aviso y total en su lugar, sin redibujar la fila:
   // redibujarla le quitaria el foco al campo a mitad de la cifra.
@@ -1117,18 +1149,22 @@ function cambioEnEntrada(campo, el) {
 
 function registrarEntrada() {
   const ent = estado.entrada;
-  const problemas = L.problemasDeEntrada(ent.lineas);
+  const merma = ent.tipo === 'merma';
+  const problemas = merma
+    ? L.problemasDeMerma(ent.lineas.map((l) => ({ ...l, existencia: productoDe(l.producto_id)?.stock ?? 0 })), ent.motivo)
+    : L.problemasDeEntrada(ent.lineas);
   if (problemas.length) return avisar(problemas[0], true);
-  const movimientos = L.armarEntrada({
-    lineas: ent.lineas, tienda_id: estado.tienda.id, usuario_id: estado.sesion.usuario.id, motivo: ent.motivo,
-  });
+  const datosMov = { lineas: ent.lineas, tienda_id: estado.tienda.id, usuario_id: estado.sesion.usuario.id, motivo: ent.motivo };
+  const movimientos = merma ? L.armarMerma(datosMov) : L.armarEntrada(datosMov);
   estado.colaMov.push(...movimientos);
-  // El stock de la tablet sube ya: lo que acaba de llegar se puede vender.
+  // El stock de la tablet cambia ya: lo que llego se puede vender, y lo que
+  // se dio de baja deja de ofrecerse.
   for (const m of movimientos) {
     const p = productoDe(m.producto_id);
     if (p) p.stock = L.r2(Number(p.stock) + m.cantidad);
   }
   const resumen = {
+    tipo: ent.tipo,
     hora: movimientos[0].ocurrido_en, motivo: ent.motivo.trim() || null, enviada: false,
     movimientos: movimientos.map((m) => m.uuid_externo), total: totalEntrada(),
     tienda_id: estado.tienda.id,
@@ -1136,20 +1172,21 @@ function registrarEntrada() {
   };
   estado.entradas.unshift(resumen);
   estado.entradas = estado.entradas.slice(0, 30);
-  estado.entrada = { lineas: [], motivo: '', buscar: '' };
+  estado.entrada = { tipo: ent.tipo, lineas: [], motivo: '', buscar: '' };
   persistir('colaMov', 'entradas', 'catalogo');
   dibujarCatalogo();
   dibujarBarra();
-  abrirModal(`<h2>Entrada registrada</h2>
-    <p>${resumen.lineas.length} producto${resumen.lineas.length === 1 ? '' : 's'} sumado${resumen.lineas.length === 1 ? '' : 's'}
-      al inventario de ${esc(estado.tienda.nombre)}${resumen.motivo ? ` · ${esc(resumen.motivo)}` : ''}.</p>
+  const n = resumen.lineas.length, s = n === 1 ? '' : 's';
+  abrirModal(`<h2>${merma ? 'Merma registrada' : 'Entrada registrada'}</h2>
+    <p>${n} producto${s} ${merma ? `dado${s} de baja del` : `sumado${s} al`}
+      inventario de ${esc(estado.tienda.nombre)}${resumen.motivo ? ` · ${esc(resumen.motivo)}` : ''}.</p>
     <table class="tabla-datos">${resumen.lineas.map((l) => `<tr>
-      <td>+${L.cantidadTexto(l.cantidad)} ${esc(l.unidad)} · ${esc(l.nombre)}</td>
+      <td>${merma ? '−' : '+'}${L.cantidadTexto(l.cantidad)} ${esc(l.unidad)} · ${esc(l.nombre)}</td>
       <td>${L.dinero(L.r2(l.cantidad * l.costo_unitario))}</td></tr>`).join('')}
-      <tr><td><strong>Costo total</strong></td><td><strong>${L.dinero(resumen.total)}</strong></td></tr></table>
+      <tr><td><strong>${merma ? 'Pérdida a costo' : 'Costo total'}</strong></td><td><strong>${L.dinero(resumen.total)}</strong></td></tr></table>
     <p class="tenue">${estado.enLinea ? 'Enviando al servidor…' : 'Sin señal: se envía cuando vuelva.'}</p>
     <div class="acciones">
-      <button class="btn" data-accion="entrada">Otra entrada</button>
+      <button class="btn" data-accion="entrada">${merma ? 'Otra merma' : 'Otra entrada'}</button>
       <button class="btn btn-primario" data-accion="cerrar-modal">Listo</button>
     </div>`);
   sincronizar();
@@ -1158,10 +1195,10 @@ function registrarEntrada() {
 function htmlUltimasEntradas() {
   const propias = estado.entradas.filter((e) => e.tienda_id === estado.tienda?.id).slice(0, 5);
   if (!propias.length) return '';
-  return `<h3 class="subtitulo-entrada">Últimas entradas en esta tablet</h3>
+  return `<h3 class="subtitulo-entrada">Últimos movimientos en esta tablet</h3>
     <table class="tabla-datos">${propias.map((e) => `<tr>
       <td>${new Date(e.hora).toLocaleString('es-NI', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
-        · ${e.lineas.length} producto${e.lineas.length === 1 ? '' : 's'}${e.motivo ? ` · ${esc(e.motivo)}` : ''}
+        · ${e.tipo === 'merma' ? 'Merma' : 'Entrada'} de ${e.lineas.length} producto${e.lineas.length === 1 ? '' : 's'}${e.motivo ? ` · ${esc(e.motivo)}` : ''}
         ${e.enviada ? '' : ' · <span class="chip chip-sin">sin enviar</span>'}</td>
       <td>${L.dinero(e.total)}</td></tr>`).join('')}</table>`;
 }
@@ -1186,7 +1223,7 @@ function htmlBarra() {
     <button class="chip ${cola ? 'chip-sin' : 'chip-neutro'}" data-accion="historial">${
       cola ? `${cola} sin enviar` : 'Ventas'}${rechazadas ? ` · ${rechazadas} rechazadas` : ''}</button>
     ${caja}
-    <button class="btn btn-chico" data-accion="entrada">Entrada</button>
+    <button class="btn btn-chico" data-accion="entrada">Inventario</button>
     <button class="btn btn-chico" data-accion="clientes">Clientes</button>
     <button class="btn btn-chico" data-accion="salir">Salir</button>`;
 }
@@ -1280,6 +1317,13 @@ const acciones = {
   sincronizar: () => sincronizar().then(abrirHistorial),
   'cerrar-modal': () => { cerrarModal(); dibujarCarrito(); },
   entrada: () => abrirEntrada(),
+  'entrada-tipo': (d) => {
+    // Cambiar de tipo vacia lo armado: una linea de entrada (con el costo de
+    // la factura) no significa lo mismo que una de merma.
+    if (estado.entrada.tipo !== d.tipo) estado.entrada = { tipo: d.tipo, lineas: [], motivo: '', buscar: '' };
+    abrirEntrada();
+  },
+  'motivo-merma': (d) => { estado.entrada.motivo = d.motivo; abrirEntrada(); },
   'entrada-agregar': (d) => agregarAEntrada(Number(d.id)),
   'entrada-quitar': (d) => { estado.entrada.lineas.splice(Number(d.i), 1); dibujarLineasEntrada(); },
   'registrar-entrada': () => registrarEntrada(),

@@ -229,6 +229,8 @@ button.chip { cursor: pointer; }
 .aviso-costo { display: block; font-size: 12px; text-align: right; color: var(--ambar); }
 .total-entrada { text-align: right; font-size: 18px; margin: 8px 0 0; }
 .subtitulo-entrada { font-size: 15px; margin: 20px 0 4px; color: var(--tinta-med); }
+.chips-motivo { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.ventana:has(#entrada-lineas) .metodos { margin: 8px 0 4px; }
 
 /* ---- Ventas recientes y factura ------------------------------------------------- */
 .lista-ventas { display: grid; gap: 8px; margin: 12px 0; max-height: 55vh; overflow-y: auto; }
