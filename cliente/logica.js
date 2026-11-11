@@ -189,6 +189,64 @@ export function aplicarRespuestaSync(enviadas, respuesta) {
   return { confirmadas, apartadas, quedan };
 }
 
+// =============================================================================
+// Entradas de mercaderia
+// =============================================================================
+
+/** Lo que el empleado tiene que corregir antes de registrar una entrada. */
+export function problemasDeEntrada(lineas) {
+  const p = [];
+  if (!lineas.length) p.push('Agregue al menos un producto.');
+  for (const l of lineas) {
+    if (!(l.cantidad > 0)) p.push(`${l.nombre}: la cantidad tiene que ser mayor que cero.`);
+    if (l.costo_unitario == null || !(l.costo_unitario >= 0)) {
+      p.push(`${l.nombre}: el costo no puede quedar vacío ni ser negativo.`);
+    }
+  }
+  return p;
+}
+
+/**
+ * Arma los movimientos de una entrada tal como los espera /sync/push: uno por
+ * producto, todos con el mismo motivo (proveedor o factura) y la misma hora.
+ *
+ * Cada uno lleva su uuid_externo: es lo que hace que reenviar la entrada,
+ * cuando la respuesta se perdio, no sume la mercaderia dos veces.
+ */
+export function armarEntrada({ lineas, tienda_id, usuario_id, motivo = null, ahora = new Date() }) {
+  const texto = (motivo ?? '').trim();
+  return lineas.map((l) => ({
+    uuid_externo: nuevoUuid(),
+    tienda_id,
+    producto_id: l.producto_id,
+    usuario_id,
+    tipo: 'entrada',
+    cantidad: l.cantidad,
+    costo_unitario: r2(l.costo_unitario),
+    motivo: texto ? texto.slice(0, 255) : null,
+    ocurrido_en: ahora.toISOString(),
+  }));
+}
+
+/**
+ * Aplica la respuesta de /sync/push a la cola de movimientos.
+ *
+ * A diferencia de las ventas, los movimientos no vuelven en "asignados" (no
+ * tienen numero que conciliar). No hace falta: con una respuesta 200 el
+ * servidor proceso TODOS los elementos, asi que lo que no esta en rechazados
+ * entro o ya estaba. Los rechazados se apartan, como las ventas.
+ */
+export function aplicarRespuestaMovimientos(enviados, respuesta) {
+  const rechazos = new Map((respuesta?.movimientos?.rechazados ?? []).map((r) => [r.uuid_externo, r]));
+  const confirmados = [], apartados = [];
+  for (const m of enviados) {
+    const r = rechazos.get(m.uuid_externo);
+    if (r) apartados.push({ movimiento: m, motivo: r.motivo, detalles: r.detalles });
+    else confirmados.push(m.uuid_externo);
+  }
+  return { confirmados, apartados };
+}
+
 /** C$1,234.50 */
 const formato = new Intl.NumberFormat('es-NI', { style: 'currency', currency: 'NIO', minimumFractionDigits: 2 });
 export const dinero = (n) => formato.format(Number(n) || 0);
