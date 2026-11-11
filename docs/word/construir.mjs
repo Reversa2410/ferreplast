@@ -38,7 +38,7 @@ const CIFRAS = {
   entidades: RESUMEN.entidades,          // 17
   relaciones: RESUMEN.relaciones,        // 30
   pruebasEsquema: 52,
-  pruebasApi: 247,
+  pruebasApi: 277,
   endpoints: 44,
 };
 CIFRAS.pruebas = CIFRAS.pruebasEsquema + CIFRAS.pruebasApi;
@@ -438,7 +438,7 @@ const s3 = [
   p('Por eso el inventario no se guarda como un total, sino como el registro de los hechos que lo modificaron. Sumar movimientos independientes da el mismo resultado sin importar en qué orden lleguen. Esa decisión es la que hace viable trabajar sin conexión, y explica buena parte de la forma del modelo entidad-relación.'),
 
   h2('Viabilidad'),
-  vineta([fuerte('Técnica.'), t(` La base de datos en SQL Server y la API que la expone (${CIFRAS.endpoints} rutas: ventas, inventario, caja, crédito, usuarios, sincronización y reportes) ya están construidas y verificadas con ${CIFRAS.pruebas} pruebas automatizadas. No es una propuesta teórica.`)], 5),
+  vineta([fuerte('Técnica.'), t(` La base de datos en SQL Server y la API que la expone (${CIFRAS.endpoints} rutas: ventas, inventario, caja, crédito, usuarios, sincronización y reportes) ya están construidas y verificadas con ${CIFRAS.pruebas} pruebas automatizadas, y el punto de venta para la tablet ya vende con y sin señal. No es una propuesta teórica.`)], 5),
   vineta([fuerte('Económica.'), t(' El hardware necesario son dos tablets de gama básica. SQL Server Express es gratuito y su capacidad sobra para dos tiendas.')], 5),
   vineta([fuerte('Operativa.'), t(' La pantalla de venta tiene tres pasos: buscar, agregar, cobrar. No exige capacitación técnica ni cambiar la forma de atender.')], 5),
 
@@ -687,6 +687,7 @@ const REGLAS = [
   ['RN-37', 'Un empleado puede trabajar en varias tiendas con un solo usuario', 'PR-09', BD, 'PK_USUARIO_TIENDA'],
   ['RN-38', 'El ingreso se bloquea tras 5 intentos fallidos en 15 minutos', 'PR-09', APP, 'INTENTO_LOGIN'],
   ['RN-39', 'Una sesión se puede revocar en cualquier momento', 'PR-09', BD, 'SESION.revocada_en'],
+  ['RN-40', 'Con conexión no se vende más de lo que hay en existencia', 'PR-01', APP, 'POST /ventas, con bloqueo de Stock'],
 ];
 const reglasApp = REGLAS.filter((r) => r[3] === APP).map((r) => r[0]);
 
@@ -705,6 +706,7 @@ s6.push(
       [fuerte('RN-15.'), t(' Desde que un empleado puede estar en las dos tiendas, la pertenencia vive en otra tabla, y una restricción CHECK no puede consultar otra tabla.', { size: 20 })],
       [fuerte('RN-23, RN-28 y RN-35.'), t(' Son reglas sobre cómo se procesa un envío, no sobre qué datos son válidos: viven donde está ese proceso.', { size: 20 })],
       [fuerte('RN-38.'), t(' Contar intentos fallidos y bloquear es comportamiento de la puerta de entrada; la base sólo guarda el registro.', { size: 20 })],
+      [fuerte('RN-40.'), t(' Una restricción en la base rechazaría también la venta que llega sin conexión, que ya ocurrió: la mercadería salió y el cliente tiene su ticket. Se exige en la venta con conexión y se deja pasar en la sincronización, donde el stock negativo queda a la vista para revisar.', { size: 20 })],
     ].map((v) => vineta(v, 26)),
   ]),
 );
@@ -723,7 +725,7 @@ const s7a = [
 // que cada regla aparezca al menos en el proceso que la origina: si no, el
 // documento no se genera, en vez de afirmar una trazabilidad que no cumple.
 const TRAZABILIDAD = [
-  ['PR-01 Registro de venta', ['VENTA', 'VENTA_LINEA', 'MOVIMIENTO_INVENTARIO', 'STOCK', 'PRODUCTO', 'USUARIO', 'TIENDA', 'CAJA'], [6, 8, 9, 11, 18, 23, 36]],
+  ['PR-01 Registro de venta', ['VENTA', 'VENTA_LINEA', 'MOVIMIENTO_INVENTARIO', 'STOCK', 'PRODUCTO', 'USUARIO', 'TIENDA', 'CAJA'], [6, 8, 9, 11, 18, 23, 36, 40]],
   ['PR-02 Recepción de mercadería', ['MOVIMIENTO_INVENTARIO', 'STOCK', 'PRODUCTO', 'TIENDA', 'USUARIO'], [3, 5, 6, 24]],
   ['PR-03 Alta de producto', ['PRODUCTO', 'CATEGORIA', 'NEGOCIO'], [1, 2, 17, 21]],
   ['PR-04 Fijación de precio', ['PRODUCTO', 'VENTA_LINEA'], [10]],
@@ -865,22 +867,23 @@ const s8 = [
       [[fuerte('Autenticación y permisos')], 'Implementada', 'PIN, contraseña, sesiones revocables, límite de intentos'],
       [[fuerte('Sincronización sin conexión')], 'Implementada', 'reenvíos sin duplicar'],
       [[fuerte('Crédito y abonos')], 'Implementado', 'límite controlado por la base'],
-      [[fuerte('Punto de venta (tablet)')], 'Pendiente', '—'],
+      [[fuerte('Punto de venta (tablet)')], 'Implementado', 'vende con y sin señal; crédito, abonos y caja'],
       [[fuerte('Panel de administración')], 'Pendiente', 'la API de reportes ya existe'],
     ]),
 
   p('Durante esta etapa la base de datos se migró de PostgreSQL a SQL Server. Las pruebas se portaron junto con ella y todas pasan sobre la versión actual.'),
 
   nota('Sobre la verificación', [
-    p(`Las ${CIFRAS.pruebas} pruebas no comprueban solamente que el código corra: comprueban las reglas de negocio. Que una venta no pueda aumentar el stock, que el historial no se pueda alterar, que reenviar una operación no la duplique, que no se pueda fiar por encima del límite, que una venta a medias no deje rastros. Ese enfoque ya encontró errores reales: un cálculo de ganancia inflado al triple por una suma mal agrupada, y un reporte diario que contaba las ventas de la tarde en el día siguiente, porque la base guarda la hora universal y Nicaragua está seis horas atrás.`,
+    p(`Las ${CIFRAS.pruebas} pruebas no comprueban solamente que el código corra: comprueban las reglas de negocio. Que una venta no pueda aumentar el stock, que el historial no se pueda alterar, que reenviar una operación no la duplique, que no se pueda fiar por encima del límite, que una venta a medias no deje rastros. Ese enfoque ya encontró errores reales: un cálculo de ganancia inflado al triple por una suma mal agrupada; un reporte diario que contaba las ventas de la tarde en el día siguiente, porque la base guarda la hora universal y Nicaragua está seis horas atrás, y una validación que rechazaba rebajas con centavos porque comparaba importes en punto flotante sin redondear (0.30000000000000004 contra 0.3).`,
       { size: 20, after: 0, line: 290 }),
   ]),
 
   h3('Próximos pasos'),
   ...[
     'Completar la ficha de datos que la visita dejó sin llenar: tiendas, empleados y cómo llevan hoy la cuenta de quién debe.',
-    'Punto de venta para la tablet, con funcionamiento sin conexión.',
     'Panel de administración consolidado, sobre los reportes que la API ya ofrece.',
+    'Abrir la caja sin conexión: hoy la apertura exige señal.',
+    'Publicar el sistema con https, que es lo que permite instalar el punto de venta en la tablet y abrirlo sin señal.',
     'Carga inicial y codificación del catálogo: los dueños no saben cuántos productos manejan, y es el mayor riesgo para poner el sistema en marcha.',
     'Prueba en tienda en paralelo con el cuaderno, hasta que los dueños confíen en el sistema.',
   ].map((o) => numerada(o, 11)),

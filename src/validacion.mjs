@@ -112,8 +112,12 @@ export const EsquemaLineaVenta = z.object({
   // contra la aritmetica del servidor: si no coinciden, el ticket que firmo el
   // cliente dice algo distinto de lo que se guardaria, y eso hay que frenarlo
   // antes de que entre a la base.
+  //
+  // La resta va DENTRO del redondeo: dos numeros ya redondeados a centavos
+  // pueden restar 0.30000000000000004, y compararlo contra 0.3 rechazaba
+  // cualquier rebaja con centavos (2 x 0.20 - 0.10). La prueba 28 lo cubre.
   .refine(
-    (l) => dosDecimales(l.cantidad * l.precio_unitario) - dosDecimales(l.descuento)
+    (l) => dosDecimales(dosDecimales(l.cantidad * l.precio_unitario) - dosDecimales(l.descuento))
         === dosDecimales(l.subtotal),
     { message: 'el subtotal de la linea no coincide con cantidad x precio menos rebaja', path: ['subtotal'] },
   );

@@ -91,7 +91,20 @@ export default async function rutasVentas(app, { db }) {
         // razon para aceptar otro, al contrario de la sincronizacion, donde la
         // tablet trae operaciones de varios turnos.
         usuario_id: peticion.usuario.id,
-      });
+      }, { exigirExistencia: true });
+
+      // 409 y no 400: la venta esta bien armada, es el estado del inventario
+      // el que no la admite. El detalle va por producto para que la pantalla
+      // pueda ajustar cada linea a lo que hay.
+      if (resultado.estado === 'sin_existencia') {
+        const texto = resultado.faltantes
+          .map((f) => `${f.nombre}: pidio ${f.pedida}, hay ${f.hay}${f.unidad ? ` ${f.unidad}` : ''}`)
+          .join('; ');
+        return respuesta.code(409).send({
+          error: `no hay existencia suficiente. ${texto}`,
+          faltantes: resultado.faltantes,
+        });
+      }
 
       if (resultado.estado === 'duplicado') {
         return respuesta.code(200).send({

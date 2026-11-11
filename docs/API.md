@@ -60,7 +60,7 @@ administrador.
 | 401 | sin sesión, o la sesión no vale |
 | 403 | identificado, pero no le corresponde |
 | 404 | no existe — **o existe y no es de su tienda** |
-| 409 | el estado del negocio no lo admite (pasó el límite, la caja ya está cerrada) |
+| 409 | el estado del negocio no lo admite (pasó el límite, no hay existencia, la caja ya está cerrada) |
 | 413 | el lote de sincronización pasa de 500 elementos |
 
 El 404 que tapa un 403 es deliberado: a quien no puede ver una venta tampoco se
@@ -121,6 +121,18 @@ hacer desaparecer mercadería sin una venta detrás. Además exige `motivo`.
 abierta en la tienda. Una venta **en efectivo sin caja abierta se rechaza con
 409**: no tendría dónde sumar el dinero y el cuadre del turno quedaría corto sin
 que nada avise. Con tarjeta o transferencia no hace falta caja.
+
+**No se vende lo que no hay.** `POST /ventas` comprueba la existencia de la
+tienda dentro de la misma transacción, con las filas de stock bloqueadas: si
+una línea pide más de lo que hay, responde **409** con `faltantes`
+(`producto_id`, `nombre`, `pedida`, `hay`) y no registra nada. Dos ventas
+simultáneas del último artículo no pasan las dos.
+
+`/sync/push` **no** hace esta comprobación, a propósito: una venta sin conexión
+ya ocurrió (la mercadería salió y el cliente tiene su ticket), y rechazarla
+solo la borraría del registro. Se acepta, y el stock negativo queda a la vista
+como una diferencia para revisar. La tablet, por su lado, no deja armar un
+carrito con más de lo que tiene en su copia del stock.
 
 **Los importes se verifican, no se recalculan en silencio.** El cliente manda
 `subtotal`, `descuento` y `total`, y si no coinciden con la aritmética del
@@ -276,13 +288,25 @@ SQL Server nombran tablas, columnas y restricciones, y eso es un mapa de la base
 para quien no debería tenerlo. Para verlo al diagnosticar:
 `DEBUG_API=1 npm run test:api`.
 
-## Lo que falta para el punto de venta
+## El punto de venta
 
-La API está completa para lo que el cliente necesita. Lo que queda es del lado
-del navegador:
+Está en `cliente/` y lo sirve esta misma API en `/app/` (rutas públicas: la
+pantalla de ingreso carga antes de tener sesión). Cómo usa la API:
 
-- almacenamiento local del catálogo (`GET /sync/catalogo/:tiendaId`)
-- cola de operaciones pendientes, con el `uuid_externo` generado en el
-  dispositivo
-- reintento al volver la señal, y conciliar los `asignados`
-- service worker para que la aplicación cargue sin conexión
+- **Ventas en efectivo → siempre por `/sync/push`.** Se guardan primero en la
+  cola de la tablet, con su `uuid_externo` y su `ocurrido_en`, y se envían
+  enseguida si hay señal. Un solo camino para con y sin conexión.
+- **Ventas a crédito → `POST /ventas`**, porque `/sync/push` no las acepta.
+  Sin señal no se puede fiar.
+- **Catálogo → `GET /sync/catalogo/:tiendaId`**, guardado en la tablet. No se
+  vuelve a pedir mientras haya ventas en la cola: el stock del servidor estaría
+  atrasado respecto del de la tablet.
+- **Respuesta de `/sync/push`**: aceptados y duplicados salen de la cola,
+  `asignados` pone el número definitivo en el comprobante, y los
+  `rechazados` se apartan y se muestran, sin reintentarlos.
+- **Caja**: abrir y cerrar exigen señal. No se deja cerrar con ventas en la
+  cola, porque el arqueo quedaría corto.
+
+Pendiente: abrir la caja sin conexión. Hoy, si no hay señal desde antes de
+abrir, una venta en efectivo se guarda sin caja (la tablet pide confirmación)
+y no suma en ningún arqueo.

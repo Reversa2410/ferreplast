@@ -53,14 +53,14 @@ Una sola aplicación con dos perfiles de uso:
 | Diagramas del MER | Al día con el modelo final — se generan con `npm run diagramas`; ver [docs/diagramas](docs/diagramas/README.md) |
 | Modelo relacional y diccionario de datos | Al día — se leen de `db/schema.sql` al generar |
 | Documento de presentación (Word) | Al día — se genera con `npm run word` |
-| API sobre SQL Server | Lista y verificada (247 pruebas, 44 endpoints) |
+| API sobre SQL Server | Lista y verificada (277 pruebas, 44 endpoints) |
 | Autenticación y permisos | Lista — sesiones, PIN, alcance por tienda, límite de intentos |
 | Sincronización offline | Lista — idempotente por `uuid_externo` |
 | Crédito a clientes y abonos | Listo — solo con conexión, por diseño |
 | Alta de productos y categorías | Lista |
 | Alta de usuarios y cambio de claves | Lista |
 | Apertura y cierre de caja | Lista — la diferencia la calcula el servidor |
-| PWA / punto de venta | Pendiente — es el siguiente paso |
+| Punto de venta (PWA) | Listo — vende en efectivo con y sin señal, fía, cobra abonos, abre y cierra caja |
 | Panel del administrador | Pendiente |
 
 > El proyecto migró de PostgreSQL a SQL Server. La base y la API ya están
@@ -69,7 +69,7 @@ Una sola aplicación con dos perfiles de uso:
 >
 > **`npm test` corre las dos suites.** `npm run db:test` prueba el esquema
 > contra la `FerreplastDB` local (52 pruebas) y `npm run test:api` prueba la
-> API (247 pruebas). La segunda es independiente y no puede tocar los datos
+> API (277 pruebas). La segunda es independiente y no puede tocar los datos
 > de trabajo: crea `FerreplastPruebaApi`, le aplica el esquema y los datos,
 > corre, y la borra.
 >
@@ -106,7 +106,13 @@ ferreplast/
 │   │   ├── clientes.mjs    clientes a crédito y abonos
 │   │   ├── usuarios.mjs    alta de usuarios y cambio de claves
 │   │   └── reportes.mjs    panel del dueño
-│   └── test-api.mjs        247 pruebas de la API
+│   ├── estaticos.mjs       sirve el punto de venta (cliente/)
+│   └── test-api.mjs        277 pruebas de la API
+├── cliente/                el punto de venta (PWA, sin dependencias)
+│   ├── index.html · estilos.css
+│   ├── app.js              pantallas, cola de ventas y sincronización
+│   ├── logica.js           importes y cola, probados contra el servidor
+│   └── sw.js               service worker: abre sin señal
 ├── docs/
 │   ├── API.md              contrato de la API (lo que necesita el cliente)
 │   ├── SCHEMA.md           decisiones de diseño de la base
@@ -196,6 +202,16 @@ npm run dev
 No hace falta `.env`: por defecto apunta a `FerreplastDB` en el SQL Server
 local con autenticación de Windows. `DB_SERVIDOR` y `DB_NOMBRE` lo cambian
 cuando hace falta, y `.env.example` las documenta.
+
+El punto de venta lo sirve la misma API: con `npm run dev` corriendo, se abre
+en **http://localhost:3001/app/**. Las credenciales de prueba (Juan, PIN 1234)
+están en [`db/seed.sql`](db/seed.sql).
+
+> **Para usarlo desde una tablet hace falta https.** El navegador solo deja
+> instalar la aplicación y guardarla para abrir sin señal (el service worker)
+> en `https` o en `localhost`. Por la red local con `http://192.168…` la
+> aplicación funciona y la cola de ventas también, pero si se recarga la
+> página sin señal no abre.
 
 Para correr las pruebas de la API, que crean y borran su propia base:
 
