@@ -53,7 +53,7 @@ Una sola aplicación con dos perfiles de uso:
 | Diagramas del MER | Al día con el modelo final — se generan con `npm run diagramas`; ver [docs/diagramas](docs/diagramas/README.md) |
 | Modelo relacional y diccionario de datos | Al día — se leen de `db/schema.sql` al generar |
 | Documento de presentación (Word) | Al día — se genera con `npm run word` |
-| API sobre SQL Server | Lista y verificada (320 pruebas, 44 endpoints) |
+| API sobre SQL Server | Lista y verificada (335 pruebas, 46 endpoints) |
 | Autenticación y permisos | Lista — sesiones, PIN, alcance por tienda, límite de intentos |
 | Sincronización offline | Lista — idempotente por `uuid_externo` |
 | Crédito a clientes y abonos | Listo — solo con conexión, por diseño |
@@ -61,6 +61,7 @@ Una sola aplicación con dos perfiles de uso:
 | Alta de usuarios y cambio de claves | Lista |
 | Apertura y cierre de caja | Lista — la diferencia la calcula el servidor |
 | Punto de venta (PWA) | Listo — vende en efectivo con y sin señal, fía, cobra abonos, abre y cierra caja |
+| Registro de tablets | Listo — cada tablet se da de alta sola; el panel muestra cuándo se comunicó y permite darla de baja |
 | Entradas de mercadería y mermas | Listas — desde la tablet, con y sin señal; la merma no deja el stock en negativo y exige decir qué pasó |
 | Panel del dueño | Listo — resumen de las dos tiendas, ventas y anulaciones, inventario con auditoría, cuentas por cobrar, cajas y tablets |
 
@@ -70,7 +71,7 @@ Una sola aplicación con dos perfiles de uso:
 >
 > **`npm test` corre las dos suites.** `npm run db:test` prueba el esquema
 > contra la `FerreplastDB` local (52 pruebas) y `npm run test:api` prueba la
-> API (320 pruebas). La segunda es independiente y no puede tocar los datos
+> API (335 pruebas). La segunda es independiente y no puede tocar los datos
 > de trabajo: crea `FerreplastPruebaApi`, le aplica el esquema y los datos,
 > corre, y la borra.
 >
@@ -106,9 +107,10 @@ ferreplast/
 │   │   ├── caja.mjs        apertura y cierre de turno
 │   │   ├── clientes.mjs    clientes a crédito y abonos
 │   │   ├── usuarios.mjs    alta de usuarios y cambio de claves
+│   │   ├── dispositivos.mjs  alta y baja de tablets
 │   │   └── reportes.mjs    panel del dueño
 │   ├── estaticos.mjs       sirve el punto de venta (cliente/)
-│   └── test-api.mjs        320 pruebas de la API
+│   └── test-api.mjs        335 pruebas de la API
 ├── cliente/                el punto de venta (PWA, sin dependencias)
 │   ├── index.html · estilos.css
 │   ├── app.js              pantallas, cola de ventas y sincronización

@@ -7,7 +7,7 @@
 - Each item includes date + "Do instead".
 
 ## Execution & Validation (Highest Priority)
-1. **[2026-11-10] `npm test` corre DOS suites: esquema (52) y API (320)**
+1. **[2026-11-10] `npm test` corre DOS suites: esquema (52) y API (335)**
    `npm run db:test` es `sqlcmd -i db/test-esquema.sql` contra la `FerreplastDB`
    del usuario (tiene que estar sembrada). `npm run test:api` es independiente:
    crea `FerreplastPruebaApi`, le aplica schema+seed, corre y la borra.
@@ -49,7 +49,7 @@
    quedan tapadas por la caja. Afecta al Word, que rasteriza con resvg.
    Do instead: `orient="auto"` (el verificador lo exige).
 9. **[2026-11-10] Las cifras del Word estan en `CIFRAS` de `construir.mjs`**
-   Pruebas (52 + 320) y endpoints (44) estan escritos a mano ahi.
+   Pruebas (52 + 335) y endpoints (46) estan escritos a mano ahi.
    Do instead: al agregar pruebas o rutas, actualizar `CIFRAS` y regenerar.
 10. **[2026-11-10] Probar el punto de venta contra `FerreplastPV`, no `FerreplastDB`**
    `.claude/launch.json` levanta la API con `DB_NOMBRE=FerreplastPV` en el 3001;

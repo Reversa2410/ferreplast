@@ -460,6 +460,25 @@ export const EsquemaReinicioPin = z.object({
 // Parametros de URL
 // -----------------------------------------------------------------------------
 export const EsquemaIdEnUrl = z.object({ id: idDeUrl() });
+
+// -----------------------------------------------------------------------------
+// Tablets (DISPOSITIVO)
+// -----------------------------------------------------------------------------
+
+// Alta: la tablet se da de alta sola la primera vez que alguien entra en ella.
+// tienda_id solo hace falta si la da de alta el administrador, que no opera
+// desde ninguna tienda; al empleado se le toma la de su sesion.
+export const EsquemaDispositivoNuevo = z.object({
+  nombre: texto(100),
+  tienda_id: id().nullish(),
+});
+
+// Cambio: renombrarla o darla de baja (una tablet perdida o robada).
+export const EsquemaDispositivoCambio = z.object({
+  nombre: texto(100).optional(),
+  activo: z.boolean().optional(),
+}).refine((c) => c.nombre !== undefined || c.activo !== undefined,
+  { message: 'indique que cambiar: nombre o activo' });
 export const EsquemaTiendaEnUrl = z.object({ tiendaId: idDeUrl() });
 export const EsquemaProductoEnUrl = z.object({ productoId: idDeUrl() });
 

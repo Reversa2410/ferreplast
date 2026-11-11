@@ -42,6 +42,10 @@ const estado = {
   colaMov: guardado.leer('colaMov', []),          // entradas de mercaderia por mandar
   movApartados: guardado.leer('movApartados', []),// entradas rechazadas por el servidor
   entradas: guardado.leer('entradas', []),        // ultimas entradas registradas aca
+  // El id de esta tablet en el servidor, por tienda: un empleado que trabaja
+  // en los dos locales puede entrar en la misma tablet en cualquiera, y cada
+  // DISPOSITIVO pertenece a una tienda.
+  dispositivos: guardado.leer('dispositivos', {}),
   entrada: { tipo: 'entrada', lineas: [], motivo: '', buscar: '' }, // la que se esta armando
   historial: guardado.leer('historial', []),      // ultimas ventas, con su numero
   carrito: [],
@@ -150,7 +154,8 @@ async function enviarPin() {
   const ing = estado.ingreso;
   try {
     const { status, datos } = await api('POST', '/auth/login/pin',
-      { usuario_id: ing.empleado.id, tienda_id: estado.tienda.id, pin: ing.pin }, { conSesion: false });
+      { usuario_id: ing.empleado.id, tienda_id: estado.tienda.id, pin: ing.pin,
+        dispositivo_id: estado.dispositivos[estado.tienda.id]?.id ?? null }, { conSesion: false });
     if (status !== 200) {
       ing.pin = '';
       ing.error = status === 429 ? (datos.error ?? 'Demasiados intentos. Espere unos minutos.')
@@ -162,7 +167,7 @@ async function enviarPin() {
     estado.ingreso = { paso: 'tienda', tiendas: ing.tiendas, empleados: [], empleado: null, pin: '', error: '' };
     dibujar();
     await Promise.all([refrescarCatalogo(true), refrescarCaja()]);
-    pedirAperturaSiHaceFalta();
+    alEntrar();
     sincronizar();
   } catch {
     ing.pin = '';
@@ -278,6 +283,63 @@ async function refrescarCaja() {
  * Al entrar, si la caja esta cerrada, se pide abrirla de una vez. Antes el
  * empleado se enteraba recien al intentar cobrar, con el cliente esperando.
  */
+const miTablet = () => estado.dispositivos[estado.tienda?.id] ?? null;
+
+/** Lo primero al entrar: que la tablet tenga nombre, y despues la caja. */
+function alEntrar() {
+  if (!miTablet()) return pedirNombreTablet();
+  pedirAperturaSiHaceFalta();
+}
+
+/**
+ * La primera vez que alguien entra en esta tablet (en esta tienda), se le
+ * pone nombre y se da de alta. Con eso el panel del duenio puede decir "la
+ * tablet Caja mostrador no envia hace 3 horas" en lugar de no saber que existe.
+ */
+function pedirNombreTablet() {
+  if (!estado.sesion || !estado.enLinea) return pedirAperturaSiHaceFalta();
+  abrirModal(`<h2>¿Cómo se llama esta tablet?</h2>
+    <p class="tenue">Se pregunta una sola vez. Es el nombre con el que el dueño la va a ver en el panel,
+      para saber si está enviando las ventas.</p>
+    <div class="campo"><label for="nombre-tablet">Nombre</label>
+      <input id="nombre-tablet" maxlength="100" autocomplete="off"
+        value="Tablet ${esc(estado.tienda?.nombre?.replace(/^Ferreplast\s*-\s*/, '') ?? '')}"></div>
+    <div class="acciones">
+      <button class="btn btn-primario" data-accion="guardar-tablet">Guardar</button>
+    </div>`);
+  document.getElementById('nombre-tablet')?.select();
+}
+
+async function guardarTablet() {
+  const nombre = document.getElementById('nombre-tablet')?.value.trim();
+  if (!nombre) return avisar('Escriba un nombre para la tablet.', true);
+  try {
+    const { status, datos } = await api('POST', '/dispositivos', { nombre });
+    if (status !== 201) return avisar(datos.error ?? `No se pudo guardar (${status}).`, true);
+    estado.dispositivos[estado.tienda.id] = { id: datos.id, nombre: datos.nombre };
+    persistir('dispositivos');
+    cerrarModal();
+    avisar(`Tablet "${datos.nombre}" registrada.`);
+    latido(true);
+    pedirAperturaSiHaceFalta();
+  } catch { avisar('Sin señal: no se pudo registrar la tablet.', true); }
+}
+
+/**
+ * Aviso de "sigo aqui": un envio vacio con el id de la tablet, una vez por
+ * minuto cuando no hay nada que mandar. Sin esto, una tablet encendida y con
+ * senial pero sin ventas apareceria en el panel como "hace 5 h sin enviar".
+ */
+let ultimoLatido = 0;
+async function latido(forzar = false) {
+  if (!miTablet() || pendientes()) return;
+  if (!forzar && Date.now() - ultimoLatido < 60000) return;
+  ultimoLatido = Date.now();
+  try {
+    await api('POST', '/sync/push', { dispositivo_id: miTablet().id, ventas: [], movimientos: [] });
+  } catch { /* sin senial: el panel lo va a mostrar, que es justamente la idea */ }
+}
+
 function pedirAperturaSiHaceFalta() {
   if (!estado.sesion || estado.caja?.abierta) return;
   if (!document.getElementById('modal').hidden) return;   // no tapar otra ventana
@@ -310,7 +372,8 @@ async function sincronizar() {
     // Las entradas van en el mismo envio que las ventas: el servidor procesa
     // primero los movimientos, asi que la mercaderia que llego y se vendio
     // sin senial suma antes de que la venta la descuente.
-    const { status, datos } = await api('POST', '/sync/push', { ventas: lote, movimientos: loteMov });
+    const { status, datos } = await api('POST', '/sync/push',
+      { dispositivo_id: miTablet()?.id ?? null, ventas: lote, movimientos: loteMov });
     if (status !== 200) {
       if (status !== 401) avisar(`El servidor no aceptó el envío (${status}). Se reintenta.`, true);
       return;
@@ -361,6 +424,7 @@ async function ciclo() {
     await api('GET', '/salud', undefined, { conSesion: false, espera: 5000 });
   } catch { return; }
   await sincronizar();
+  await latido();
   await refrescarCaja();
   await refrescarCatalogo();
 }
@@ -1317,6 +1381,7 @@ const acciones = {
   sincronizar: () => sincronizar().then(abrirHistorial),
   'cerrar-modal': () => { cerrarModal(); dibujarCarrito(); },
   entrada: () => abrirEntrada(),
+  'guardar-tablet': () => guardarTablet(),
   'entrada-tipo': (d) => {
     // Cambiar de tipo vacia lo armado: una linea de entrada (con el costo de
     // la factura) no significa lo mismo que una de merma.
@@ -1378,6 +1443,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !document.getElementById('modal').hidden) cerrarModal();
   if (e.key === 'Enter' && e.target.id === 'pago-recibido') { confirmarPago(); return; }
   if (e.key === 'Enter' && e.target.id === 'monto-inicial') { confirmarApertura(); return; }
+  if (e.key === 'Enter' && e.target.id === 'nombre-tablet') { guardarTablet(); return; }
   // En la entrada, Enter agrega el primer resultado: con el lector de codigos
   // la mercaderia se va cargando escaneando caja por caja.
   if (e.key === 'Enter' && e.target.id === 'entrada-buscar') {
@@ -1418,7 +1484,7 @@ dibujar();
 if (estado.sesion) {
   // Primero la caja (para saber si hay que pedir la apertura), despues el
   // resto del ciclo. Sin senial se usa la ultima caja conocida.
-  refrescarCaja().then(pedirAperturaSiHaceFalta);
+  refrescarCaja().then(alEntrar);
   ciclo();
   refrescarCatalogo(true);
 } else {

@@ -1,7 +1,7 @@
 # API de Ferreplast
 
-> Motor: Fastify sobre SQL Server. 44 endpoints, verificados por
-> [`src/test-api.mjs`](../src/test-api.mjs) (247 pruebas).
+> Motor: Fastify sobre SQL Server. 46 endpoints, verificados por
+> [`src/test-api.mjs`](../src/test-api.mjs) (335 pruebas).
 >
 > Este documento es el contrato que necesita el cliente. Las razones de cada
 > decisión están en los comentarios del código, no acá: lo que sigue es qué
@@ -222,6 +222,24 @@ día y no en el siguiente. Vale para `fecha` en `/reportes/resumen`, para
 cliente no tiene que calcularlo con su propio reloj. El razonamiento está en
 [SCHEMA.md](SCHEMA.md), sección 10.
 
+### Tablets
+
+| | Ruta | Quién |
+|---|---|---|
+| POST | `/dispositivos` | con sesión — el empleado, en la tienda de su sesión; el administrador indica `tienda_id` |
+| PATCH | `/dispositivos/:id` | **administrador** — `nombre` o `activo: false` (tablet perdida o reemplazada) |
+
+**Cada tablet se da de alta sola** la primera vez que alguien entra en ella, y
+manda su `dispositivo_id` al ingresar y en cada `/sync/push`. Encendida y con
+señal, manda además un envío vacío una vez por minuto: eso la pone al día en
+`/sync/estado` sin dejar filas vacías en `SYNC_LOG`.
+
+**El id tiene que ser creíble.** En el ingreso y en `/sync/push` solo cuenta si
+la tablet existe, está activa y es de una tienda de quien la usa. Uno que no
+cumple se ignora (no se rechaza el pedido: las ventas son reales). Antes se
+aceptaba cualquiera, y un empleado de una tienda podía poner "al día" la tablet
+de la otra.
+
 ### Usuarios
 
 | | Ruta | Quién |
@@ -312,10 +330,7 @@ No trabaja sin conexión, a propósito: un número viejo presentado como actual
 es peor que ninguno. Las horas se muestran siempre en la hora de Nicaragua,
 aunque se mire desde otro país.
 
-Pendiente: las tablets del punto de venta todavía no se registran como
-dispositivo (no hay ruta para darlas de alta y `/sync/push` se envía sin
-`dispositivo_id`), así que la sección Tablets solo muestra las cargadas en la
-base.
+La sección Tablets permite dar de baja una tablet (`PATCH /dispositivos/:id`).
 
 ## El punto de venta
 
