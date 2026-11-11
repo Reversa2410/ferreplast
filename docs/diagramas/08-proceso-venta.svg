@@ -1,11 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1140" height="500" viewBox="0 0 1140 500" role="img" aria-label="El proceso de venta paso a paso y las entidades que cada paso lee o escribe: identificarse lee usuario, buscar lee producto y stock, armar el pedido no guarda nada todavia, cobrar escribe venta y sus lineas, y confirmar escribe los movimientos de inventario que actualizan el stock.">
+<svg xmlns="http://www.w3.org/2000/svg" width="1140" height="500" viewBox="0 0 1140 500" role="img" aria-label="El proceso de venta paso a paso y las entidades que cada paso lee o escribe: identificarse lee el usuario y sus tiendas, buscar lee producto y stock, armar el pedido no guarda nada todavia, cobrar escribe venta y sus lineas, y confirmar escribe los movimientos de inventario que actualizan el stock.">
   <title>El proceso de venta sobre el modelo de datos</title>
   <rect x="0" y="0" width="1140" height="500" fill="#FFFFFF"/>
         <defs>
-          <marker id="pf" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <marker id="pf" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
             <path d="M0,0 L10,5 L0,10 z" fill="#66727E"/>
           </marker>
-          <marker id="pe" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <marker id="pe" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
             <path d="M0,0 L10,5 L0,10 z" fill="#1F5673"/>
           </marker>
         </defs>
@@ -38,7 +38,7 @@
         <line stroke="#66727E" stroke-width="1.4" fill="none" x1="864" y1="72" x2="880" y2="72" marker-end="url(#pf)"/>
 
         <line stroke="#C9D2DA" stroke-width="1" x1="20" y1="138" x2="1120" y2="138"/>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="20" y="164">LO QUE QUEDA EN EL MODELO</text>
+        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="134" y="164">LO QUE QUEDA EN EL MODELO</text>
 
         <line stroke="#1F5673" stroke-width="1.4" fill="none" stroke-dasharray="5 4" x1="118" y1="98" x2="118" y2="196" marker-end="url(#pe)"/>
         <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="126" y="126">lee</text>
@@ -53,8 +53,8 @@
         <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="20" y="196" width="196" height="24"/>
         <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="20" y="220" width="196" height="44"/>
         <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="118" y="213" text-anchor="middle">USUARIO</text>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="32" y="239">rol, tienda_id</text>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="32" y="255">pin_hash</text>
+        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="32" y="239">pin_hash, rol</text>
+        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="32" y="255">tiendas: USUARIO_TIENDA</text>
 
         <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="236" y="196" width="196" height="24"/>
         <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="236" y="220" width="196" height="44"/>
@@ -77,14 +77,14 @@
         <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="766" y="213" text-anchor="middle">VENTA</text>
         <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="680" y="239">numero, total</text>
         <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="680" y="255">metodo_pago</text>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="680" y="271">caja_id</text>
+        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="680" y="271">caja_id, cliente_id</text>
 
         <rect fill="#F6E8DC" stroke="#A8551F" stroke-width="1.6" x="668" y="304" width="196" height="24"/>
         <rect fill="#FFFFFF" stroke="#A8551F" stroke-width="1.6" x="668" y="328" width="196" height="48"/>
         <rect fill="none" stroke="#A8551F" stroke-width="1" x="672" y="332" width="188" height="40"/>
         <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="766" y="321" text-anchor="middle">VENTA_LINEA</text>
         <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="682" y="347">cantidad, precio *</text>
-        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="682" y="363">costo *</text>
+        <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="682" y="363">costo *, descuento</text>
 
         <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="884" y="196" width="236" height="24"/>
         <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="884" y="220" width="236" height="60"/>
@@ -98,7 +98,7 @@
         <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#A8551F" x="782" y="297">1 : N</text>
 
         <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M884,250 H864" marker-end="url(#pe)"/>
-        <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="874" y="242" text-anchor="middle">deriva de</text>
+        <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="896" y="298">deriva de VENTA</text>
 
         <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M1002,280 V420 H334 V346" marker-end="url(#pe)"/>
         <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="660" y="412">recalcula el stock por disparador</text>

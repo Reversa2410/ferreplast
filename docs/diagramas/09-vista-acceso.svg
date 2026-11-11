@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="700" viewBox="0 0 1500 700" role="img" aria-label="Vista de acceso y sincronizacion: cada sesion pertenece a un usuario, puede estar en un dispositivo y fija desde que tienda opera. Los intentos de ingreso se registran por tienda. Cada tablet deja una bitacora de sincronizacion.">
+  <title>Vista de acceso y sincronizacion</title>
+  <rect x="0" y="0" width="1500" height="700" fill="#FFFFFF"/>
+  <defs>
+    <marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#1F5673"/>
+    </marker>
+    <marker id="mb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#A8551F"/>
+    </marker>
+  </defs>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="28" font-weight="700" fill="#12181F" letter-spacing="0.8" x="40" y="48">Vista de acceso y sincronización</text>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="16" font-weight="500" fill="#3D4954" x="40" y="72">Sesiones, intentos de ingreso y tablets</text>
+  <line stroke="#C9D2DA" stroke-width="1" x1="60" y1="624" x2="1440" y2="624"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="60" y="642">LEYENDA</text>
+  <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="60" y="654" width="34" height="22"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="12.5" font-weight="500" fill="#3D4954" x="106" y="670">Entidad fuerte</text>
+  <rect fill="#E7EBEF" stroke="#66727E" stroke-width="1.3" stroke-dasharray="5 3" x="238" y="654" width="34" height="22"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="12.5" font-weight="500" fill="#3D4954" x="284" y="670">Definida en otra vista</text>
+  <line stroke="#1F5673" stroke-width="1.4" fill="none" x1="472" y1="665" x2="506" y2="665" marker-end="url(#ma)"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="12.5" font-weight="500" fill="#3D4954" x="518" y="670">Relación 1:N (la flecha apunta al lado N)</text>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M1070,480 H1170" marker-end="url(#ma)"/>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M800,460 H700" marker-end="url(#ma)"/>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M870,210 V400" marker-end="url(#ma)"/>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M330,190 H450 V400" marker-end="url(#ma)"/>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M800,190 H680 V400" marker-end="url(#ma)"/>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M1070,170 H1170" marker-end="url(#ma)"/>
+  <!-- USUARIO -->
+  <rect fill="#E7EBEF" stroke="#66727E" stroke-width="1.3" stroke-dasharray="5 3" x="60" y="176" width="270" height="34"/>
+  <rect fill="none" stroke="#66727E" stroke-width="1.3" stroke-dasharray="5 3" x="60" y="150" width="270" height="26"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="600" font-size="13" fill="#66727E" letter-spacing="0.6" x="195" y="168" text-anchor="middle">USUARIO</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="74" y="195">id (PK)</text>
+  <!-- TIENDA -->
+  <rect fill="#E7EBEF" stroke="#66727E" stroke-width="1.3" stroke-dasharray="5 3" x="800" y="176" width="270" height="34"/>
+  <rect fill="none" stroke="#66727E" stroke-width="1.3" stroke-dasharray="5 3" x="800" y="150" width="270" height="26"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="600" font-size="13" fill="#66727E" letter-spacing="0.6" x="935" y="168" text-anchor="middle">TIENDA</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="814" y="195">id (PK)</text>
+  <!-- SESION -->
+  <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="430" y="426" width="270" height="84"/>
+  <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="430" y="400" width="270" height="26"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="565" y="418" text-anchor="middle">SESION</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="444" y="445">token_hash</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="444" y="461">expira_en, revocada_en</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="444" y="477">tienda_id (FK)</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="444" y="493">usuario_id, dispositivo_id (FK)</text>
+  <!-- DISPOSITIVO -->
+  <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="800" y="426" width="270" height="74"/>
+  <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="800" y="400" width="270" height="26"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="935" y="418" text-anchor="middle">DISPOSITIVO</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="814" y="445">id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="814" y="461">nombre, ultimo_sync</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="814" y="477">tienda_id (FK)</text>
+  <!-- INTENTO_LOGIN -->
+  <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="1170" y="176" width="270" height="84"/>
+  <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="1170" y="150" width="270" height="26"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="1305" y="168" text-anchor="middle">INTENTO_LOGIN</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="1184" y="195">id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1184" y="211">identificador, exitoso</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1184" y="227">ip, created_at</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1184" y="243">tienda_id (FK)</text>
+  <!-- SYNC_LOG -->
+  <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="1170" y="426" width="270" height="84"/>
+  <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="1170" y="400" width="270" height="26"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="1305" y="418" text-anchor="middle">SYNC_LOG</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="1184" y="445">id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1184" y="461">enviados, aceptados</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1184" y="477">duplicados, error</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1184" y="493">dispositivo_id (FK)</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="1099" y="457">1 : N</text>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="1099" y="473">registra</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="718" y="437">0..1 : N</text>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="718" y="453">aloja</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="877" y="311">1 : N</text>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="877" y="327">instala</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="457" y="246">1 : N</text>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="457" y="262">inicia</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="687" y="246">0..1 : N</text>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="687" y="262">opera desde</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="1098" y="147">0..1 : N</text>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="11.5" font-weight="500" fill="#66727E" x="1098" y="163">recibe</text>
+</svg>
