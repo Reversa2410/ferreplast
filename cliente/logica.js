@@ -195,3 +195,102 @@ export const dinero = (n) => formato.format(Number(n) || 0);
 
 /** Cantidades: enteras sin decimales, fraccionarias con hasta 3. */
 export const cantidadTexto = (n) => Number(n).toLocaleString('es-NI', { maximumFractionDigits: 3 });
+
+// =============================================================================
+// Panel del duenio
+// =============================================================================
+
+/** C$15.8 mil -- para las etiquetas de la grafica, donde no entra la cifra entera. */
+export function dineroCorto(n) {
+  const v = Math.abs(Number(n) || 0);
+  const signo = Number(n) < 0 ? '−' : '';
+  if (v < 1000) return `${signo}C$${Math.round(v)}`;
+  if (v < 1e6) return `${signo}C$${(v / 1000).toFixed(1).replace(/\.0$/, '')} mil`;
+  return `${signo}C$${(v / 1e6).toFixed(1).replace(/\.0$/, '')} M`;
+}
+
+/** Porcentaje entero, o null si no hay base (sin ventas no hay margen, no hay "0%"). */
+export function porcentaje(parte, total) {
+  const t = Number(total);
+  if (!t) return null;
+  return Math.round((Number(parte) / t) * 100);
+}
+
+/**
+ * Las columnas DATE vuelven como "2026-11-10T00:00:00.000Z": medianoche UTC
+ * del dia del calendario. Se recorta el texto en lugar de pasarlo por Date en
+ * la zona del navegador, que lo moveria al dia anterior en Nicaragua (UTC-6).
+ */
+export const diaDe = (fecha) => String(fecha).slice(0, 10);
+
+/** '2026-11-10' + n dias, sin pasar por la zona horaria del navegador. */
+export function sumarDias(fecha, n) {
+  const [a, m, d] = diaDe(fecha).split('-').map(Number);
+  return new Date(Date.UTC(a, m - 1, d + n)).toISOString().slice(0, 10);
+}
+
+const enUtc = (fecha) => { const [a, m, d] = diaDe(fecha).split('-').map(Number); return new Date(Date.UTC(a, m - 1, d)); };
+export const fechaCorta = (fecha) => enUtc(fecha).toLocaleDateString('es-NI', { timeZone: 'UTC', day: 'numeric', month: 'short' });
+export const fechaLarga = (fecha) => enUtc(fecha).toLocaleDateString('es-NI',
+  { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+export const diaSemana = (fecha) => enUtc(fecha).toLocaleDateString('es-NI', { timeZone: 'UTC', weekday: 'short' });
+
+/**
+ * Fecha y hora de un instante guardado en UTC, en la hora de las tiendas.
+ * Con zona fija y no la del navegador: si la duenia mira el panel desde otro
+ * pais, la venta de las 6 de la tarde sigue siendo de las 6 de la tarde.
+ */
+export const fechaHora = (iso) => new Date(iso).toLocaleString('es-NI', {
+  timeZone: 'America/Managua', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+export const hora = (iso) => new Date(iso).toLocaleTimeString('es-NI', {
+  timeZone: 'America/Managua', hour: '2-digit', minute: '2-digit' });
+
+/**
+ * Serie diaria de las dos tiendas sumadas, con los dias sin ventas en cero.
+ * Sin rellenar, un dia sin ventas desapareceria de la grafica y el anterior
+ * quedaria pegado al siguiente como si fueran consecutivos.
+ */
+export function serieDiaria(filas, desde, hasta) {
+  const porDia = new Map();
+  for (const f of filas) {
+    const d = diaDe(f.fecha);
+    porDia.set(d, r2((porDia.get(d) ?? 0) + Number(f.total_vendido)));
+  }
+  const dias = [];
+  for (let d = diaDe(desde); d <= diaDe(hasta); d = sumarDias(d, 1)) {
+    dias.push({ fecha: d, total: porDia.get(d) ?? 0 });
+  }
+  return dias;
+}
+
+const sinTildes = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+/** Filtro del inventario: busqueda por nombre o codigo, y "para reponer" o "en negativo". */
+export function filtrarInventario(filas, { buscar = '', solo = 'todos' } = {}) {
+  const q = sinTildes(buscar.trim());
+  return filas
+    .filter((p) => solo !== 'reponer' || p.necesita_reposicion)
+    .filter((p) => solo !== 'negativo' || Number(p.cantidad) < 0)
+    .filter((p) => !q || sinTildes(p.producto).includes(q) || sinTildes(p.codigo).includes(q));
+}
+
+/**
+ * Como le fue a una caja, en palabras. La diferencia que se mira es la REAL
+ * (la que sale hoy de las ventas no anuladas), no la que se guardo al cerrar.
+ */
+export function resultadoCaja(c) {
+  if (c.estado === 'abierta' || c.diferencia_real == null) return { clase: '', texto: 'Abierta' };
+  const dif = r2(Number(c.diferencia_real));
+  if (dif === 0) return { clase: 'bien', texto: 'Cuadra' };
+  if (dif > 0) return { clase: 'aviso', texto: `Sobran ${dinero(dif)}` };
+  return { clase: 'mal', texto: `Faltan ${dinero(-dif)}` };
+}
+
+/** Hace cuanto envio sus ventas una tablet, y si hay que preocuparse. */
+export function estadoSincronizacion(minutos) {
+  if (minutos == null) return { clase: 'mal', texto: 'Nunca envió' };
+  const m = Number(minutos);
+  if (m <= 15) return { clase: 'bien', texto: 'Al día' };
+  const cuanto = m < 120 ? `${m} min` : m < 2880 ? `${Math.round(m / 60)} h` : `${Math.round(m / 1440)} días`;
+  return { clase: m <= 120 ? 'aviso' : 'mal', texto: `Hace ${cuanto} sin enviar` };
+}
