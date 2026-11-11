@@ -81,6 +81,10 @@ export class Lienzo {
     this.ocupH = new Uint8Array(this.NX * this.NY);
     this.ocupV = new Uint8Array(this.NX * this.NY);
     this.puertos = new Uint8Array(this.NX * this.NY);
+    // Puntos del borde por donde solo se puede SALIR: los costados de las filas
+    // de clave foranea. Si otra flecha llegara ahi, la columna se quedaria sin
+    // salida (paso con SYNC_LOG llegando a DISPOSITIVO por la fila tienda_id).
+    this.soloSalida = new Uint8Array(this.NX * this.NY);
     this.relaciones = [];
     this.avisos = [];
   }
@@ -124,6 +128,48 @@ export class Lienzo {
     if (nota) s.push(`<text class="der" x="${x + 14}" y="${ty + 6}">${esc(nota)}</text>`);
     this.cuerpo.push(s.join('\n  '));
     return this.cajas.get(id);
+  }
+
+  /**
+   * Tabla del modelo relacional: una fila por columna, de 20 px, para que
+   * el centro de cada fila caiga sobre la grilla y una clave foranea pueda
+   * salir exactamente de la fila de su columna.
+   *
+   * filas: [{ marcas: ['PK','FK'], nombre, tipo, nulo }]
+   * Devuelve la caja y el y (en px) del centro de cada fila, por nombre.
+   */
+  tabla(id, { x, y, ancho, filas }) {
+    const CAB_T = 30, FILA = 20;
+    const alto = CAB_T + filas.length * FILA + 10;
+    this.cajas.set(id, { x, y, w: ancho, h: alto, tipo: 'tabla' });
+    this.bloqueado = null;
+    const s = [`<!-- tabla ${id} -->`];
+    s.push(`<rect class="ent" x="${x}" y="${y + CAB_T}" width="${ancho}" height="${alto - CAB_T}"/>`);
+    s.push(`<rect class="cab-ent" x="${x}" y="${y}" width="${ancho}" height="${CAB_T}"/>`);
+    s.push(`<text class="nom" x="${x + ancho / 2}" y="${y + 20}" text-anchor="middle">${esc(id)}</text>`);
+    const centros = {};
+    filas.forEach((f, k) => {
+      const cy = y + CAB_T + FILA / 2 + k * FILA;
+      centros[f.nombre] = cy;
+      if (k % 2 === 1) {
+        s.push(`<rect fill="#F4F6F8" x="${x + 1}" y="${cy - 10}" width="${ancho - 2}" height="${FILA}"/>`);
+      }
+      const base = cy + 4;
+      if (f.marcas.length) {
+        s.push(`<text class="${f.marcas.includes('PK') ? 'card-amb' : 'card'}" x="${x + 10}" y="${base}">${f.marcas.join(' ')}</text>`);
+      }
+      s.push(`<text class="${f.marcas.includes('PK') ? 'pk' : 'atr'}" x="${x + 56}" y="${base}">${esc(f.nombre)}</text>`);
+      s.push(`<text class="${f.tipo === 'calculada' ? 'der' : 'zona'}" x="${x + ancho - 10}" y="${base}" text-anchor="end">${esc(f.tipo + (f.nulo ? ' NULL' : ''))}</text>`);
+    });
+    this.cuerpo.push(s.join('\n  '));
+    return { ...this.cajas.get(id), centros };
+  }
+
+  /** Reserva los dos costados de una fila como puntos de salida exclusivos. */
+  reservarSalida(id, py) {
+    const c = this.cajas.get(id);
+    this.soloSalida[this.idx(c.x / G, py / G)] = 1;
+    this.soloSalida[this.idx((c.x + c.w) / G, py / G)] = 1;
   }
 
   /** Zona que los conectores y los rotulos tienen que esquivar (titulo, leyenda...). */
@@ -206,31 +252,54 @@ export class Lienzo {
    * op.lados restringe los lados por donde puede salir o llegar
    * ({ desde: 'abajo', hasta: 'izquierda' }); sin eso el A* elige solo.
    */
-  relacion(desde, hasta, { card, verbo, clase = 'rel', identificadora = false, lados = {} } = {}) {
-    this.relaciones.push({ desde, hasta, card, verbo, clase, identificadora, lados });
+  relacion(desde, hasta, { card, verbo, clase = 'rel', identificadora = false, lados = {}, filaDesde } = {}) {
+    this.relaciones.push({ desde, hasta, card, verbo, clase, identificadora, lados, filaDesde });
   }
 
   trazar() {
     this.construirMapa();
-    for (const r of this.relaciones) {
-      const ruta = this.buscarRuta(r);
-      if (!ruta) {
-        this.avisos.push(`sin recorrido posible: ${r.desde} -> ${r.hasta}`);
-        continue;
+    // Cada conector trazado ocupa la grilla, asi que uno de los ultimos puede
+    // quedar encerrado por los anteriores. Si pasa, se deshace todo, se pone
+    // primero al que no encontro camino y se vuelve a trazar.
+    const copia = {
+      ocupH: this.ocupH.slice(), ocupV: this.ocupV.slice(), puertos: this.puertos.slice(),
+      segmentos: this.segmentos.length, trazos: this.trazos.length,
+    };
+    let fallidas = [];
+    for (let intento = 0; intento < 6; intento++) {
+      fallidas = [];
+      for (const r of this.relaciones) {
+        r.ruta = null;
+        const ruta = this.buscarRuta(r);
+        if (!ruta) { fallidas.push(r); continue; }
+        r.ruta = ruta;
+        this.ocupar(ruta);
+        this.dibujarRuta(r);
       }
-      r.ruta = ruta;
-      this.ocupar(ruta);
-      this.dibujarRuta(r);
+      if (!fallidas.length) break;
+      this.ocupH = copia.ocupH.slice(); this.ocupV = copia.ocupV.slice(); this.puertos = copia.puertos.slice();
+      this.segmentos.length = copia.segmentos; this.trazos.length = copia.trazos;
+      this.relaciones = [...fallidas, ...this.relaciones.filter((r) => !fallidas.includes(r))];
     }
+    for (const r of fallidas) this.avisos.push(`sin recorrido posible: ${r.desde} -> ${r.hasta}`);
     for (const r of this.relaciones) if (r.ruta && (r.card || r.verbo)) this.rotular(r);
   }
 
-  buscarRuta({ desde, hasta, lados }) {
+  buscarRuta({ desde, hasta, lados, filaDesde }) {
     const LADO = { derecha: 0, abajo: 1, izquierda: 2, arriba: 3 };
     const filtra = (lista, lado) => lado == null ? lista
       : lista.filter((p) => [].concat(lado).map((l) => LADO[l]).includes(p[2]));
-    const salidas = filtra(this.puertosDe(desde), lados.desde);
-    const llegadasLista = filtra(this.puertosDe(hasta), lados.hasta);
+    let salidas = filtra(this.puertosDe(desde), lados.desde);
+    // En el modelo relacional la linea sale de la fila de la columna FK, por
+    // el costado: asi se lee que columna apunta a que tabla.
+    if (filaDesde != null) {
+      salidas = salidas.filter((p) => p[1] * G === filaDesde && (p[2] === 0 || p[2] === 2));
+    }
+    const llegadasLista = filtra(this.puertosDe(hasta), lados.hasta)
+      // Tampoco a 10 px: dos puertos tienen que quedar a 20 px, asi que una
+      // llegada pegada a la fila tambien le quitaria la salida.
+      .filter(([i, j]) => ![[0, 0], [0, -1], [0, 1], [-1, 0], [1, 0]]
+        .some(([di, dj]) => this.soloSalida[this.idx(i + di, j + dj)]));
     const llegadas = new Map(llegadasLista.map((p) => [this.idx(p[0], p[1]), p]));
     if (!salidas.length || !llegadas.size) return null;
 

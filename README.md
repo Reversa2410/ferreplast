@@ -51,6 +51,7 @@ Una sola aplicación con dos perfiles de uso:
 | Esquema de base de datos (SQL Server) | Listo y verificado (52 pruebas, 17 tablas) |
 | Datos de prueba | Listos — 100 productos, 2 tiendas, 2 clientes con crédito |
 | Diagramas del MER | Al día con el modelo final — se generan con `npm run diagramas`; ver [docs/diagramas](docs/diagramas/README.md) |
+| Modelo relacional y diccionario de datos | Al día — se leen de `db/schema.sql` al generar |
 | Documento de presentación (Word) | Al día — se genera con `npm run word` |
 | API sobre SQL Server | Lista y verificada (247 pruebas, 44 endpoints) |
 | Autenticación y permisos | Lista — sesiones, PIN, alcance por tienda, límite de intentos |
@@ -111,7 +112,7 @@ ferreplast/
 │   ├── SCHEMA.md           decisiones de diseño de la base
 │   ├── diagramas/
 │   │   ├── DECISIONES-MODELO.md  por qué el modelo es así (defensa)
-│   │   ├── 00-…09-*.svg        MER y vistas, generados por _figuras.mjs
+│   │   ├── 00-…10-*.svg        MER, vistas y modelo relacional (generados)
 │   │   └── modelo relacional 2.svg · .png  (exportación vieja de Lucid)
 │   └── word/               documento de presentación
 ├── .env.example            plantilla de configuración
