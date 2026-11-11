@@ -228,6 +228,47 @@ export function armarEntrada({ lineas, tienda_id, usuario_id, motivo = null, aho
   }));
 }
 
+// =============================================================================
+// Mermas: lo que se rompe, vence o se dania y sale del inventario sin venderse
+// =============================================================================
+
+/**
+ * Lo que hay que corregir antes de registrar una merma. El motivo es
+ * obligatorio: una merma sin explicacion es indistinguible de un faltante, y
+ * es justo lo que el duenio va a querer revisar. Y no se puede dar de baja
+ * mas de lo que hay: el stock quedaria en negativo.
+ */
+export function problemasDeMerma(lineas, motivo) {
+  const p = [];
+  if (!lineas.length) p.push('Agregue al menos un producto.');
+  if (!String(motivo ?? '').trim()) p.push('Indique qué pasó: roto, vencido, dañado…');
+  for (const l of lineas) {
+    if (!(l.cantidad > 0)) p.push(`${l.nombre}: la cantidad tiene que ser mayor que cero.`);
+    else if (l.cantidad > Math.max(0, r2(Number(l.existencia) || 0))) {
+      p.push(`${l.nombre}: solo hay ${cantidadTexto(Math.max(0, l.existencia))}; no se puede dar de baja más.`);
+    }
+  }
+  return p;
+}
+
+/**
+ * Arma los movimientos de una merma: uno por producto, con cantidad NEGATIVA
+ * (sale del inventario) y el costo del catalogo, para saber cuanto se perdio.
+ */
+export function armarMerma({ lineas, tienda_id, usuario_id, motivo, ahora = new Date() }) {
+  return lineas.map((l) => ({
+    uuid_externo: nuevoUuid(),
+    tienda_id,
+    producto_id: l.producto_id,
+    usuario_id,
+    tipo: 'merma',
+    cantidad: -Math.abs(l.cantidad),
+    costo_unitario: r2(l.costo_unitario ?? 0),
+    motivo: String(motivo).trim().slice(0, 255),
+    ocurrido_en: ahora.toISOString(),
+  }));
+}
+
 /**
  * Aplica la respuesta de /sync/push a la cola de movimientos.
  *

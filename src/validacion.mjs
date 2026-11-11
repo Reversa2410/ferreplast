@@ -346,6 +346,12 @@ export const EsquemaMovimientoManual = z.object({
   .refine(
     (m) => m.tipo !== 'ajuste' || (m.motivo != null && m.motivo.length >= 3),
     { message: 'un ajuste de inventario exige decir por que', path: ['motivo'] },
+  )
+  // La merma tambien: sin el motivo (roto, vencido...) una merma no se
+  // distingue de un faltante, que es justo lo que el duenio va a revisar.
+  .refine(
+    (m) => m.tipo !== 'merma' || (m.motivo != null && m.motivo.length >= 3),
+    { message: 'una merma exige decir que paso (roto, vencido, daniado...)', path: ['motivo'] },
   );
 
 // -----------------------------------------------------------------------------
