@@ -298,20 +298,51 @@ export default async function rutasCatalogo(app, { db }) {
     }
 
     try {
-      await insertarMovimiento(db, {
-        ...datos,
-        usuario_id: peticion.usuario.id,
-        ocurrido_en: null,   // lo pone el servidor: esto esta pasando ahora
+      const resultado = await db.tx(async (tx) => {
+        // Lo que RESTA (merma, ajuste negativo) no puede llevarse mas de lo que
+        // hay: el stock quedaria en negativo, que no significa nada. Mismo
+        // criterio y mismo bloqueo que la venta con conexion (seccion 30 de las
+        // pruebas): UPDLOCK + HOLDLOCK hace que dos bajas simultaneas del
+        // ultimo articulo no pasen las dos.
+        //
+        // Por /sync/push no se exige, a proposito: lo roto sin senial ya se
+        // rompio, y rechazarlo solo lo borraria del registro.
+        if (datos.cantidad < 0) {
+          const { rows } = await tx.query(
+            `SELECT p.nombre, p.unidad_medida, ISNULL(s.cantidad, 0) AS hay
+               FROM PRODUCTO p
+               LEFT JOIN Stock s WITH (UPDLOCK, HOLDLOCK)
+                      ON s.producto_id = p.id AND s.tienda_id = @t
+              WHERE p.id = @p`,
+            { t: datos.tienda_id, p: datos.producto_id },
+          );
+          const hay = Number(rows[0]?.hay ?? 0);
+          if (-datos.cantidad > hay) {
+            return { faltante: { producto_id: datos.producto_id, nombre: rows[0]?.nombre ?? '',
+                                 unidad: rows[0]?.unidad_medida ?? '', pedida: -datos.cantidad,
+                                 hay: Math.max(0, hay) } };
+          }
+        }
+        await insertarMovimiento(tx, {
+          ...datos,
+          usuario_id: peticion.usuario.id,
+          ocurrido_en: null,   // lo pone el servidor: esto esta pasando ahora
+        });
+        const { rows } = await tx.query(
+          'SELECT cantidad FROM Stock WHERE tienda_id = @t AND producto_id = @p',
+          { t: datos.tienda_id, p: datos.producto_id },
+        );
+        return { stock: Number(rows[0]?.cantidad ?? 0) };
       });
 
-      const { rows } = await db.query(
-        'SELECT cantidad FROM Stock WHERE tienda_id = @t AND producto_id = @p',
-        { t: datos.tienda_id, p: datos.producto_id },
-      );
-      return respuesta.code(201).send({
-        registrado: true,
-        stock_resultante: Number(rows[0]?.cantidad ?? 0),
-      });
+      if (resultado.faltante) {
+        const f = resultado.faltante;
+        return respuesta.code(409).send({
+          error: `no hay existencia suficiente. ${f.nombre}: pidio dar de baja ${f.pedida}, hay ${f.hay}${f.unidad ? ` ${f.unidad}` : ''}`,
+          faltantes: [f],
+        });
+      }
+      return respuesta.code(201).send({ registrado: true, stock_resultante: resultado.stock });
     } catch (e) {
       return responderError(e, respuesta, peticion.log, 'fallo al registrar el movimiento');
     }

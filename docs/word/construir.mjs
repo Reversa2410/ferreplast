@@ -38,7 +38,7 @@ const CIFRAS = {
   entidades: RESUMEN.entidades,          // 17
   relaciones: RESUMEN.relaciones,        // 30
   pruebasEsquema: 52,
-  pruebasApi: 308,
+  pruebasApi: 320,
   endpoints: 44,
 };
 CIFRAS.pruebas = CIFRAS.pruebasEsquema + CIFRAS.pruebasApi;
@@ -689,6 +689,7 @@ const REGLAS = [
   ['RN-39', 'Una sesión se puede revocar en cualquier momento', 'PR-09', BD, 'SESION.revocada_en'],
   ['RN-40', 'Con conexión no se vende más de lo que hay en existencia', 'PR-01', APP, 'POST /ventas, con bloqueo de Stock'],
   ['RN-41', 'El ajuste de inventario es solo del administrador, por cualquier camino', 'PR-06', APP, 'POST /inventario/movimientos y /sync/push'],
+  ['RN-42', 'Una merma dice qué pasó y, con conexión, no deja el stock bajo cero', 'PR-07', APP, 'POST /inventario/movimientos, con bloqueo de Stock'],
 ];
 const reglasApp = REGLAS.filter((r) => r[3] === APP).map((r) => r[0]);
 
@@ -708,6 +709,7 @@ s6.push(
       [fuerte('RN-23, RN-28 y RN-35.'), t(' Son reglas sobre cómo se procesa un envío, no sobre qué datos son válidos: viven donde está ese proceso.', { size: 20 })],
       [fuerte('RN-38.'), t(' Contar intentos fallidos y bloquear es comportamiento de la puerta de entrada; la base sólo guarda el registro.', { size: 20 })],
       [fuerte('RN-41.'), t(' Quién puede ajustar depende del rol de la sesión, que la base no conoce: la exigen las dos puertas de la API por las que entra un movimiento.', { size: 20 })],
+      [fuerte('RN-42.'), t(' Igual que RN-40: una restricción en la base rechazaría también la merma que llega sin conexión, que ya ocurrió.', { size: 20 })],
       [fuerte('RN-40.'), t(' Una restricción en la base rechazaría también la venta que llega sin conexión, que ya ocurrió: la mercadería salió y el cliente tiene su ticket. Se exige en la venta con conexión y se deja pasar en la sincronización, donde el stock negativo queda a la vista para revisar.', { size: 20 })],
     ].map((v) => vineta(v, 26)),
   ]),
@@ -733,7 +735,7 @@ const TRAZABILIDAD = [
   ['PR-04 Fijación de precio', ['PRODUCTO', 'VENTA_LINEA'], [10]],
   ['PR-05 Cierre de caja', ['CAJA', 'VENTA', 'PAGO_CREDITO', 'USUARIO', 'TIENDA'], [12, 13, 14, 25, 34]],
   ['PR-06 Conteo y ajuste', ['MOVIMIENTO_INVENTARIO', 'STOCK'], [4, 7, 26, 27, 41]],
-  ['PR-07 Registro de merma', ['MOVIMIENTO_INVENTARIO', 'STOCK'], [5, 6]],
+  ['PR-07 Registro de merma', ['MOVIMIENTO_INVENTARIO', 'STOCK'], [5, 6, 42]],
   ['PR-08 Reposición', ['STOCK', 'PRODUCTO', 'TIENDA'], [22]],
   ['PR-09 Control de acceso', ['USUARIO', 'USUARIO_TIENDA', 'SESION', 'INTENTO_LOGIN', 'TIENDA', 'NEGOCIO'], [15, 16, 19, 37, 38, 39]],
   ['PR-10 Supervisión consolidada', ['VENTA', 'VENTA_LINEA', 'STOCK', 'PRODUCTO', 'TIENDA', 'CAJA'], [10, 22, 25]],
@@ -869,7 +871,7 @@ const s8 = [
       [[fuerte('Autenticación y permisos')], 'Implementada', 'PIN, contraseña, sesiones revocables, límite de intentos'],
       [[fuerte('Sincronización sin conexión')], 'Implementada', 'reenvíos sin duplicar'],
       [[fuerte('Crédito y abonos')], 'Implementado', 'límite controlado por la base'],
-      [[fuerte('Entradas de mercadería')], 'Implementadas', 'desde la tablet, con y sin señal'],
+      [[fuerte('Entradas de mercadería y mermas')], 'Implementadas', 'desde la tablet, con y sin señal'],
       [[fuerte('Punto de venta (tablet)')], 'Implementado', 'vende con y sin señal; crédito, abonos y caja'],
       [[fuerte('Panel de administración')], 'Implementado', 'las dos tiendas; reportes, anulaciones, auditoría de inventario'],
     ]),

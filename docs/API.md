@@ -340,6 +340,14 @@ pantalla de ingreso carga antes de tener sesión). Cómo usa la API:
   lo que llegó y se vendió sin señal suma antes de descontarse. Los movimientos
   no vuelven en `asignados`: con una respuesta 200, lo que no está en
   `rechazados` entró o ya estaba.
+- **Mermas → `/sync/push`, en `movimientos`**, igual que las entradas, con
+  cantidad negativa y el motivo (roto, vencido…) obligatorio. La tablet no deja
+  dar de baja más de lo que tiene en su copia del stock.
+- **Una merma o un ajuste negativo no dejan el stock bajo cero** en
+  `POST /inventario/movimientos`: se comprueba dentro de la transacción, con el
+  stock bloqueado, y responde **409** con `faltantes`. La merma exige además
+  `motivo`. Por `/sync/push` no se comprueba la existencia, a propósito: lo
+  roto sin señal ya se rompió, y rechazarlo solo lo borraría del registro.
 - **El ajuste es del administrador también por la cola.** Antes, por
   `/sync/push` un empleado podía mandar un ajuste y se aceptaba; ahora se
   rechaza con `motivo: "regla"`, igual que en `POST /inventario/movimientos`.
