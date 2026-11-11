@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "punto-de-venta (base FerreplastPV)",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["src/servidor.mjs"],
+      "env": { "DB_NOMBRE": "FerreplastPV", "PORT": "3001" },
+      "port": 3001
+    }
+  ]
+}
