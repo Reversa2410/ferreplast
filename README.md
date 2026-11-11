@@ -53,7 +53,7 @@ Una sola aplicación con dos perfiles de uso:
 | Diagramas del MER | Al día con el modelo final — se generan con `npm run diagramas`; ver [docs/diagramas](docs/diagramas/README.md) |
 | Modelo relacional y diccionario de datos | Al día — se leen de `db/schema.sql` al generar |
 | Documento de presentación (Word) | Al día — se genera con `npm run word` |
-| API sobre SQL Server | Lista y verificada (298 pruebas, 44 endpoints) |
+| API sobre SQL Server | Lista y verificada (308 pruebas, 44 endpoints) |
 | Autenticación y permisos | Lista — sesiones, PIN, alcance por tienda, límite de intentos |
 | Sincronización offline | Lista — idempotente por `uuid_externo` |
 | Crédito a clientes y abonos | Listo — solo con conexión, por diseño |
@@ -61,6 +61,7 @@ Una sola aplicación con dos perfiles de uso:
 | Alta de usuarios y cambio de claves | Lista |
 | Apertura y cierre de caja | Lista — la diferencia la calcula el servidor |
 | Punto de venta (PWA) | Listo — vende en efectivo con y sin señal, fía, cobra abonos, abre y cierra caja |
+| Entradas de mercadería | Listas — desde la tablet, con y sin señal, con costo y proveedor |
 | Panel del dueño | Listo — resumen de las dos tiendas, ventas y anulaciones, inventario con auditoría, cuentas por cobrar, cajas y tablets |
 
 > El proyecto migró de PostgreSQL a SQL Server. La base y la API ya están
@@ -69,7 +70,7 @@ Una sola aplicación con dos perfiles de uso:
 >
 > **`npm test` corre las dos suites.** `npm run db:test` prueba el esquema
 > contra la `FerreplastDB` local (52 pruebas) y `npm run test:api` prueba la
-> API (298 pruebas). La segunda es independiente y no puede tocar los datos
+> API (308 pruebas). La segunda es independiente y no puede tocar los datos
 > de trabajo: crea `FerreplastPruebaApi`, le aplica el esquema y los datos,
 > corre, y la borra.
 >
@@ -107,7 +108,7 @@ ferreplast/
 │   │   ├── usuarios.mjs    alta de usuarios y cambio de claves
 │   │   └── reportes.mjs    panel del dueño
 │   ├── estaticos.mjs       sirve el punto de venta (cliente/)
-│   └── test-api.mjs        298 pruebas de la API
+│   └── test-api.mjs        308 pruebas de la API
 ├── cliente/                el punto de venta (PWA, sin dependencias)
 │   ├── index.html · estilos.css
 │   ├── app.js              pantallas, cola de ventas y sincronización

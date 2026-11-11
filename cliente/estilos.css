@@ -210,6 +210,26 @@ button.chip { cursor: pointer; }
 .resultado.faltante { background: var(--rojo-tenue); color: var(--rojo); }
 .nota { background: var(--ambar-tenue); color: var(--ambar); border-radius: var(--radio); padding: 10px 14px; font-size: 14px; margin: 12px 0; }
 
+/* ---- Entrada de mercaderia ----------------------------------------------------- */
+/* La ventana se ensancha solo cuando tiene la tabla de la entrada: con cuatro
+   columnas (producto, cantidad, costo, importe) no entra en 560 px. */
+.ventana:has(#entrada-lineas) { width: min(820px, 100%); }
+.resultados-entrada { display: grid; gap: 6px; margin-bottom: 12px; }
+.resultado-entrada {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px; text-align: left;
+  padding: 10px 12px; min-height: 48px; background: var(--papel-alto);
+  border: 1px solid var(--linea); border-radius: var(--radio);
+}
+.resultado-entrada:hover, .resultado-entrada:focus { border-color: var(--azul); background: var(--azul-tenue); }
+.detalle.entrada input {
+  width: 100px; padding: 8px; border: 1px solid var(--linea); border-radius: 8px; text-align: right; font-size: 16px;
+}
+.detalle.entrada td { vertical-align: middle; }
+.detalle.entrada .quitar { background: none; border: none; color: var(--rojo); font-weight: 600; padding: 6px; }
+.aviso-costo { display: block; font-size: 12px; text-align: right; color: var(--ambar); }
+.total-entrada { text-align: right; font-size: 18px; margin: 8px 0 0; }
+.subtitulo-entrada { font-size: 15px; margin: 20px 0 4px; color: var(--tinta-med); }
+
 /* ---- Ventas recientes y factura ------------------------------------------------- */
 .lista-ventas { display: grid; gap: 8px; margin: 12px 0; max-height: 55vh; overflow-y: auto; }
 .fila-venta {
