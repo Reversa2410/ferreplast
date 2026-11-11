@@ -172,7 +172,16 @@ const FIGURAS = [
   ['08-proceso-venta',           'El proceso de venta sobre el modelo de datos',
     () => readFileSync(join(aqui, '_fuente-proceso-venta.svgsrc'), 'utf8').trim()],
   ['09-vista-acceso',            'Vista de acceso y sincronizacion',                     F.vistaAcceso],
+  ['10-modelo-relacional',       'Modelo relacional leido de db/schema.sql',             F.modeloRelacional],
 ];
+
+// Antes de dibujar: el MER tiene que tener las mismas tablas y claves foraneas
+// que el esquema. Si no coinciden, ningun diagrama se escribe.
+const diferencias = F.compararConEsquema();
+if (diferencias.length) {
+  console.error('El MER no coincide con db/schema.sql:\n  ' + diferencias.join('\n  '));
+  process.exit(1);
+}
 
 const generados = [];
 for (const [nombre, titulo, construir] of FIGURAS) {

@@ -36,7 +36,11 @@
    El modelo (atributos y una relacion por FK) vive en `ATR` y `REL`; los
    conectores los calcula un A* en `_dibujo.mjs`. El Word toma de ahi las
    cifras (17 entidades, 30 relaciones) y su tabla de trazabilidad falla si
-   falta una entidad.
+   falta una entidad. El generador compara `ATR`/`REL` con lo que
+   `_esquema.mjs` lee de `db/schema.sql` y aborta si difieren; el relacional
+   (`10`) y el anexo del Word se leen directo del esquema. Ojo: el lector
+   depende del formato (una columna por linea, 4 espacios, nombre en
+   minusculas) y falla si una tabla queda sin columnas o sin PK.
    Do instead: al cambiar una tabla, editar `ATR`/`REL`, correr
    `npm run diagramas` y despues `npm run word`. Si una vista no cierra,
    `DIAGRAMAS_BORRADOR=1` la escribe igual para ver donde mover cajas.
