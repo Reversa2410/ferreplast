@@ -288,6 +288,35 @@ SQL Server nombran tablas, columnas y restricciones, y eso es un mapa de la base
 para quien no debería tenerlo. Para verlo al diagnosticar:
 `DEBUG_API=1 npm run test:api`.
 
+## El panel del dueño
+
+Está en `cliente/panel.html` y se abre en `/app/panel.html`. Entra con
+`POST /auth/login/admin` y solo lee los reportes de esta API: no calcula
+ventas, ganancias ni saldos por su cuenta, así que un número del panel es el
+mismo que da la vista correspondiente en SSMS.
+
+| Sección | Lo que usa |
+|---|---|
+| Resumen | `/reportes/resumen` (el día que devuelve `fecha`) y `/reportes/ventas` para los últimos 14 días |
+| Ventas | `GET /ventas` (con `desde`, `hasta`, `tienda_id`, `metodo_pago`, `pagina`), `/reportes/ventas` para los totales, `GET /ventas/:id` y `POST /ventas/:id/anular` |
+| Inventario | `/reportes/inventario` y `/reportes/movimientos/:productoId` para la auditoría de un producto |
+| Por cobrar | `/reportes/cuentas-por-cobrar`, `/clientes/:id/estado-cuenta` y `PATCH /clientes/:id` para el límite |
+| Cajas | `/reportes/cuadre-caja` y `GET /caja/:id` |
+| Tablets | `/sync/estado` |
+
+La sección 31 de las pruebas comprueba que cada uno de estos reportes traiga
+los campos que el panel lee: renombrar una columna de una vista rompe la
+prueba en lugar de dejar el panel mostrando ceros.
+
+No trabaja sin conexión, a propósito: un número viejo presentado como actual
+es peor que ninguno. Las horas se muestran siempre en la hora de Nicaragua,
+aunque se mire desde otro país.
+
+Pendiente: las tablets del punto de venta todavía no se registran como
+dispositivo (no hay ruta para darlas de alta y `/sync/push` se envía sin
+`dispositivo_id`), así que la sección Tablets solo muestra las cargadas en la
+base.
+
 ## El punto de venta
 
 Está en `cliente/` y lo sirve esta misma API en `/app/` (rutas públicas: la

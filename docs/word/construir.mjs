@@ -38,7 +38,7 @@ const CIFRAS = {
   entidades: RESUMEN.entidades,          // 17
   relaciones: RESUMEN.relaciones,        // 30
   pruebasEsquema: 52,
-  pruebasApi: 277,
+  pruebasApi: 298,
   endpoints: 44,
 };
 CIFRAS.pruebas = CIFRAS.pruebasEsquema + CIFRAS.pruebasApi;
@@ -868,7 +868,7 @@ const s8 = [
       [[fuerte('Sincronización sin conexión')], 'Implementada', 'reenvíos sin duplicar'],
       [[fuerte('Crédito y abonos')], 'Implementado', 'límite controlado por la base'],
       [[fuerte('Punto de venta (tablet)')], 'Implementado', 'vende con y sin señal; crédito, abonos y caja'],
-      [[fuerte('Panel de administración')], 'Pendiente', 'la API de reportes ya existe'],
+      [[fuerte('Panel de administración')], 'Implementado', 'las dos tiendas; reportes, anulaciones, auditoría de inventario'],
     ]),
 
   p('Durante esta etapa la base de datos se migró de PostgreSQL a SQL Server. Las pruebas se portaron junto con ella y todas pasan sobre la versión actual.'),
@@ -881,7 +881,7 @@ const s8 = [
   h3('Próximos pasos'),
   ...[
     'Completar la ficha de datos que la visita dejó sin llenar: tiendas, empleados y cómo llevan hoy la cuenta de quién debe.',
-    'Panel de administración consolidado, sobre los reportes que la API ya ofrece.',
+    'Dar de alta las tablets como dispositivos, para que el panel muestre cuándo sincronizó cada una.',
     'Abrir la caja sin conexión: hoy la apertura exige señal.',
     'Publicar el sistema con https, que es lo que permite instalar el punto de venta en la tablet y abrirlo sin señal.',
     'Carga inicial y codificación del catálogo: los dueños no saben cuántos productos manejan, y es el mayor riesgo para poner el sistema en marcha.',
