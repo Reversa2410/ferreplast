@@ -1931,6 +1931,76 @@ console.log('\n32. Entradas de mercaderia desde la tablet, por la cola');
 }
 
 // -----------------------------------------------------------------------------
+console.log('\n33. Mermas: lo que se rompe o vence, sin dejar el stock en negativo');
+// -----------------------------------------------------------------------------
+// Una merma o un ajuste negativo por mas de lo que hay deja el stock en
+// negativo: el sistema diria que hay menos que nada. Con conexion se rechaza,
+// igual que la venta (seccion 30). Por la cola se acepta, por la misma razon
+// que la venta: lo roto ya se rompio, y rechazarlo solo lo borraria del
+// registro; el negativo queda a la vista para revisar.
+{
+  const L = await import('../cliente/logica.js');
+  const juan = await entrarComoEmpleado(JUAN, JUAN_PIN, TIENDA_FER);
+  const admin = await entrarComoAdmin();
+  const { rows: [prod] } = await db.query(
+    `SELECT TOP 1 p.id FROM PRODUCTO p JOIN Stock s ON s.producto_id = p.id AND s.tienda_id = @t
+      WHERE s.cantidad >= 3 AND p.id <> @p ORDER BY p.id`, { t: TIENDA_FER, p: PRODUCTO });
+  const hay = await stockDe(prod.id, TIENDA_FER);
+  const merma = (cantidad, motivo = 'se cayo de la estanteria') => ({
+    tienda_id: TIENDA_FER, producto_id: prod.id, tipo: 'merma', cantidad: -cantidad, motivo });
+
+  const demas = await pedir('POST', '/inventario/movimientos', juan, merma(hay + 1));
+  check(`una merma de ${hay + 1} cuando hay ${hay} se rechaza con 409`, demas.statusCode === 409,
+    `${demas.statusCode}: ${demas.body}`);
+  check('el mensaje dice cuanto hay', new RegExp(`hay ${hay}\\b`).test(demas.json().error ?? ''), demas.body);
+  check('y el stock no se toco', await stockDe(prod.id, TIENDA_FER) === hay);
+
+  const sinMotivo = await pedir('POST', '/inventario/movimientos', juan, merma(1, null));
+  check('una merma sin decir que paso se rechaza', sinMotivo.statusCode === 400, sinMotivo.body);
+
+  const justo = await pedir('POST', '/inventario/movimientos', juan, merma(hay));
+  check('una merma de todo lo que hay se permite y deja el stock en cero',
+    justo.statusCode === 201 && justo.json().stock_resultante === 0, justo.body);
+
+  const sinNada = await pedir('POST', '/inventario/movimientos', juan, merma(1));
+  check('sin existencia no se registra merma', sinNada.statusCode === 409, sinNada.body);
+
+  const ajusteDemas = await pedir('POST', '/inventario/movimientos', admin,
+    { tienda_id: TIENDA_FER, producto_id: prod.id, tipo: 'ajuste', cantidad: -1, motivo: 'conteo fisico' });
+  check('un ajuste negativo tampoco deja el stock bajo cero', ajusteDemas.statusCode === 409, ajusteDemas.body);
+  const ajusteArriba = await pedir('POST', '/inventario/movimientos', admin,
+    { tienda_id: TIENDA_FER, producto_id: prod.id, tipo: 'ajuste', cantidad: 4, motivo: 'conteo fisico' });
+  check('un ajuste positivo se sigue permitiendo', ajusteArriba.statusCode === 201
+    && ajusteArriba.json().stock_resultante === 4, ajusteArriba.body);
+
+  // La merma que arma la tablet.
+  const lineas = [{ producto_id: prod.id, nombre: 'x', cantidad: 2, costo_unitario: 10, existencia: 4 }];
+  const movs = L.armarMerma({ lineas, tienda_id: TIENDA_FER, usuario_id: JUAN, motivo: 'Vencido' });
+  const { EsquemaMovimiento } = await import('./validacion.mjs');
+  check('la merma armada por la tablet resta y pasa la validacion del servidor',
+    movs.length === 1 && movs[0].tipo === 'merma' && movs[0].cantidad === -2
+    && EsquemaMovimiento.safeParse(movs[0]).success, JSON.stringify(movs[0]));
+  const r = (await pedir('POST', '/sync/push', juan, { movimientos: movs })).json();
+  check('entra por la cola y baja el stock', r.movimientos?.aceptados === 1
+    && await stockDe(prod.id, TIENDA_FER) === 2, JSON.stringify(r.movimientos));
+
+  // Por la cola se acepta aunque deje el stock en negativo: ya ocurrio.
+  const deMas = L.armarMerma({ lineas: [{ ...lineas[0], cantidad: 5 }], tienda_id: TIENDA_FER,
+                                usuario_id: JUAN, motivo: 'Roto' });
+  const r2 = (await pedir('POST', '/sync/push', juan, { movimientos: deMas })).json();
+  check('una merma sin conexion se acepta aunque deje el stock en negativo',
+    r2.movimientos?.aceptados === 1 && await stockDe(prod.id, TIENDA_FER) === -3, JSON.stringify(r2.movimientos));
+
+  // Lo que la tablet no deja armar.
+  const p = (ls, motivo = 'Roto') => L.problemasDeMerma(ls, motivo);
+  check('la tablet no arma una merma mayor a la existencia, sin motivo o vacia',
+    p([{ nombre: 'x', cantidad: 5, existencia: 4 }]).length === 1
+    && p([{ nombre: 'x', cantidad: 1, existencia: 4 }], '  ').length === 1
+    && p([]).length === 1
+    && p([{ nombre: 'x', cantidad: 4, existencia: 4 }]).length === 0);
+}
+
+// -----------------------------------------------------------------------------
 // Cierre
 // -----------------------------------------------------------------------------
 console.log('\n=============================================================');
