@@ -1751,6 +1751,108 @@ console.log('\n30. Existencias: con conexion no se vende lo que no hay');
 }
 
 // -----------------------------------------------------------------------------
+console.log('\n31. Panel del duenio: la pagina, sus calculos y lo que lee de la API');
+// -----------------------------------------------------------------------------
+// El panel no calcula ventas ni saldos: los lee de los reportes. Lo que se
+// prueba aca es (a) que sus funciones de fechas y estados no mientan, y (b) el
+// CONTRATO: que cada reporte traiga los campos que el panel usa. Si alguien
+// renombra una columna de una vista, el panel mostraria "undefined" o C$0.00
+// sin que nada falle; esta seccion lo convierte en una falla.
+{
+  const pagina = await pedir('GET', '/app/panel.html');
+  check('la pagina del panel carga sin sesion', pagina.statusCode === 200 && /panel\.js/.test(pagina.body));
+  check('su script se sirve', (await pedir('GET', '/app/panel.js')).statusCode === 200);
+
+  const L = await import('../cliente/logica.js');
+
+  // Fechas del negocio: sin pasar por la zona del navegador.
+  check('sumar dias cruza el fin de mes y de anio',
+    L.sumarDias('2026-12-25', 13) === '2027-01-07' && L.sumarDias('2026-03-01', -1) === '2026-02-28'
+    && L.sumarDias('2028-03-01', -1) === '2028-02-29', L.sumarDias('2026-12-25', 13));
+  check('una columna DATE se lee como el dia del calendario, no como el anterior',
+    L.diaDe('2026-11-10T00:00:00.000Z') === '2026-11-10');
+  check('las horas se muestran en la hora de Nicaragua, no en la del navegador',
+    /08:39/.test(L.fechaHora('2026-11-11T02:39:58.000Z')) && /10\/11\/2026/.test(L.fechaHora('2026-11-11T02:39:58.000Z')),
+    L.fechaHora('2026-11-11T02:39:58.000Z'));
+
+  const serie = L.serieDiaria([
+    { fecha: '2026-11-08T00:00:00.000Z', total_vendido: 100.1 },
+    { fecha: '2026-11-08T00:00:00.000Z', total_vendido: 200.2 },   // la otra tienda
+    { fecha: '2026-11-10T00:00:00.000Z', total_vendido: 50 },
+  ], '2026-11-07', '2026-11-10');
+  check('la serie suma las dos tiendas y rellena los dias sin ventas',
+    JSON.stringify(serie.map((d) => d.total)) === JSON.stringify([0, 300.3, 0, 50]), JSON.stringify(serie));
+
+  check('sin ventas no hay margen (no "0%")', L.porcentaje(0, 0) === null && L.porcentaje(25, 100) === 25);
+  check('caja que cuadra, sobra o falta',
+    L.resultadoCaja({ estado: 'cerrada', diferencia_real: 0 }).texto === 'Cuadra'
+    && L.resultadoCaja({ estado: 'cerrada', diferencia_real: -3.5 }).clase === 'mal'
+    && /Faltan C\$3\.50/.test(L.resultadoCaja({ estado: 'cerrada', diferencia_real: -3.5 }).texto)
+    && L.resultadoCaja({ estado: 'abierta', diferencia_real: null }).texto === 'Abierta');
+  check('tablet al dia, atrasada o que nunca envio',
+    L.estadoSincronizacion(5).clase === 'bien' && L.estadoSincronizacion(90).clase === 'aviso'
+    && L.estadoSincronizacion(600).clase === 'mal' && L.estadoSincronizacion(null).texto === 'Nunca envió');
+  const inv = [{ producto: 'Cemento Canal', codigo: 'FER-013', cantidad: 5, necesita_reposicion: true },
+               { producto: 'Balde', codigo: 'PLA-011', cantidad: -2, necesita_reposicion: true },
+               { producto: 'Tubería PVC', codigo: 'FER-022', cantidad: 50, necesita_reposicion: false }];
+  check('el inventario se filtra por nombre sin tildes, por codigo, por reponer y por negativo',
+    L.filtrarInventario(inv, { buscar: 'tuberia' }).length === 1
+    && L.filtrarInventario(inv, { buscar: 'pla-0' }).length === 1
+    && L.filtrarInventario(inv, { solo: 'reponer' }).length === 2
+    && L.filtrarInventario(inv, { solo: 'negativo' })[0]?.codigo === 'PLA-011');
+
+  // Contrato con la API, con una sesion de administrador nueva (la seccion de
+  // cambio de claves cerro las anteriores).
+  const admin = await entrarComoAdmin();
+  const tiene = (obj, campos) => campos.filter((c) => !(c in (obj ?? {})));
+
+  const tiendas = (await pedir('GET', '/tiendas')).json().tiendas;
+  check('las tiendas traen su prefijo (el panel arma "FER-1003" con el)', tiendas.every((t) => t.prefijo));
+
+  const res = (await pedir('GET', '/reportes/resumen', admin)).json();
+  check('el resumen dice por que dia agrupo, en formato de fecha', /^\d{4}-\d{2}-\d{2}$/.test(res.fecha), res.fecha);
+  check('el resumen trae los totales que muestra el panel',
+    tiene(res.consolidado, ['total_vendido', 'ganancia_bruta', 'por_cobrar', 'clientes_con_deuda', 'cantidad_alertas']).length === 0
+    && Array.isArray(res.por_tienda) && Array.isArray(res.alertas_stock) && Array.isArray(res.inventario_valorizado));
+
+  const serieApi = (await pedir('GET', `/reportes/ventas?desde=${L.sumarDias(res.fecha, -13)}&hasta=${res.fecha}`, admin)).json().ventas;
+  check('la serie diaria trae fecha y total de cada dia',
+    serieApi.length > 0 && tiene(serieApi[0], ['fecha', 'tienda_id', 'cantidad_ventas', 'total_vendido', 'ganancia_bruta']).length === 0,
+    JSON.stringify(serieApi[0]));
+
+  const ventas = (await pedir('GET', '/ventas', admin)).json();
+  check('el listado de ventas trae lo que muestra la tabla y el tamanio de pagina',
+    ventas.por_pagina > 0 && tiene(ventas.ventas[0], ['id', 'numero', 'tienda_id', 'tienda', 'vendedor',
+      'cliente', 'metodo_pago', 'total', 'anulada', 'ocurrido_en']).length === 0);
+
+  const invApi = (await pedir('GET', '/reportes/inventario', admin)).json().inventario;
+  check('el inventario trae lo que muestra la tabla',
+    tiene(invApi[0], ['producto_id', 'tienda_id', 'tienda', 'codigo', 'producto', 'cantidad', 'cantidad_minima',
+      'precio_costo', 'precio_venta', 'valor_costo', 'valor_venta', 'necesita_reposicion']).length === 0);
+
+  const cobrar = (await pedir('GET', '/reportes/cuentas-por-cobrar?todos=1', admin)).json();
+  check('las cuentas por cobrar traen saldo, limite y cupo',
+    typeof cobrar.total === 'number' && tiene(cobrar.clientes[0], ['cliente_id', 'nombre', 'saldo', 'limite_credito',
+      'cupo_disponible', 'ultima_venta', 'ultimo_abono']).length === 0);
+  const cuenta = (await pedir('GET', `/clientes/${cobrar.clientes[0].cliente_id}/estado-cuenta`, admin)).json();
+  check('el estado de cuenta trae cliente, ventas fiadas y abonos',
+    cuenta.cliente && Array.isArray(cuenta.ventas_fiadas) && Array.isArray(cuenta.abonos));
+
+  const cajas = (await pedir('GET', '/reportes/cuadre-caja', admin)).json().cajas;
+  check('el cuadre de caja trae lo esperado, lo contado y la diferencia real',
+    cajas.length > 0 && tiene(cajas[0], ['caja_id', 'tienda', 'usuario', 'estado', 'abierta_en', 'cerrada_en',
+      'esperado', 'efectivo_contado', 'diferencia_real', 'diferencia_registrada', 'cuadra']).length === 0);
+
+  const tablets = (await pedir('GET', '/sync/estado', admin)).json().dispositivos;
+  check('el estado de las tablets trae los minutos sin enviar',
+    tiene(tablets[0], ['nombre', 'tienda', 'ultimo_sync', 'minutos_sin_sincronizar']).length === 0);
+
+  // El panel es del administrador: un empleado con sesion no ve los reportes.
+  const deEmpleado = await pedir('GET', '/reportes/resumen', tokenJuanFer);
+  check('un empleado no puede leer los reportes del panel', deEmpleado.statusCode === 403, `${deEmpleado.statusCode}`);
+}
+
+// -----------------------------------------------------------------------------
 // Cierre
 // -----------------------------------------------------------------------------
 console.log('\n=============================================================');
