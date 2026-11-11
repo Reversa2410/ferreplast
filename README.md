@@ -53,7 +53,7 @@ Una sola aplicación con dos perfiles de uso:
 | Diagramas del MER | Al día con el modelo final — se generan con `npm run diagramas`; ver [docs/diagramas](docs/diagramas/README.md) |
 | Modelo relacional y diccionario de datos | Al día — se leen de `db/schema.sql` al generar |
 | Documento de presentación (Word) | Al día — se genera con `npm run word` |
-| API sobre SQL Server | Lista y verificada (277 pruebas, 44 endpoints) |
+| API sobre SQL Server | Lista y verificada (298 pruebas, 44 endpoints) |
 | Autenticación y permisos | Lista — sesiones, PIN, alcance por tienda, límite de intentos |
 | Sincronización offline | Lista — idempotente por `uuid_externo` |
 | Crédito a clientes y abonos | Listo — solo con conexión, por diseño |
@@ -61,7 +61,7 @@ Una sola aplicación con dos perfiles de uso:
 | Alta de usuarios y cambio de claves | Lista |
 | Apertura y cierre de caja | Lista — la diferencia la calcula el servidor |
 | Punto de venta (PWA) | Listo — vende en efectivo con y sin señal, fía, cobra abonos, abre y cierra caja |
-| Panel del administrador | Pendiente |
+| Panel del dueño | Listo — resumen de las dos tiendas, ventas y anulaciones, inventario con auditoría, cuentas por cobrar, cajas y tablets |
 
 > El proyecto migró de PostgreSQL a SQL Server. La base y la API ya están
 > migradas y verificadas; la versión anterior quedó archivada en
@@ -69,7 +69,7 @@ Una sola aplicación con dos perfiles de uso:
 >
 > **`npm test` corre las dos suites.** `npm run db:test` prueba el esquema
 > contra la `FerreplastDB` local (52 pruebas) y `npm run test:api` prueba la
-> API (277 pruebas). La segunda es independiente y no puede tocar los datos
+> API (298 pruebas). La segunda es independiente y no puede tocar los datos
 > de trabajo: crea `FerreplastPruebaApi`, le aplica el esquema y los datos,
 > corre, y la borra.
 >
@@ -107,12 +107,13 @@ ferreplast/
 │   │   ├── usuarios.mjs    alta de usuarios y cambio de claves
 │   │   └── reportes.mjs    panel del dueño
 │   ├── estaticos.mjs       sirve el punto de venta (cliente/)
-│   └── test-api.mjs        277 pruebas de la API
+│   └── test-api.mjs        298 pruebas de la API
 ├── cliente/                el punto de venta (PWA, sin dependencias)
 │   ├── index.html · estilos.css
 │   ├── app.js              pantallas, cola de ventas y sincronización
 │   ├── logica.js           importes y cola, probados contra el servidor
-│   └── sw.js               service worker: abre sin señal
+│   ├── sw.js               service worker: abre sin señal
+│   └── panel.html · panel.js  panel del dueño (solo con conexión)
 ├── docs/
 │   ├── API.md              contrato de la API (lo que necesita el cliente)
 │   ├── SCHEMA.md           decisiones de diseño de la base
@@ -204,8 +205,10 @@ local con autenticación de Windows. `DB_SERVIDOR` y `DB_NOMBRE` lo cambian
 cuando hace falta, y `.env.example` las documenta.
 
 El punto de venta lo sirve la misma API: con `npm run dev` corriendo, se abre
-en **http://localhost:3001/app/**. Las credenciales de prueba (Juan, PIN 1234)
-están en [`db/seed.sql`](db/seed.sql).
+en **http://localhost:3001/app/**, y el panel del dueño en
+**http://localhost:3001/app/panel.html**. Las credenciales de prueba (Juan con
+PIN 1234 para la tablet, el administrador con correo y contraseña para el
+panel) están en [`db/seed.sql`](db/seed.sql).
 
 > **Para usarlo desde una tablet hace falta https.** El navegador solo deja
 > instalar la aplicación y guardarla para abrir sin señal (el service worker)
