@@ -7,7 +7,7 @@
 - Each item includes date + "Do instead".
 
 ## Execution & Validation (Highest Priority)
-1. **[2026-11-06] `npm test` corre DOS suites: esquema (46) y API (110)**
+1. **[2026-11-10] `npm test` corre DOS suites: esquema (52) y API (247)**
    `npm run db:test` es `sqlcmd -i db/test-esquema.sql` contra la `FerreplastDB`
    del usuario (tiene que estar sembrada). `npm run test:api` es independiente:
    crea `FerreplastPruebaApi`, le aplica schema+seed, corre y la borra.
@@ -32,15 +32,21 @@
    Do instead: si debe ser publica, agregarla a `RUTAS_PUBLICAS` en
    `src/auth/guardia.mjs` con el patron de Fastify (`'GET /ruta/:param'`),
    no con la URL concreta.
-7. **[2026-11-03] Los SVG de `docs/diagramas/` se generan, no se editan**
-   Do instead: tocar `_fuente-maestro.svgsrc` o `_fuente-figuras.html` y
-   correr `npm run diagramas` (genera + verifica geometria).
-8. **[2026-11-03] `npm run diagramas` ROTO: faltan las figuras 01-07**
-   `_fuente-figuras.html` quedo con solo 2 SVG (proceso-venta y el maestro), y
-   el generador espera 7 figuras. Falla ANTES de escribir, asi que no daña los
-   archivos existentes, que siguen pasando `_verificar.mjs`.
-   Do instead: para regenerar solo 00 y 08 no hace falta el HTML; para
-   recuperar 01-07 hay que reponer sus fuentes en `_fuente-figuras.html`.
+7. **[2026-11-10] Los SVG de `docs/diagramas/` se generan desde `_figuras.mjs`**
+   El modelo (atributos y una relacion por FK) vive en `ATR` y `REL`; los
+   conectores los calcula un A* en `_dibujo.mjs`. El Word toma de ahi las
+   cifras (17 entidades, 30 relaciones) y su tabla de trazabilidad falla si
+   falta una entidad.
+   Do instead: al cambiar una tabla, editar `ATR`/`REL`, correr
+   `npm run diagramas` y despues `npm run word`. Si una vista no cierra,
+   `DIAGRAMAS_BORRADOR=1` la escribe igual para ver donde mover cajas.
+8. **[2026-11-10] resvg ignora `orient="auto-start-reverse"`**
+   Deja todas las flechas apuntando a la derecha; las que llegan desde arriba
+   quedan tapadas por la caja. Afecta al Word, que rasteriza con resvg.
+   Do instead: `orient="auto"` (el verificador lo exige).
+9. **[2026-11-10] Las cifras del Word estan en `CIFRAS` de `construir.mjs`**
+   Pruebas (52 + 247) y endpoints (44) estan escritos a mano ahi.
+   Do instead: al agregar pruebas o rutas, actualizar `CIFRAS` y regenerar.
 
 ## Shell & Command Reliability
 1. **[2026-11-03] Hay un SQL Server local y se puede probar de verdad**

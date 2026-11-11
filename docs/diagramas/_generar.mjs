@@ -1,10 +1,10 @@
 // =============================================================================
 // Genera los diagramas del MER como archivos SVG sueltos y autocontenidos.
 //
-// Los SVG del documento web se apoyan en variables CSS de la pagina, que no
-// existen cuando el archivo se abre solo. Este script convierte cada clase en
-// atributos de presentacion (fill, stroke, font-family...), que es lo que
-// entienden PowerPoint, Google Slides, Inkscape e Illustrator.
+// Las figuras se describen con clases (ent, rel, card...) en _figuras.mjs, y
+// el proceso de venta en _fuente-proceso-venta.svgsrc. Este script convierte
+// cada clase en atributos de presentacion (fill, stroke, font-family...), que
+// es lo que entienden PowerPoint, Google Slides, Word, Inkscape e Illustrator.
 //
 // Uso:  node docs/diagramas/_generar.mjs
 // =============================================================================
@@ -12,6 +12,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import * as F from './_figuras.mjs';
 
 const aqui = dirname(fileURLToPath(import.meta.url));
 
@@ -159,49 +160,27 @@ function empaquetar(svg, titulo) {
 }
 
 // -----------------------------------------------------------------------------
-const html = readFileSync(join(aqui, '_fuente-figuras.html'), 'utf8');
-const maestro = readFileSync(join(aqui, '_fuente-maestro.svgsrc'), 'utf8');
-
-// El documento de presentacion incluye tambien el diagrama maestro. Aqui se
-// descarta, porque se genera aparte desde su propia fuente (_fuente-maestro).
-const figuras = (html.match(/<svg class="dg"[\s\S]*?<\/svg>/g) ?? [])
-  .filter((svg) => !svg.includes('viewBox="0 0 1840 1240"'));
-
-const NOMBRES = [
-  ['01-vista-estructura',        'Vista de estructura: negocio, catalogo e inventario'],
-  ['02-vista-operacion',         'Vista de operacion: ventas, caja y movimientos'],
-  ['03-especializacion-usuario', 'Especializacion total y disjunta de USUARIO'],
-  ['04-entidad-debil',           'Entidad debil VENTA_LINEA y relacion identificadora'],
-  ['05-relacion-recursiva',      'Relacion recursiva de CATEGORIA'],
-  ['06-entidad-asociativa',      'Entidad asociativa STOCK que resuelve el M:N'],
-  ['07-atributos-derivados',     'El stock como atributo derivado de los movimientos'],
+const FIGURAS = [
+  ['00-modelo-completo',         'Modelo E-R extendido completo',                       F.modeloCompleto],
+  ['01-vista-estructura',        'Vista de estructura: negocio, catalogo y personas',   F.vistaEstructura],
+  ['02-vista-operacion',         'Vista de operacion: ventas, caja, credito e inventario', F.vistaOperacion],
+  ['03-especializacion-usuario', 'Especializacion total y disjunta de USUARIO',          F.especializacion],
+  ['04-entidad-debil',           'Entidad debil VENTA_LINEA y relacion identificadora',  F.entidadDebil],
+  ['05-relacion-recursiva',      'Relacion recursiva de CATEGORIA',                      F.relacionRecursiva],
+  ['06-entidad-asociativa',      'Entidades asociativas STOCK y USUARIO_TIENDA',         F.entidadAsociativa],
+  ['07-atributos-derivados',     'Atributos derivados: stock y saldo del cliente',       F.atributosDerivados],
+  ['08-proceso-venta',           'El proceso de venta sobre el modelo de datos',
+    () => readFileSync(join(aqui, '_fuente-proceso-venta.svgsrc'), 'utf8').trim()],
+  ['09-vista-acceso',            'Vista de acceso y sincronizacion',                     F.vistaAcceso],
 ];
 
-if (figuras.length !== NOMBRES.length) {
-  console.error(`Se esperaban ${NOMBRES.length} figuras y se encontraron ${figuras.length}.`);
-  process.exit(1);
-}
-
 const generados = [];
-
-// Diagramas con fuente propia
-for (const [fuente, archivo, titulo] of [
-  ['_fuente-maestro.svgsrc',       '00-modelo-completo.svg', 'Modelo E-R extendido completo'],
-  ['_fuente-proceso-venta.svgsrc', '08-proceso-venta.svg',   'El proceso de venta sobre el modelo de datos'],
-]) {
-  const svg = empaquetar(resolverVars(aplicarClases(readFileSync(join(aqui, fuente), 'utf8').trim())), titulo);
+for (const [nombre, titulo, construir] of FIGURAS) {
+  const svg = empaquetar(resolverVars(aplicarClases(construir())), titulo);
+  const archivo = `${nombre}.svg`;
   writeFileSync(join(aqui, archivo), svg, 'utf8');
   generados.push([archivo, svg.length]);
 }
-
-// Figuras individuales
-figuras.forEach((svg, i) => {
-  const [nombre, titulo] = NOMBRES[i];
-  const salida = empaquetar(resolverVars(aplicarClases(svg)), titulo);
-  const archivo = `${nombre}.svg`;
-  writeFileSync(join(aqui, archivo), salida, 'utf8');
-  generados.push([archivo, salida.length]);
-});
 
 console.log('SVG generados en docs/diagramas/\n');
 for (const [archivo, bytes] of generados) {
