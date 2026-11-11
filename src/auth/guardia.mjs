@@ -31,6 +31,12 @@ const RUTAS_PUBLICAS = new Set([
   'GET /auth/empleados/:tiendaId',
   'POST /auth/login/pin',
   'POST /auth/login/admin',
+  // Los archivos del punto de venta: la pantalla de ingreso tiene que poder
+  // cargarse ANTES de tener sesion. No exponen datos: los datos los pide la
+  // aplicacion despues, con su token.
+  'GET /',
+  'GET /app',
+  'GET /app/*',
 ]);
 
 /**

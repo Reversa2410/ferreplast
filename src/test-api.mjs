@@ -1072,8 +1072,19 @@ console.log('\n20. Venta con conexion');
   check('y el mensaje dice que hay que abrir la caja',
     /caja/.test(enPla.json().error), enPla.json().error);
 
-  const conTarjeta = await pedir('POST', '/ventas', tokenMaria,
-    { ...venta, tienda_id: TIENDA_PLA, metodo_pago: 'tarjeta' });
+  // Con un producto que la plastiqueria SI tiene: PRODUCTO es de la
+  // ferreteria y aca hay 0, y desde la seccion 30 eso se rechaza por falta de
+  // existencia, que no es lo que esta prueba mira.
+  const { rows: [enStockPla] } = await db.query(
+    `SELECT TOP 1 s.producto_id, p.precio_venta FROM Stock s JOIN PRODUCTO p ON p.id = s.producto_id
+      WHERE s.tienda_id = @t AND s.cantidad >= 2 ORDER BY s.producto_id`, { t: TIENDA_PLA });
+  const precioPla = Number(enStockPla.precio_venta);
+  const conTarjeta = await pedir('POST', '/ventas', tokenMaria, {
+    tienda_id: TIENDA_PLA, metodo_pago: 'tarjeta',
+    subtotal: precioPla * 2, descuento: 0, total: precioPla * 2,
+    lineas: [{ producto_id: enStockPla.producto_id, cantidad: 2, precio_unitario: precioPla,
+               costo_unitario: 0, descuento: 0, subtotal: precioPla * 2 }],
+  });
   check('pero una venta con tarjeta no necesita caja abierta',
     conTarjeta.statusCode === 201, conTarjeta.body);
 }
@@ -1543,6 +1554,200 @@ console.log('\n27. Zona horaria: el dia del reporte es el dia del negocio');
   const hoyEnJs = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString().slice(0, 10);
   check('la base y JavaScript calculan el mismo dia de Nicaragua',
     localDeLaBase === hoyEnJs, `base ${localDeLaBase}, JavaScript ${hoyEnJs}`);
+}
+
+// -----------------------------------------------------------------------------
+console.log('\n28. Rebajas con centavos: la aritmetica no rechaza ventas validas');
+// -----------------------------------------------------------------------------
+// La validacion de la linea comparaba cantidad x precio - rebaja SIN redondear
+// contra el subtotal redondeado. En punto flotante 2 x 0.20 - 0.10 da
+// 0.30000000000000004, distinto de 0.3, y la venta se rechazaba con "el
+// subtotal no coincide". Le pasaba a cualquier rebaja con centavos, que es
+// justo la rebaja por mayoreo que el mostrador negocia.
+{
+  const { EsquemaLineaVenta } = await import('./validacion.mjs');
+  const r2 = (n) => Math.round(n * 100) / 100;
+  let rechazadas = 0, probadas = 0, ejemplo = '';
+  for (let centavos = 10; centavos <= 30000; centavos += 10) {
+    const precio = centavos / 100;
+    for (const cantidad of [1, 2, 3, 1.5, 0.25, 12]) {
+      for (const descuento of [0.1, 0.2, 0.3, 0.7, 1.1, 2.35]) {
+        if (descuento > r2(cantidad * precio)) continue;
+        probadas++;
+        const linea = { producto_id: 1, cantidad, precio_unitario: precio, descuento,
+                        subtotal: r2(r2(cantidad * precio) - descuento) };
+        if (!EsquemaLineaVenta.safeParse(linea).success) {
+          rechazadas++;
+          ejemplo ||= `${cantidad} x ${precio} - ${descuento}`;
+        }
+      }
+    }
+  }
+  check(`ninguna de ${probadas} lineas validas con rebaja se rechaza`, rechazadas === 0,
+    `${rechazadas} rechazadas, por ejemplo ${ejemplo}`);
+
+  // Y de punta a punta, por la API: la venta del ejemplo tiene que entrar.
+  const venta = {
+    tienda_id: TIENDA_FER, metodo_pago: 'tarjeta',
+    subtotal: 0.4, descuento: 0.1, total: 0.3,
+    lineas: [{ producto_id: PRODUCTO, cantidad: 2, precio_unitario: 0.2,
+               costo_unitario: 0, descuento: 0.1, subtotal: 0.3 }],
+  };
+  const r = await pedir('POST', '/ventas', tokenJuanFer, venta);
+  check('2 x 0.20 con 0.10 de rebaja se registra', r.statusCode === 201, r.body);
+
+  // La comprobacion sigue existiendo: un subtotal que de verdad no cuadra
+  // se rechaza igual que antes.
+  const mal = await pedir('POST', '/ventas', tokenJuanFer, {
+    ...venta, total: 0.31,
+    lineas: [{ ...venta.lineas[0], subtotal: 0.31 }],
+  });
+  check('un subtotal que no cuadra por un centavo se sigue rechazando', mal.statusCode === 400, mal.body);
+}
+
+// -----------------------------------------------------------------------------
+console.log('\n29. Punto de venta: la aplicacion y lo que arma la tablet');
+// -----------------------------------------------------------------------------
+// La aplicacion se sirve desde la misma API, sin sesion (la pantalla de
+// ingreso tiene que cargar antes de tener token). Y lo que arma la tablet
+// (cliente/logica.js) se comprueba contra los mismos esquemas del servidor:
+// una venta que el servidor rechaza ya tiene el ticket entregado.
+{
+  const pagina = await pedir('GET', '/app/');
+  check('la pagina del punto de venta carga sin sesion', pagina.statusCode === 200
+    && /text\/html/.test(pagina.headers['content-type']), `${pagina.statusCode}`);
+  const sw = await pedir('GET', '/app/sw.js');
+  check('el service worker se sirve como JavaScript', sw.statusCode === 200
+    && /javascript/.test(sw.headers['content-type']));
+  const raiz = await pedir('GET', '/');
+  check('la raiz lleva al punto de venta', raiz.statusCode === 302 && raiz.headers.location === '/app/');
+
+  // Nadie puede leer el codigo del servidor por la puerta de la aplicacion.
+  for (const url of ['/app/../src/db.mjs', '/app/..%2Fsrc%2Fdb.mjs', '/app/%2e%2e/package.json',
+                     '/app/..%5Csrc%5Cdb.mjs']) {
+    const r = await pedir('GET', url);
+    check(`no se sale de cliente/: ${url}`, r.statusCode === 404 && !/import|"dependencies"/.test(r.body),
+      `${r.statusCode}`);
+  }
+  check('las rutas de datos siguen cerradas', (await pedir('GET', '/sync/catalogo/1')).statusCode === 401);
+
+  const L = await import('../cliente/logica.js');
+  const { EsquemaVenta } = await import('./validacion.mjs');
+
+  // Miles de carritos al azar, con cantidades fraccionarias y rebajas con
+  // centavos: todos tienen que pasar la validacion del servidor tal cual.
+  let semilla = 7;
+  const azar = () => { semilla = (semilla * 16807) % 2147483647; return semilla / 2147483647; };
+  let malos = 0, primero = '';
+  for (let n = 0; n < 3000; n++) {
+    let carrito = [];
+    const lineas = 1 + Math.floor(azar() * 6);
+    for (let k = 0; k < lineas; k++) {
+      const precio = Math.round(azar() * 150000) / 100;
+      carrito = L.agregar(carrito, { id: 1 + Math.floor(azar() * 40), nombre: 'p', precio_venta: precio,
+                                     precio_costo: precio / 2 },
+                          [1, 2, 3, 0.5, 1.25, 12][Math.floor(azar() * 6)]);
+    }
+    carrito = carrito.map((it) => ({ ...it,
+      descuento: azar() < 0.5 ? 0 : Math.round(azar() * it.cantidad * it.precio_unitario * 30) / 100 }));
+    if (L.problemasDelCarrito(carrito).length) continue;
+    const v = L.armarVenta({ carrito, tienda_id: 1, usuario_id: 2 });
+    const r = EsquemaVenta.safeParse(v);
+    if (!r.success) { malos++; primero ||= JSON.stringify(r.error.issues[0]); }
+  }
+  check('3000 carritos armados por la tablet pasan la validacion del servidor', malos === 0,
+    `${malos} rechazados; ${primero}`);
+
+  const u = L.nuevoUuid();
+  check('la tablet genera identificadores que el servidor acepta',
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(u), u);
+
+  // De punta a punta por /sync/push: dos ventas buenas y una a credito, que
+  // por este camino se rechaza. Despues, el reenvio del mismo lote (la
+  // respuesta se perdio en el camino).
+  const item = { id: PRODUCTO, nombre: 'x', precio_venta: PRECIO, precio_costo: COSTO };
+  const v1 = L.armarVenta({ carrito: L.agregar([], item, 1), tienda_id: TIENDA_FER, usuario_id: JUAN });
+  const v2 = L.armarVenta({ carrito: [{ ...L.agregar([], item, 3)[0], descuento: 0.1 }],
+                            tienda_id: TIENDA_FER, usuario_id: JUAN });
+  const v3 = L.armarVenta({ carrito: L.agregar([], item, 1), tienda_id: TIENDA_FER, usuario_id: JUAN,
+                            metodo_pago: 'credito', cliente_id: CLIENTE_CONSTRUCTORA });
+  const lote = [v1, v2, v3];
+  const r1 = await pedir('POST', '/sync/push', tokenJuanFer, { ventas: lote });
+  const a1 = L.aplicarRespuestaSync(lote, r1.json());
+  check('la cola confirma las dos ventas validas, con su numero',
+    a1.confirmadas.length === 2 && a1.confirmadas.every((c) => c.numero > 0), r1.body);
+  check('la venta a credito queda apartada, no en la cola',
+    a1.apartadas.length === 1 && a1.apartadas[0].motivo === 'regla' && a1.quedan.length === 0,
+    JSON.stringify(a1));
+
+  const r2 = await pedir('POST', '/sync/push', tokenJuanFer, { ventas: [v1, v2] });
+  const a2 = L.aplicarRespuestaSync([v1, v2], r2.json());
+  check('reenviar el lote no duplica y devuelve el mismo numero',
+    r2.json().ventas.duplicados === 2 && a2.confirmadas.length === 2
+    && a2.confirmadas[0].numero === a1.confirmadas[0].numero, r2.body);
+
+  check('lo que el servidor no menciona se queda en la cola',
+    L.aplicarRespuestaSync([v1], { ventas: { rechazados: [], asignados: [] } }).quedan.length === 1);
+
+  // Existencias: con 79 no se pueden vender 80 (paso en la prueba con la
+  // duenia), y sin existencia no se agrega nada.
+  const de79 = L.limitarAExistencia(80, 79, 'Cemento', 'Bolsa');
+  check('con 79 en existencia, pedir 80 deja 79 y avisa',
+    de79.cantidad === 79 && /Solo hay 79 Bolsa de Cemento/.test(de79.aviso), JSON.stringify(de79));
+  check('pedir lo que hay no avisa', L.limitarAExistencia(79, 79).aviso === null);
+  check('sin existencia no se agrega', L.limitarAExistencia(1, 0).cantidad === 0
+    && L.limitarAExistencia(1, -3).cantidad === 0);
+  check('con medidas fraccionarias se limita a lo que hay', L.limitarAExistencia(3, 2.5).cantidad === 2.5);
+
+  const sug = L.sugerenciasDePago(203.5);
+  check('los montos sugeridos empiezan por el exacto y no quedan por debajo del total',
+    sug[0] === 203.5 && sug.every((m) => m >= 203.5) && sug.includes(500), JSON.stringify(sug));
+}
+
+// -----------------------------------------------------------------------------
+console.log('\n30. Existencias: con conexion no se vende lo que no hay');
+// -----------------------------------------------------------------------------
+// En la prueba con la duenia se vendieron 80 de un producto del que habia 79,
+// y el stock quedo en negativo. La tablet ya lo frena; aca se comprueba que el
+// servidor tambien, para la venta con conexion. La que llega por la cola sin
+// conexion se acepta igual: la mercaderia ya se entrego, y rechazarla borraria
+// del registro una venta que ocurrio.
+{
+  const hay = await stockDe(PRODUCTO, TIENDA_FER);
+  const linea = (cantidad) => ({ producto_id: PRODUCTO, cantidad, precio_unitario: PRECIO,
+                                 costo_unitario: COSTO, descuento: 0,
+                                 subtotal: Math.round(cantidad * PRECIO * 100) / 100 });
+  const venta = (cantidad) => ({ tienda_id: TIENDA_FER, metodo_pago: 'tarjeta',
+                                 subtotal: linea(cantidad).subtotal, descuento: 0,
+                                 total: linea(cantidad).subtotal, lineas: [linea(cantidad)] });
+
+  const demas = await pedir('POST', '/ventas', tokenJuanFer, venta(hay + 1));
+  check(`vender ${hay + 1} cuando hay ${hay} se rechaza con 409`, demas.statusCode === 409,
+    `${demas.statusCode}: ${demas.body}`);
+  check('el mensaje dice que producto y cuanto hay',
+    demas.statusCode === 409 && new RegExp(`hay ${hay}\\b`).test(demas.json().error)
+    && demas.json().faltantes?.[0]?.producto_id === PRODUCTO, demas.body);
+  check('y no se toco el stock', await stockDe(PRODUCTO, TIENDA_FER) === hay);
+
+  const justo = await pedir('POST', '/ventas', tokenJuanFer, venta(hay));
+  check('vender exactamente lo que hay se permite', justo.statusCode === 201, justo.body);
+  check('y el stock queda en cero, no en negativo', await stockDe(PRODUCTO, TIENDA_FER) === 0);
+
+  const sinNada = await pedir('POST', '/ventas', tokenJuanFer, venta(1));
+  check('sin existencia no se vende ni uno', sinNada.statusCode === 409, sinNada.body);
+
+  // La cola sin conexion: se acepta y queda registrada aunque deje el stock
+  // en negativo. Es la decision documentada, y esta prueba la fija.
+  const L = await import('../cliente/logica.js');
+  const offline = L.armarVenta({
+    carrito: L.agregar([], { id: PRODUCTO, nombre: 'x', precio_venta: PRECIO, precio_costo: COSTO }, 2),
+    tienda_id: TIENDA_FER, usuario_id: JUAN,
+  });
+  const r = await pedir('POST', '/sync/push', tokenJuanFer, { ventas: [offline] });
+  check('una venta sin conexion se acepta aunque no haya existencia',
+    r.json().ventas?.aceptados === 1, r.body);
+  check('y el stock queda en negativo, para que el panel lo muestre',
+    await stockDe(PRODUCTO, TIENDA_FER) === -2);
 }
 
 // -----------------------------------------------------------------------------

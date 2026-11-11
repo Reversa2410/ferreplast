@@ -99,7 +99,7 @@ export async function insertarMovimiento(db, m) {
  * restriccion rechace una venta valida. Calculandolo con la misma aritmetica
  * decimal que la restriccion, no hay forma de que no coincidan.
  */
-export async function insertarVenta(db, v) {
+export async function insertarVenta(db, v, { exigirExistencia = false } = {}) {
   return db.tx(async (tx) => {
     // Solo tiene sentido buscar un duplicado si la venta trae su clave de
     // idempotencia. Una venta hecha con conexion no la necesita: la respuesta
@@ -112,6 +112,46 @@ export async function insertarVenta(db, v) {
       if (yaEsta.rows.length > 0) {
         return { estado: 'duplicado', id: yaEsta.rows[0].id, numero: yaEsta.rows[0].numero };
       }
+    }
+
+    // EXISTENCIA SUFICIENTE (solo en la venta con conexion).
+    //
+    // Va DESPUES del chequeo de duplicado: una venta que ya entro y se
+    // reenvia no tiene que fallar porque ella misma consumio el stock.
+    //
+    // UPDLOCK + HOLDLOCK sobre las filas de Stock: sin el bloqueo, dos ventas
+    // simultaneas del ultimo saco de cemento leen "hay 1" las dos, y las dos
+    // pasan. Con el bloqueo, la segunda espera a que la primera confirme y lee
+    // el stock ya descontado (el trigger lo actualiza dentro de esta misma
+    // transaccion).
+    //
+    // POR QUE NO EN LA SINCRONIZACION: la venta sin conexion ya ocurrio. La
+    // mercaderia salio de la tienda y el cliente tiene su ticket. Rechazarla
+    // no devuelve los productos al estante: solo borra del registro una venta
+    // real. Se acepta, y el stock negativo queda a la vista del panel como lo
+    // que es: una diferencia que hay que revisar.
+    if (exigirExistencia) {
+      const ids = [...new Set(v.lineas.map((l) => l.producto_id))];
+      const params = Object.fromEntries(ids.map((id, i) => [`prod_${i}`, id]));
+      const { rows } = await tx.query(
+        `SELECT p.id, p.nombre, p.unidad_medida, ISNULL(s.cantidad, 0) AS hay
+           FROM PRODUCTO p
+           LEFT JOIN Stock s WITH (UPDLOCK, HOLDLOCK)
+                  ON s.producto_id = p.id AND s.tienda_id = @tienda_id
+          WHERE p.id IN (${ids.map((_, i) => `@prod_${i}`).join(', ')})`,
+        { tienda_id: v.tienda_id, ...params },
+      );
+      const porId = new Map(rows.map((r) => [r.id, r]));
+      const faltantes = [];
+      for (const l of v.lineas) {
+        const p = porId.get(l.producto_id);
+        const hay = Number(p?.hay ?? 0);
+        if (l.cantidad > hay) {
+          faltantes.push({ producto_id: l.producto_id, nombre: p?.nombre ?? `#${l.producto_id}`,
+                           unidad: p?.unidad_medida ?? '', pedida: l.cantidad, hay: Math.max(0, hay) });
+        }
+      }
+      if (faltantes.length) return { estado: 'sin_existencia', faltantes };
     }
 
     // EL NUMERO DE VENTA LO ASIGNA EL SERVIDOR.
