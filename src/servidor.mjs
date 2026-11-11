@@ -17,6 +17,7 @@ import rutasVentas from './rutas/ventas.mjs';
 import rutasCaja from './rutas/caja.mjs';
 import rutasClientes from './rutas/clientes.mjs';
 import rutasUsuarios from './rutas/usuarios.mjs';
+import rutasEstaticas from './estaticos.mjs';
 import { registrarGuardia } from './auth/guardia.mjs';
 
 // -----------------------------------------------------------------------------
@@ -57,6 +58,8 @@ export async function crearApp({ db, logger = false }) {
   await app.register(rutasCaja, { db });
   await app.register(rutasClientes, { db });
   await app.register(rutasUsuarios, { db });
+  // El punto de venta: la pagina, sus scripts y el service worker.
+  await app.register(rutasEstaticas);
 
   // Manejador de errores: registra el detalle en el servidor pero no se lo
   // devuelve al cliente, para no filtrar la estructura interna de la base.

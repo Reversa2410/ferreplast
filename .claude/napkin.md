@@ -7,7 +7,7 @@
 - Each item includes date + "Do instead".
 
 ## Execution & Validation (Highest Priority)
-1. **[2026-11-10] `npm test` corre DOS suites: esquema (52) y API (247)**
+1. **[2026-11-10] `npm test` corre DOS suites: esquema (52) y API (277)**
    `npm run db:test` es `sqlcmd -i db/test-esquema.sql` contra la `FerreplastDB`
    del usuario (tiene que estar sembrada). `npm run test:api` es independiente:
    crea `FerreplastPruebaApi`, le aplica schema+seed, corre y la borra.
@@ -49,8 +49,15 @@
    quedan tapadas por la caja. Afecta al Word, que rasteriza con resvg.
    Do instead: `orient="auto"` (el verificador lo exige).
 9. **[2026-11-10] Las cifras del Word estan en `CIFRAS` de `construir.mjs`**
-   Pruebas (52 + 247) y endpoints (44) estan escritos a mano ahi.
+   Pruebas (52 + 277) y endpoints (44) estan escritos a mano ahi.
    Do instead: al agregar pruebas o rutas, actualizar `CIFRAS` y regenerar.
+10. **[2026-11-10] Probar el punto de venta contra `FerreplastPV`, no `FerreplastDB`**
+   `.claude/launch.json` levanta la API con `DB_NOMBRE=FerreplastPV` en el 3001;
+   vender a mano escribe ventas reales en la base que se apunte. Se crea con
+   schema+seed reemplazando el nombre (como hace test-api.mjs). Para probar
+   sin senial: `preview_stop`, vender, `preview_start`: la cola se envia sola.
+   Do instead: tras cambiar `cliente/`, subir `VERSION` en `cliente/sw.js` si
+   ya hay tablets usandolo, o seguiran con la copia vieja.
 
 ## Shell & Command Reliability
 1. **[2026-11-03] Hay un SQL Server local y se puede probar de verdad**
@@ -213,7 +220,10 @@
    Calcularlo con punto flotante y dejar que la base lo recalcule en DECIMAL
    hace que un caso de redondeo al borde rechace una venta valida.
    Do instead: `CAST(@x AS DECIMAL(18,2))` dentro del INSERT, y derivar la
-   cabecera de las lineas con un UPDATE posterior.
+   cabecera de las lineas con un UPDATE posterior. En JS, toda comparacion de
+   importes redondea el RESULTADO, no solo los operandos: `r2(r2(a) - r2(b))`.
+   `r2(a) - r2(b)` da 0.30000000000000004 y rechazaba rebajas con centavos
+   (prueba 28). El cliente usa las mismas reglas en `cliente/logica.js`.
 8. **[2026-11-06] La tienda del empleado sale de la SESION, no del usuario**
    Un empleado puede estar en las dos (`USUARIO_TIENDA`); elige cual al
    entrar y queda en `SESION.tienda_id`.
