@@ -8,6 +8,7 @@
 // =============================================================================
 
 import { Lienzo, leyenda, titulo, anchoTexto } from './_dibujo.mjs';
+import { leerEsquema, marcas } from './_esquema.mjs';
 
 // ---- Atributos de cada entidad, tal como estan en db/schema.sql -------------
 // [texto, clase]: 'pk' clave primaria, 'atr' atributo, 'der' derivado o calculado.
@@ -469,6 +470,116 @@ export function atributosDerivados() {
   );
   return envolver(960, 510,
     'Atributos derivados: el stock es la suma de los movimientos de inventario, y el saldo de un cliente es lo fiado menos lo abonado. Ninguno de los dos se escribe a mano.', partes);
+}
+
+// =============================================================================
+// Coherencia entre el MER y el esquema real
+// =============================================================================
+
+// En el esquema dos tablas se llaman Usuario y Stock; en el MER, en mayusculas.
+const enMer = (tabla) => tabla.toUpperCase();
+
+/**
+ * Comprueba que el MER tenga exactamente las tablas y las claves foraneas de
+ * db/schema.sql. Sin esto, agregar una tabla al esquema y olvidarse de ATR o
+ * de REL dejaria el diagrama describiendo otro modelo sin que nada fallara.
+ */
+export function compararConEsquema() {
+  const tablas = leerEsquema();
+  const problemas = [];
+  const enEsquema = [...tablas.keys()].map(enMer).sort();
+  const enAtr = Object.keys(ATR).sort();
+  for (const t of enEsquema) if (!enAtr.includes(t)) problemas.push(`la tabla ${t} no esta en el MER`);
+  for (const t of enAtr) if (!enEsquema.includes(t)) problemas.push(`${t} esta en el MER pero no en el esquema`);
+
+  const fks = [...tablas.values()].flatMap((t) =>
+    t.fks.map((f) => `${enMer(f.tabla)}>${enMer(t.nombre)}`)).sort();
+  const rels = REL.map(([x, y]) => `${x}>${y}`).sort();
+  const sobra = [...rels], falta = [];
+  for (const f of fks) {
+    const i = sobra.indexOf(f);
+    if (i === -1) falta.push(f); else sobra.splice(i, 1);
+  }
+  for (const f of falta) problemas.push(`la clave foranea ${f} no tiene relacion en el MER`);
+  for (const r of sobra) problemas.push(`la relacion ${r} del MER no tiene clave foranea`);
+  return problemas;
+}
+
+// =============================================================================
+// 10 -- Modelo relacional, leido directamente de db/schema.sql
+// =============================================================================
+export function modeloRelacional() {
+  const tablas = leerEsquema();
+  const col = { A: 60, B: 500, C: 940, D: 1380, E: 1820, F: 2260 };
+  const R1 = 140, R2 = 440, R3 = 800, R4 = 1260;
+  const ANCHO = 360;
+  const lz = new Lienzo(2680, 1640);
+  titulo(lz, 'FERREPLAST', 'Modelo relacional',
+    `${tablas.size} tablas · ${[...tablas.values()].reduce((a, t) => a + t.fks.length, 0)} claves foráneas · SQL Server`);
+
+  const pos = {
+    CATEGORIA: [col.A, R1], INTENTO_LOGIN: [col.B, R1], NEGOCIO: [col.C, R1],
+    SESION: [col.D, R1], DISPOSITIVO: [col.E, R1], SYNC_LOG: [col.F, R1],
+    PRODUCTO: [col.A, R2], Stock: [col.B, R2], TIENDA: [col.C, R2],
+    USUARIO_TIENDA: [col.D, R2], Usuario: [col.E, R2],
+    MOVIMIENTO_INVENTARIO: [col.A, R3], VENTA_LINEA: [col.B, R3], VENTA: [col.C, R3], CAJA: [col.D, R3],
+    CLIENTE: [col.C, R4], PAGO_CREDITO: [col.D, R4],
+  };
+  const sinLugar = [...tablas.keys()].filter((t) => !pos[t]);
+  if (sinLugar.length) throw new Error(`Tablas sin lugar en el modelo relacional: ${sinLugar.join(', ')}`);
+
+  const centros = {};
+  for (const [nombre, t] of tablas) {
+    const [x, y] = pos[nombre];
+    const c = lz.tabla(nombre, {
+      x, y, ancho: ANCHO,
+      filas: t.columnas.map((c) => ({ marcas: marcas(t, c.nombre), nombre: c.nombre, tipo: c.tipo, nulo: c.nulo })),
+    });
+    centros[nombre] = c.centros;
+  }
+
+  // Cada clave foranea sale de la fila de su columna y apunta a la tabla
+  // referenciada. Las mas cortas primero, para que tomen el camino directo.
+  const fks = [...tablas.values()].flatMap((t) => t.fks.map((f) => ({ t: t.nombre, f })));
+  const dist = ({ t, f }) => Math.abs(pos[t][0] - pos[f.tabla][0]) + Math.abs(pos[t][1] - pos[f.tabla][1]);
+  fks.sort((p, q) => dist(p) - dist(q));
+  for (const { t, f } of fks) lz.reservarSalida(t, centros[t][f.columnas[0]]);
+  for (const { t, f } of fks) {
+    lz.relacion(t, f.tabla, {
+      filaDesde: centros[t][f.columnas[0]],
+      clase: f.alBorrar === 'CASCADE' ? 'rel-amb' : 'rel',
+      lados: t === f.tabla ? { hasta: 'arriba' } : {},
+    });
+  }
+
+  leyendaRelacional(lz, 60, 1600);
+  lz.trazar();
+  return entregar(lz, `Modelo relacional de Ferreplast leido de db/schema.sql: ${tablas.size} tablas con todas sus columnas, tipos y claves. Cada flecha sale de la columna clave foranea y apunta a la tabla que referencia.`);
+}
+
+function leyendaRelacional(lz, x, y) {
+  lz.fondo.push(`<line class="sep" x1="${x}" y1="${y - 26}" x2="${lz.W - x}" y2="${y - 26}"/>`);
+  lz.fondo.push(`<text class="zona" x="${x}" y="${y - 8}">LEYENDA</text>`);
+  const items = [
+    ['card-amb', 'PK', 'clave primaria'],
+    ['card', 'FK', 'clave foránea'],
+    ['card', 'UQ', 'valor único (si no es nulo)'],
+    ['zona', 'NULL', 'admite nulos; sin la marca, es NOT NULL'],
+    ['der', 'calculada', 'columna calculada y persistida'],
+  ];
+  let cx = x;
+  for (const [clase, marca, texto] of items) {
+    lz.fondo.push(`<text class="${clase}" x="${cx}" y="${y + 16}">${marca}</text>`);
+    const w = anchoTexto(marca, 'card') + 10;
+    lz.fondo.push(`<text class="leg" x="${cx + w}" y="${y + 16}">${texto}</text>`);
+    cx += w + anchoTexto(texto, 'leg') + 40;
+  }
+  lz.fondo.push(`<line class="rel" x1="${cx}" y1="${y + 12}" x2="${cx + 34}" y2="${y + 12}" marker-end="url(#ma)"/>`);
+  lz.fondo.push(`<text class="leg" x="${cx + 46}" y="${y + 16}">de la columna FK a la tabla que referencia</text>`);
+  cx += 46 + anchoTexto('de la columna FK a la tabla que referencia', 'leg') + 40;
+  lz.fondo.push(`<line class="rel-amb" x1="${cx}" y1="${y + 12}" x2="${cx + 34}" y2="${y + 12}" marker-end="url(#mb)"/>`);
+  lz.fondo.push(`<text class="leg" x="${cx + 46}" y="${y + 16}">ON DELETE CASCADE</text>`);
+  lz.reservar(x, y - 40, lz.W - 2 * x, 70);
 }
 
 export { anchoTexto };

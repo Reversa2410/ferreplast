@@ -199,7 +199,7 @@ function revisarGeometria(archivo) {
 }
 
 for (const archivo of ['00-modelo-completo.svg', '01-vista-estructura.svg',
-                       '02-vista-operacion.svg', '09-vista-acceso.svg']) {
+                       '02-vista-operacion.svg', '09-vista-acceso.svg', '10-modelo-relacional.svg']) {
   revisarGeometria(archivo);
 }
 

@@ -22,6 +22,10 @@ import {
   ImageRun, PageBreak, PageOrientation, LevelFormat, convertInchesToTwip,
 } from 'docx';
 import { RESUMEN } from '../diagramas/_figuras.mjs';
+import { leerEsquema, marcas } from '../diagramas/_esquema.mjs';
+
+const ESQUEMA = leerEsquema();
+const TOTAL_FK = [...ESQUEMA.values()].reduce((a, t) => a + t.fks.length, 0);
 
 // Rutas relativas al script: antes apuntaban a C:/dev/ferreplast y el
 // documento solo se podia generar en la maquina donde se escribio.
@@ -283,6 +287,7 @@ const indice = [
     ['6', 'Modelo conceptual', 'procesos y reglas de negocio'],
     ['7', 'Modelo entidad-relación', 'el modelo de datos y su trazabilidad'],
     ['8', 'Estado y plan de trabajo', 'qué está hecho y qué falta'],
+    ['A', 'Anexo: diccionario de datos', 'cada tabla, columna por columna'],
   ].map(([n, titulo, desc]) => new Paragraph({
     spacing: { after: 80, line: 280 },
     border: { bottom: { style: BorderStyle.SINGLE, size: 2, color: LINEA, space: 4 } },
@@ -787,8 +792,57 @@ const s7c = [
   vineta([fuerte('Traspaso entre tiendas.'), t(' Se representa con dos movimientos sueltos, una salida y una entrada, sin vínculo entre sí. Tampoco se preguntó con qué frecuencia ocurre.')], 9),
 
   nota('Sobre el estado del modelo entidad-relación', [
-    p(`Los diagramas y las tablas de este documento reflejan el modelo tal como está construido en db/schema.sql y verificado por sus ${CIFRAS.pruebasEsquema} pruebas. Los diagramas se generan a partir de la misma lista de tablas y claves foráneas, así que no pueden describir un modelo distinto del que existe.`,
+    p(`Los diagramas y las tablas de este documento reflejan el modelo tal como está construido en db/schema.sql y verificado por sus ${CIFRAS.pruebasEsquema} pruebas. Antes de dibujar, el generador compara las entidades y relaciones del MER con las tablas y claves foráneas del esquema, y no escribe ningún diagrama si no coinciden.`,
       { size: 20, after: 0, line: 290 }),
+  ]),
+
+  h2('7.5  El modelo relacional'),
+  p(`La traducción del modelo entidad-relación a tablas de SQL Server: ${ESQUEMA.size} tablas y ${TOTAL_FK} claves foráneas. La figura 6, en la página siguiente, no se dibujó a mano: se lee directamente de db/schema.sql, con todas las columnas, sus tipos y sus claves. Cada flecha sale de la fila de la columna que es clave foránea y apunta a la tabla que referencia.`),
+  p('Algunas decisiones de la traducción que conviene tener presentes al leerla:'),
+  ...[
+    [fuerte('La especialización de USUARIO es una sola tabla.'), t(' Administrador y empleado comparten casi todo, así que se implementan en Usuario con la columna rol como discriminante. La restricción CK_USUARIO_CREDENCIALES exige a cada subtipo sus propias credenciales.')],
+    [fuerte('Las entidades asociativas tienen clave compuesta.'), t(' Stock y USUARIO_TIENDA usan como clave primaria el par de claves foráneas: eso hace imposible por diseño que existan dos filas para el mismo par.')],
+    [fuerte('La entidad débil hereda la clave de su dueña.'), t(' La clave de VENTA_LINEA es venta_id más el número de línea, y borrar la venta borra sus líneas (ON DELETE CASCADE).')],
+    [fuerte('Los atributos derivados se calculan, no se capturan.'), t(' El saldo del cliente ni siquiera es columna: lo calcula una vista. El stock sí se guarda, como caché que mantiene un disparador, porque la pantalla de venta lo consulta en cada tecla.')],
+    [fuerte('Los únicos opcionales son índices filtrados.'), t(' El código de producto, la cédula del cliente y el correo del usuario pueden faltar, pero si están no se repiten. En SQL Server una restricción UNIQUE común admitiría un solo NULL en toda la tabla.')],
+  ].map((v) => vineta(v, 27)),
+  p('El detalle de cada columna, con su tipo, si admite nulos y su valor por defecto, está en el Anexo A.'),
+];
+
+// ---- Anexo A. Diccionario de datos ------------------------------------------
+// Se arma leyendo db/schema.sql, igual que la figura 6: si cambia una columna,
+// el anexo cambia solo al regenerar el documento.
+const descFk = (t, c) => {
+  const fk = t.fks.find((f) => f.columnas.includes(c));
+  return fk ? `→ ${fk.tabla}(${fk.ref[fk.columnas.indexOf(c)]})${fk.alBorrar ? ` ${fk.alBorrar}` : ''}` : '';
+};
+const anexo = [
+  new Paragraph({
+    heading: HeadingLevel.HEADING_1,
+    pageBreakBefore: true,
+    spacing: { before: 0, after: 60 },
+    children: [
+      new TextRun({ text: 'A. ', font: F_TIT, size: 32, color: AZUL, bold: true }),
+      new TextRun({ text: 'Diccionario de datos', font: F_TIT, size: 32, color: TINTA, bold: true }),
+    ],
+  }),
+  p(`Las ${ESQUEMA.size} tablas de la base, en el orden en que se crean. Se genera leyendo db/schema.sql al armar este documento, así que no puede contradecir a la base. Una columna sin la marca de nulo es NOT NULL.`,
+    { size: 22, color: T_MED, line: 320 }),
+  ...[...ESQUEMA.values()].flatMap((t) => [
+    h2(t.nombre),
+    tabla([2300, 1900, 800, 2560, 1800],
+      ['Columna', 'Tipo', 'Nulo', 'Clave', 'Por defecto'],
+      t.columnas.map((c) => [
+        [mono(c.nombre, c.calculada ? T_MED : TINTA)],
+        [mono(c.calculada ? `calculada${c.persistida ? ', persistida' : ''}` : c.tipo, T_MED)],
+        c.nulo ? 'sí' : '',
+        [mono([...marcas(t, c.nombre), descFk(t, c.nombre)].filter(Boolean).join(' '), AZUL)],
+        [mono(c.identidad ? 'IDENTITY(1,1)' : (c.defecto ?? ''), T_MED)],
+      ])),
+    ...((t.checks.length || t.unicos.length) ? [p([
+      new TextRun({ text: 'Restricciones: ', font: F_SANS, size: 17, color: T_BAJA, bold: true }),
+      mono([...t.checks, ...t.unicos.map((u) => u.nombre + (u.filtro ? ` (WHERE ${u.filtro})` : ''))].join(' · '), T_MED),
+    ], { after: 120 })] : []),
   ]),
 ];
 
@@ -805,6 +859,7 @@ const s8 = [
       [[fuerte('Levantamiento de requerimientos')], 'Realizado', 'ficha de la visita incompleta'],
       [[fuerte('Modelo conceptual y reglas')], 'Validado con los dueños', `${PROCESOS.length} procesos, ${REGLAS.length} reglas`],
       [[fuerte('Modelo entidad-relación')], 'Completo, con los cambios del levantamiento', `${CIFRAS.entidades} entidades, diagramas verificados`],
+      [[fuerte('Modelo relacional y diccionario')], 'Completos', 'se generan desde db/schema.sql'],
       [[fuerte('Base de datos (SQL Server)')], 'Implementada', [mono(`${CIFRAS.pruebasEsquema} pruebas automatizadas`, T_MED)]],
       [[fuerte('API')], `Implementada: ${CIFRAS.endpoints} rutas`, [mono(`${CIFRAS.pruebasApi} pruebas automatizadas`, T_MED)]],
       [[fuerte('Autenticación y permisos')], 'Implementada', 'PIN, contraseña, sesiones revocables, límite de intentos'],
@@ -901,7 +956,15 @@ const doc = new Document({
           2200, true),
       ] },
 
-    { properties: { page: VERTICAL }, children: [...s7c, ...s8] },
+    { properties: { page: VERTICAL }, children: [...s7c] },
+
+    { properties: { page: APAISADA },
+      children: figura('10-modelo-relacional.svg', PX_H, alto('10-modelo-relacional.svg'),
+        epig('Figura 6 — Modelo relacional. ',
+          `Las ${ESQUEMA.size} tablas con todas sus columnas, leídas de db/schema.sql. PK marca la clave primaria, FK la clave foránea y UQ un valor único; NULL indica que la columna admite nulos. Cada flecha sale de la columna clave foránea y apunta a la tabla referenciada; en ámbar, las que borran en cascada.`),
+        2900) },
+
+    { properties: { page: VERTICAL }, children: [...s8, ...anexo] },
   ],
 });
 

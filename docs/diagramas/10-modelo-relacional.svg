@@ -1,0 +1,511 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2680" height="1640" viewBox="0 0 2680 1640" role="img" aria-label="Modelo relacional de Ferreplast leido de db/schema.sql: 17 tablas con todas sus columnas, tipos y claves. Cada flecha sale de la columna clave foranea y apunta a la tabla que referencia.">
+  <title>Modelo relacional leido de db/schema.sql</title>
+  <rect x="0" y="0" width="2680" height="1640" fill="#FFFFFF"/>
+  <defs>
+    <marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#1F5673"/>
+    </marker>
+    <marker id="mb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#A8551F"/>
+    </marker>
+  </defs>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="28" font-weight="700" fill="#12181F" letter-spacing="0.8" x="40" y="48">FERREPLAST</text>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="16" font-weight="500" fill="#3D4954" x="40" y="72">Modelo relacional</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="40" y="96">17 tablas · 30 claves foráneas · SQL Server</text>
+  <line stroke="#C9D2DA" stroke-width="1" x1="60" y1="1574" x2="2620" y2="1574"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="60" y="1592">LEYENDA</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#A8551F" x="60" y="1616">PK</text>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="12.5" font-weight="500" fill="#3D4954" x="83.64" y="1616">clave primaria</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="221.64000000000001" y="1616">FK</text>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="12.5" font-weight="500" fill="#3D4954" x="245.28000000000003" y="1616">clave foránea</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="376.28000000000003" y="1616">UQ</text>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="12.5" font-weight="500" fill="#3D4954" x="399.92" y="1616">valor único (si no es nulo)</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="628.9200000000001" y="1616">NULL</text>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="12.5" font-weight="500" fill="#3D4954" x="666.2" y="1616">admite nulos; sin la marca, es NOT NULL</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#2F6B4F" font-style="italic" x="979.2" y="1616">calculada</text>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="12.5" font-weight="500" fill="#3D4954" x="1050.58" y="1616">columna calculada y persistida</text>
+  <line stroke="#1F5673" stroke-width="1.4" fill="none" x1="1300.58" y1="1612" x2="1334.58" y2="1612" marker-end="url(#ma)"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="12.5" font-weight="500" fill="#3D4954" x="1346.58" y="1616">de la columna FK a la tabla que referencia</text>
+  <line stroke="#A8551F" stroke-width="1.6" fill="none" x1="1680.58" y1="1612" x2="1714.58" y2="1612" marker-end="url(#mb)"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-size="12.5" font-weight="500" fill="#3D4954" x="1726.58" y="1616">ON DELETE CASCADE</text>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M1820,200 H1760 V420 H1280 V440" marker-end="url(#ma)"/>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M420,220 H440 V120 H400 V140" marker-end="url(#ma)"/>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M940,500 H920 V280 H940" marker-end="url(#ma)"/>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M60,540 H40 V200 H60" marker-end="url(#ma)"/>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M420,900 H440 V660 H420" marker-end="url(#ma)"/>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M940,880 H920 V620 H940" marker-end="url(#ma)"/>
+  <path stroke="#A8551F" stroke-width="1.6" fill="none" d="M1740,480 H1820" marker-end="url(#mb)"/>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M1380,500 H1320 V480 H1300" marker-end="url(#ma)"/>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M860,480 H940" marker-end="url(#ma)"/>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M500,500 H420" marker-end="url(#ma)"/>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M2260,200 H2200 V180 H2180" marker-end="url(#ma)"/>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M1300,920 H1380" marker-end="url(#ma)"/>
+  <path stroke="#A8551F" stroke-width="1.6" fill="none" d="M860,840 H940" marker-end="url(#mb)"/>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M1380,1320 H1320 V1300 H1300" marker-end="url(#ma)"/>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M1740,220 H1820" marker-end="url(#ma)"/>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M940,940 H920 V1280 H940" marker-end="url(#ma)"/>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M1740,1340 H1760 V1020 H1740" marker-end="url(#ma)"/>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M1380,200 H1360 V400 H1840 V440" marker-end="url(#ma)"/>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M1380,240 H1320 V460 H1300" marker-end="url(#ma)"/>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M860,220 H900 V460 H940" marker-end="url(#ma)"/>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M1380,860 H1320 V620 H1300" marker-end="url(#ma)"/>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M1740,880 H1840 V680" marker-end="url(#ma)"/>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M500,880 H460 V640 H420" marker-end="url(#ma)"/>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M420,940 H480 V1020 H940" marker-end="url(#ma)"/>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M940,1320 H880 V260 H940" marker-end="url(#ma)"/>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M1820,500 H1780 V340 H1280 V300" marker-end="url(#ma)"/>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M420,880 H450 V860 H480 V660 H960 V640" marker-end="url(#ma)"/>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M1300,900 H1360 V660 H1820" marker-end="url(#ma)"/>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M1740,1360 H1860 V680" marker-end="url(#ma)"/>
+  <path stroke="#1F5673" stroke-width="1.4" fill="none" d="M420,920 H470 V780 H1340 V640 H1820" marker-end="url(#ma)"/>
+  <!-- tabla NEGOCIO -->
+  <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="940" y="170" width="360" height="130"/>
+  <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="940" y="140" width="360" height="30"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="1120" y="160" text-anchor="middle">NEGOCIO</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#A8551F" x="950" y="184">PK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="996" y="184">id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="184" text-anchor="end">INT</text>
+  <rect fill="#F4F6F8" x="941" y="190" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="996" y="204">nombre</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="204" text-anchor="end">VARCHAR(100)</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="996" y="224">propietario</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="224" text-anchor="end">VARCHAR(100) NULL</text>
+  <rect fill="#F4F6F8" x="941" y="230" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="996" y="244">moneda</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="244" text-anchor="end">VARCHAR(10)</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="996" y="264">activo</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="264" text-anchor="end">BIT</text>
+  <rect fill="#F4F6F8" x="941" y="270" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="996" y="284">created_at</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="284" text-anchor="end">DATETIME2(3)</text>
+  <!-- tabla TIENDA -->
+  <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="940" y="470" width="360" height="170"/>
+  <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="940" y="440" width="360" height="30"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="1120" y="460" text-anchor="middle">TIENDA</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#A8551F" x="950" y="484">PK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="996" y="484">id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="484" text-anchor="end">INT</text>
+  <rect fill="#F4F6F8" x="941" y="490" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="950" y="504">FK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="996" y="504">negocio_id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="504" text-anchor="end">INT</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="996" y="524">nombre</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="524" text-anchor="end">VARCHAR(100)</text>
+  <rect fill="#F4F6F8" x="941" y="530" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="996" y="544">tipo</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="544" text-anchor="end">VARCHAR(50)</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="996" y="564">direccion</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="564" text-anchor="end">VARCHAR(255) NULL</text>
+  <rect fill="#F4F6F8" x="941" y="570" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="996" y="584">prefijo</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="584" text-anchor="end">VARCHAR(10)</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="996" y="604">activo</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="604" text-anchor="end">BIT</text>
+  <rect fill="#F4F6F8" x="941" y="610" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="996" y="624">created_at</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="624" text-anchor="end">DATETIME2(3)</text>
+  <!-- tabla CATEGORIA -->
+  <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="60" y="170" width="360" height="70"/>
+  <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="60" y="140" width="360" height="30"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="240" y="160" text-anchor="middle">CATEGORIA</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#A8551F" x="70" y="184">PK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="116" y="184">id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="410" y="184" text-anchor="end">INT</text>
+  <rect fill="#F4F6F8" x="61" y="190" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="116" y="204">nombre</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="410" y="204" text-anchor="end">VARCHAR(100)</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="70" y="224">FK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="116" y="224">padre_id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="410" y="224" text-anchor="end">INT NULL</text>
+  <!-- tabla PRODUCTO -->
+  <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="60" y="470" width="360" height="210"/>
+  <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="60" y="440" width="360" height="30"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="240" y="460" text-anchor="middle">PRODUCTO</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#A8551F" x="70" y="484">PK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="116" y="484">id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="410" y="484" text-anchor="end">INT</text>
+  <rect fill="#F4F6F8" x="61" y="490" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="70" y="504">UQ</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="116" y="504">codigo</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="410" y="504" text-anchor="end">VARCHAR(50) NULL</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="116" y="524">nombre</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="410" y="524" text-anchor="end">VARCHAR(150)</text>
+  <rect fill="#F4F6F8" x="61" y="530" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="70" y="544">FK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="116" y="544">categoria_id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="410" y="544" text-anchor="end">INT</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="116" y="564">precio_costo</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="410" y="564" text-anchor="end">DECIMAL(18,2)</text>
+  <rect fill="#F4F6F8" x="61" y="570" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="116" y="584">precio_venta</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="410" y="584" text-anchor="end">DECIMAL(18,2)</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="116" y="604">unidad_medida</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="410" y="604" text-anchor="end">VARCHAR(50)</text>
+  <rect fill="#F4F6F8" x="61" y="610" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="116" y="624">activo</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="410" y="624" text-anchor="end">BIT</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="116" y="644">created_at</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="410" y="644" text-anchor="end">DATETIME2(3)</text>
+  <rect fill="#F4F6F8" x="61" y="650" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="116" y="664">updated_at</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="410" y="664" text-anchor="end">DATETIME2(3)</text>
+  <!-- tabla CLIENTE -->
+  <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="940" y="1290" width="360" height="170"/>
+  <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="940" y="1260" width="360" height="30"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="1120" y="1280" text-anchor="middle">CLIENTE</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#A8551F" x="950" y="1304">PK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="996" y="1304">id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="1304" text-anchor="end">INT</text>
+  <rect fill="#F4F6F8" x="941" y="1310" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="950" y="1324">FK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="996" y="1324">negocio_id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="1324" text-anchor="end">INT</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="996" y="1344">nombre</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="1344" text-anchor="end">VARCHAR(150)</text>
+  <rect fill="#F4F6F8" x="941" y="1350" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="996" y="1364">telefono</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="1364" text-anchor="end">VARCHAR(30) NULL</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="950" y="1384">UQ</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="996" y="1384">identificacion</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="1384" text-anchor="end">VARCHAR(30) NULL</text>
+  <rect fill="#F4F6F8" x="941" y="1390" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="996" y="1404">limite_credito</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="1404" text-anchor="end">DECIMAL(18,2)</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="996" y="1424">activo</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="1424" text-anchor="end">BIT</text>
+  <rect fill="#F4F6F8" x="941" y="1430" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="996" y="1444">created_at</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="1444" text-anchor="end">DATETIME2(3)</text>
+  <!-- tabla Usuario -->
+  <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="1820" y="470" width="360" height="210"/>
+  <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="1820" y="440" width="360" height="30"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="2000" y="460" text-anchor="middle">Usuario</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#A8551F" x="1830" y="484">PK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="1876" y="484">id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="2170" y="484" text-anchor="end">INT</text>
+  <rect fill="#F4F6F8" x="1821" y="490" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="1830" y="504">FK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1876" y="504">negocio_id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="2170" y="504" text-anchor="end">INT</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1876" y="524">nombre</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="2170" y="524" text-anchor="end">VARCHAR(100)</text>
+  <rect fill="#F4F6F8" x="1821" y="530" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1876" y="544">rol</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="2170" y="544" text-anchor="end">VARCHAR(20)</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="1830" y="564">UQ</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1876" y="564">email</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="2170" y="564" text-anchor="end">VARCHAR(150) NULL</text>
+  <rect fill="#F4F6F8" x="1821" y="570" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1876" y="584">password_hash</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="2170" y="584" text-anchor="end">VARCHAR(255) NULL</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1876" y="604">pin_hash</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="2170" y="604" text-anchor="end">VARCHAR(255) NULL</text>
+  <rect fill="#F4F6F8" x="1821" y="610" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1876" y="624">activo</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="2170" y="624" text-anchor="end">BIT</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1876" y="644">ultimo_acceso</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="2170" y="644" text-anchor="end">DATETIME2(3) NULL</text>
+  <rect fill="#F4F6F8" x="1821" y="650" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1876" y="664">created_at</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="2170" y="664" text-anchor="end">DATETIME2(3)</text>
+  <!-- tabla USUARIO_TIENDA -->
+  <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="1380" y="470" width="360" height="70"/>
+  <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="1380" y="440" width="360" height="30"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="1560" y="460" text-anchor="middle">USUARIO_TIENDA</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#A8551F" x="1390" y="484">PK FK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="1436" y="484">usuario_id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1730" y="484" text-anchor="end">INT</text>
+  <rect fill="#F4F6F8" x="1381" y="490" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#A8551F" x="1390" y="504">PK FK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="1436" y="504">tienda_id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1730" y="504" text-anchor="end">INT</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1436" y="524">created_at</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1730" y="524" text-anchor="end">DATETIME2(3)</text>
+  <!-- tabla Stock -->
+  <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="500" y="470" width="360" height="130"/>
+  <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="500" y="440" width="360" height="30"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="680" y="460" text-anchor="middle">Stock</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#A8551F" x="510" y="484">PK FK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="556" y="484">tienda_id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="850" y="484" text-anchor="end">INT</text>
+  <rect fill="#F4F6F8" x="501" y="490" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#A8551F" x="510" y="504">PK FK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="556" y="504">producto_id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="850" y="504" text-anchor="end">INT</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="556" y="524">cantidad</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="850" y="524" text-anchor="end">DECIMAL(18,3)</text>
+  <rect fill="#F4F6F8" x="501" y="530" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="556" y="544">cantidad_minima</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="850" y="544" text-anchor="end">DECIMAL(18,3)</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="556" y="564">updated_at</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="850" y="564" text-anchor="end">DATETIME2(3)</text>
+  <rect fill="#F4F6F8" x="501" y="570" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="556" y="584">necesita_reposicion</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#2F6B4F" font-style="italic" x="850" y="584" text-anchor="end">calculada</text>
+  <!-- tabla MOVIMIENTO_INVENTARIO -->
+  <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="60" y="830" width="360" height="250"/>
+  <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="60" y="800" width="360" height="30"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="240" y="820" text-anchor="middle">MOVIMIENTO_INVENTARIO</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#A8551F" x="70" y="844">PK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="116" y="844">id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="410" y="844" text-anchor="end">INT</text>
+  <rect fill="#F4F6F8" x="61" y="850" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="70" y="864">UQ</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="116" y="864">uuid_externo</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="410" y="864" text-anchor="end">UNIQUEIDENTIFIER NULL</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="70" y="884">FK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="116" y="884">tienda_id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="410" y="884" text-anchor="end">INT</text>
+  <rect fill="#F4F6F8" x="61" y="890" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="70" y="904">FK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="116" y="904">producto_id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="410" y="904" text-anchor="end">INT</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="70" y="924">FK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="116" y="924">usuario_id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="410" y="924" text-anchor="end">INT NULL</text>
+  <rect fill="#F4F6F8" x="61" y="930" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="70" y="944">FK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="116" y="944">venta_id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="410" y="944" text-anchor="end">INT NULL</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="116" y="964">tipo</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="410" y="964" text-anchor="end">VARCHAR(20)</text>
+  <rect fill="#F4F6F8" x="61" y="970" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="116" y="984">cantidad</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="410" y="984" text-anchor="end">DECIMAL(18,3)</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="116" y="1004">costo_unitario</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="410" y="1004" text-anchor="end">DECIMAL(18,2) NULL</text>
+  <rect fill="#F4F6F8" x="61" y="1010" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="116" y="1024">motivo</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="410" y="1024" text-anchor="end">VARCHAR(255) NULL</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="116" y="1044">ocurrido_en</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="410" y="1044" text-anchor="end">DATETIME2(3)</text>
+  <rect fill="#F4F6F8" x="61" y="1050" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="116" y="1064">created_at</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="410" y="1064" text-anchor="end">DATETIME2(3)</text>
+  <!-- tabla DISPOSITIVO -->
+  <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="1820" y="170" width="360" height="130"/>
+  <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="1820" y="140" width="360" height="30"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="2000" y="160" text-anchor="middle">DISPOSITIVO</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#A8551F" x="1830" y="184">PK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="1876" y="184">id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="2170" y="184" text-anchor="end">INT</text>
+  <rect fill="#F4F6F8" x="1821" y="190" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="1830" y="204">FK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1876" y="204">tienda_id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="2170" y="204" text-anchor="end">INT</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1876" y="224">nombre</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="2170" y="224" text-anchor="end">VARCHAR(100)</text>
+  <rect fill="#F4F6F8" x="1821" y="230" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1876" y="244">ultimo_sync</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="2170" y="244" text-anchor="end">DATETIME2(3) NULL</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1876" y="264">activo</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="2170" y="264" text-anchor="end">BIT</text>
+  <rect fill="#F4F6F8" x="1821" y="270" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1876" y="284">created_at</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="2170" y="284" text-anchor="end">DATETIME2(3)</text>
+  <!-- tabla SYNC_LOG -->
+  <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="2260" y="170" width="360" height="150"/>
+  <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="2260" y="140" width="360" height="30"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="2440" y="160" text-anchor="middle">SYNC_LOG</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#A8551F" x="2270" y="184">PK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="2316" y="184">id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="2610" y="184" text-anchor="end">INT</text>
+  <rect fill="#F4F6F8" x="2261" y="190" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="2270" y="204">FK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="2316" y="204">dispositivo_id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="2610" y="204" text-anchor="end">INT</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="2316" y="224">registros_enviados</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="2610" y="224" text-anchor="end">INT</text>
+  <rect fill="#F4F6F8" x="2261" y="230" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="2316" y="244">registros_aceptados</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="2610" y="244" text-anchor="end">INT</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="2316" y="264">registros_duplicados</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="2610" y="264" text-anchor="end">INT</text>
+  <rect fill="#F4F6F8" x="2261" y="270" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="2316" y="284">error</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="2610" y="284" text-anchor="end">VARCHAR(MAX) NULL</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="2316" y="304">created_at</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="2610" y="304" text-anchor="end">DATETIME2(3)</text>
+  <!-- tabla CAJA -->
+  <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="1380" y="830" width="360" height="210"/>
+  <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="1380" y="800" width="360" height="30"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="1560" y="820" text-anchor="middle">CAJA</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#A8551F" x="1390" y="844">PK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="1436" y="844">id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1730" y="844" text-anchor="end">INT</text>
+  <rect fill="#F4F6F8" x="1381" y="850" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="1390" y="864">FK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1436" y="864">tienda_id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1730" y="864" text-anchor="end">INT</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="1390" y="884">FK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1436" y="884">usuario_id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1730" y="884" text-anchor="end">INT</text>
+  <rect fill="#F4F6F8" x="1381" y="890" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1436" y="904">monto_inicial</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1730" y="904" text-anchor="end">DECIMAL(18,2)</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1436" y="924">efectivo_contado</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1730" y="924" text-anchor="end">DECIMAL(18,2) NULL</text>
+  <rect fill="#F4F6F8" x="1381" y="930" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1436" y="944">diferencia</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1730" y="944" text-anchor="end">DECIMAL(18,2) NULL</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1436" y="964">estado</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1730" y="964" text-anchor="end">VARCHAR(20)</text>
+  <rect fill="#F4F6F8" x="1381" y="970" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1436" y="984">abierta_en</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1730" y="984" text-anchor="end">DATETIME2(3)</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1436" y="1004">cerrada_en</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1730" y="1004" text-anchor="end">DATETIME2(3) NULL</text>
+  <rect fill="#F4F6F8" x="1381" y="1010" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1436" y="1024">observaciones</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1730" y="1024" text-anchor="end">VARCHAR(MAX) NULL</text>
+  <!-- tabla VENTA -->
+  <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="940" y="830" width="360" height="310"/>
+  <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="940" y="800" width="360" height="30"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="1120" y="820" text-anchor="middle">VENTA</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#A8551F" x="950" y="844">PK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="996" y="844">id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="844" text-anchor="end">INT</text>
+  <rect fill="#F4F6F8" x="941" y="850" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="950" y="864">UQ</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="996" y="864">uuid_externo</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="864" text-anchor="end">UNIQUEIDENTIFIER NULL</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="950" y="884">FK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="996" y="884">tienda_id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="884" text-anchor="end">INT</text>
+  <rect fill="#F4F6F8" x="941" y="890" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="950" y="904">FK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="996" y="904">usuario_id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="904" text-anchor="end">INT NULL</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="950" y="924">FK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="996" y="924">caja_id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="924" text-anchor="end">INT NULL</text>
+  <rect fill="#F4F6F8" x="941" y="930" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="950" y="944">FK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="996" y="944">cliente_id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="944" text-anchor="end">INT NULL</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="996" y="964">numero</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="964" text-anchor="end">INT</text>
+  <rect fill="#F4F6F8" x="941" y="970" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="996" y="984">subtotal</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="984" text-anchor="end">DECIMAL(18,2)</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="996" y="1004">descuento</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="1004" text-anchor="end">DECIMAL(18,2)</text>
+  <rect fill="#F4F6F8" x="941" y="1010" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="996" y="1024">total</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="1024" text-anchor="end">DECIMAL(18,2)</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="996" y="1044">metodo_pago</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="1044" text-anchor="end">VARCHAR(20)</text>
+  <rect fill="#F4F6F8" x="941" y="1050" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="996" y="1064">anulada</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="1064" text-anchor="end">BIT</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="996" y="1084">observaciones</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="1084" text-anchor="end">VARCHAR(MAX) NULL</text>
+  <rect fill="#F4F6F8" x="941" y="1090" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="996" y="1104">ocurrido_en</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="1104" text-anchor="end">DATETIME2(3)</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="996" y="1124">created_at</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1290" y="1124" text-anchor="end">DATETIME2(3)</text>
+  <!-- tabla VENTA_LINEA -->
+  <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="500" y="830" width="360" height="170"/>
+  <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="500" y="800" width="360" height="30"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="680" y="820" text-anchor="middle">VENTA_LINEA</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#A8551F" x="510" y="844">PK FK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="556" y="844">venta_id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="850" y="844" text-anchor="end">INT</text>
+  <rect fill="#F4F6F8" x="501" y="850" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#A8551F" x="510" y="864">PK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="556" y="864">numero</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="850" y="864" text-anchor="end">INT</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="510" y="884">FK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="556" y="884">producto_id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="850" y="884" text-anchor="end">INT</text>
+  <rect fill="#F4F6F8" x="501" y="890" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="556" y="904">cantidad</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="850" y="904" text-anchor="end">DECIMAL(18,3)</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="556" y="924">precio_unitario</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="850" y="924" text-anchor="end">DECIMAL(18,2)</text>
+  <rect fill="#F4F6F8" x="501" y="930" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="556" y="944">costo_unitario</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="850" y="944" text-anchor="end">DECIMAL(18,2)</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="556" y="964">descuento</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="850" y="964" text-anchor="end">DECIMAL(18,2)</text>
+  <rect fill="#F4F6F8" x="501" y="970" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="556" y="984">subtotal</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="850" y="984" text-anchor="end">DECIMAL(18,2)</text>
+  <!-- tabla PAGO_CREDITO -->
+  <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="1380" y="1290" width="360" height="190"/>
+  <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="1380" y="1260" width="360" height="30"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="1560" y="1280" text-anchor="middle">PAGO_CREDITO</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#A8551F" x="1390" y="1304">PK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="1436" y="1304">id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1730" y="1304" text-anchor="end">INT</text>
+  <rect fill="#F4F6F8" x="1381" y="1310" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="1390" y="1324">FK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1436" y="1324">cliente_id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1730" y="1324" text-anchor="end">INT</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="1390" y="1344">FK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1436" y="1344">caja_id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1730" y="1344" text-anchor="end">INT NULL</text>
+  <rect fill="#F4F6F8" x="1381" y="1350" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="1390" y="1364">FK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1436" y="1364">usuario_id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1730" y="1364" text-anchor="end">INT NULL</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1436" y="1384">monto</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1730" y="1384" text-anchor="end">DECIMAL(18,2)</text>
+  <rect fill="#F4F6F8" x="1381" y="1390" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1436" y="1404">metodo_pago</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1730" y="1404" text-anchor="end">VARCHAR(20)</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1436" y="1424">observaciones</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1730" y="1424" text-anchor="end">VARCHAR(MAX) NULL</text>
+  <rect fill="#F4F6F8" x="1381" y="1430" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1436" y="1444">ocurrido_en</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1730" y="1444" text-anchor="end">DATETIME2(3)</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1436" y="1464">created_at</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1730" y="1464" text-anchor="end">DATETIME2(3)</text>
+  <!-- tabla SESION -->
+  <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="1380" y="170" width="360" height="150"/>
+  <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="1380" y="140" width="360" height="30"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="1560" y="160" text-anchor="middle">SESION</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#A8551F" x="1390" y="184">PK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="1436" y="184">token_hash</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1730" y="184" text-anchor="end">CHAR(64)</text>
+  <rect fill="#F4F6F8" x="1381" y="190" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="1390" y="204">FK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1436" y="204">usuario_id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1730" y="204" text-anchor="end">INT</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="1390" y="224">FK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1436" y="224">dispositivo_id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1730" y="224" text-anchor="end">INT NULL</text>
+  <rect fill="#F4F6F8" x="1381" y="230" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="1390" y="244">FK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1436" y="244">tienda_id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1730" y="244" text-anchor="end">INT NULL</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1436" y="264">expira_en</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1730" y="264" text-anchor="end">DATETIME2(3)</text>
+  <rect fill="#F4F6F8" x="1381" y="270" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1436" y="284">revocada_en</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1730" y="284" text-anchor="end">DATETIME2(3) NULL</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="1436" y="304">created_at</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="1730" y="304" text-anchor="end">DATETIME2(3)</text>
+  <!-- tabla INTENTO_LOGIN -->
+  <rect fill="#FFFFFF" stroke="#1F5673" stroke-width="1.6" x="500" y="170" width="360" height="130"/>
+  <rect fill="#E2EDF3" stroke="#1F5673" stroke-width="1.6" x="500" y="140" width="360" height="30"/>
+  <text font-family="'IBM Plex Sans Condensed','Arial Narrow','Segoe UI',sans-serif" font-weight="700" font-size="14" fill="#12181F" letter-spacing="0.6" x="680" y="160" text-anchor="middle">INTENTO_LOGIN</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#A8551F" x="510" y="184">PK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#12181F" font-weight="600" text-decoration="underline" x="556" y="184">id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="850" y="184" text-anchor="end">INT</text>
+  <rect fill="#F4F6F8" x="501" y="190" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="556" y="204">identificador</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="850" y="204" text-anchor="end">VARCHAR(150)</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" font-weight="600" fill="#1F5673" x="510" y="224">FK</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="556" y="224">tienda_id</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="850" y="224" text-anchor="end">INT NULL</text>
+  <rect fill="#F4F6F8" x="501" y="230" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="556" y="244">exitoso</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="850" y="244" text-anchor="end">BIT</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="556" y="264">ip</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="850" y="264" text-anchor="end">VARCHAR(45) NULL</text>
+  <rect fill="#F4F6F8" x="501" y="270" width="358" height="20"/>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="11" fill="#3D4954" x="556" y="284">created_at</text>
+  <text font-family="'IBM Plex Mono','Consolas','Courier New',monospace" font-size="10.5" fill="#66727E" letter-spacing="1" x="850" y="284" text-anchor="end">DATETIME2(3)</text>
+</svg>
