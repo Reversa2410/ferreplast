@@ -5,18 +5,39 @@
 // con resvg antes de incrustarlos. Las figuras van en paginas apaisadas: a lo
 // ancho de una pagina vertical el texto de los diagramas quedaria ilegible.
 //
-// Uso:  node construir.mjs
+// Uso:  npm run word      (o: node docs/word/construir.mjs, desde donde sea)
+//
+// Las cifras que se repiten en el texto (pruebas, endpoints, entidades) estan
+// juntas en CIFRAS, mas abajo. Al cambiar el modelo o agregar pruebas se
+// actualizan ahi y en ningun otro lado.
 // =============================================================================
 
 import { readFileSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 import { Resvg } from '@resvg/resvg-js';
 import {
   Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType,
   Table, TableRow, TableCell, WidthType, ShadingType, BorderStyle,
   ImageRun, PageBreak, PageOrientation, LevelFormat, convertInchesToTwip,
 } from 'docx';
+import { RESUMEN } from '../diagramas/_figuras.mjs';
 
-const DIAG = 'C:/dev/ferreplast/docs/diagramas';
+// Rutas relativas al script: antes apuntaban a C:/dev/ferreplast y el
+// documento solo se podia generar en la maquina donde se escribio.
+const AQUI = dirname(fileURLToPath(import.meta.url));
+const DIAG = join(AQUI, '..', 'diagramas');
+
+// ---- Cifras del proyecto -----------------------------------------------------
+// Las de pruebas salen de correr `npm test`; las del modelo, de las figuras.
+const CIFRAS = {
+  entidades: RESUMEN.entidades,          // 17
+  relaciones: RESUMEN.relaciones,        // 30
+  pruebasEsquema: 52,
+  pruebasApi: 247,
+  endpoints: 44,
+};
+CIFRAS.pruebas = CIFRAS.pruebasEsquema + CIFRAS.pruebasApi;
 
 // ---- Paleta, la misma de los documentos web ---------------------------------
 const TINTA   = '12181F';
@@ -211,12 +232,19 @@ function figura(archivo, ancho, alto, epigrafe, anchoPx, saltoAntes = false) {
 
 const saltoPagina = () => new Paragraph({ children: [new PageBreak()] });
 
+/** Alto en px de una figura a todo el ancho apaisado, leido de su viewBox. */
+function alto(archivo) {
+  const [, w, h] = readFileSync(join(DIAG, archivo), 'utf8').match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/);
+  return Math.round(PX_H * h / w);
+}
+
 // =============================================================================
 // CONTENIDO
 // =============================================================================
 
 // ---- Portada ----------------------------------------------------------------
-const portada = [
+// Es una funcion porque cuenta las reglas, que se definen mas abajo.
+const portada = () => [
   new Paragraph({ spacing: { before: 1800, after: 0 },
     children: [new TextRun({ text: 'DOCUMENTO DE PRESENTACIÓN DE PROYECTO',
       font: F_SANS, size: 17, color: AZUL, bold: true, characterSpacing: 40 })] }),
@@ -233,12 +261,12 @@ const portada = [
     ['Concepto', 'Valor', 'Observación'],
     [
       ['Tiendas', '2', 'Ferretería y plastiquería, en esquinas opuestas'],
-      ['Entidades del modelo', '12', 'Más 3 subtipos de la especialización'],
-      ['Relaciones', '22', 'Más una jerarquía ISA'],
-      ['Procesos definidos', '11', 'Ninguno estaba formalizado'],
-      ['Reglas de negocio', '29', '26 impuestas por la base de datos'],
-      ['Levantamiento', 'Realizado', 'Confirma el diseño; exige 3 cambios'],
-      ['Estado', 'Base de datos y API construidas', '66 pruebas automatizadas'],
+      ['Entidades del modelo', String(CIFRAS.entidades), 'Más 2 subtipos de la especialización de USUARIO'],
+      ['Relaciones', String(CIFRAS.relaciones), 'Una por clave foránea, más una jerarquía ISA'],
+      ['Procesos definidos', String(PROCESOS.length), 'Ninguno estaba formalizado'],
+      ['Reglas de negocio', String(REGLAS.length), `${REGLAS.filter((r) => r[3] === BD).length} impuestas por la base de datos`],
+      ['Levantamiento', 'Realizado', 'Sus 3 cambios ya están en el modelo'],
+      ['Estado', 'Base de datos y API construidas', `${CIFRAS.pruebas} pruebas automatizadas`],
     ]),
   saltoPagina(),
 ];
@@ -297,7 +325,7 @@ const s1 = [
   ], 2),
 
   pendiente('Sobre el estado del documento', [
-    p('El levantamiento de requerimientos ya se realizó y sus resultados están incorporados en la sección 2. Confirmó buena parte del diseño, cerró una duda abierta y reveló tres cosas que el modelo todavía no resuelve; esas tres se detallan en el apartado 7.4.',
+    p('El levantamiento de requerimientos ya se realizó y sus resultados están en la sección 2. Confirmó buena parte del diseño, cerró una duda abierta y reveló tres cosas que el modelo no resolvía: empleados que trabajan en las dos tiendas, crédito a clientes y rebajas por mayoreo. Las tres ya están incorporadas al modelo y verificadas; el apartado 7.4 explica cómo quedó cada una.',
       { size: 20, after: 120, line: 290 }),
     p('Lo que sigue marcado como pendiente es lo que la visita dejó sin responder. Se mantiene a la vista a propósito, para que ningún dato supuesto se exponga como si fuera un hecho comprobado.',
       { size: 20, after: 0, line: 290 }),
@@ -324,7 +352,7 @@ const s2 = [
   vineta([fuerte('Dos poblaciones de usuarios distintas.'), t(' Los empleados atienden el mostrador; la familia supervisa. Necesitan accesos y vistas diferentes.')], 3),
 
   h2('Resultados del levantamiento'),
-  p('Se visitó a los dueños con una guía de preguntas. Lo que sigue es lo que respondieron y lo que cada respuesta implica para el sistema. Cinco respuestas confirman decisiones de diseño ya tomadas; tres obligan a modificar el modelo.'),
+  p('Se visitó a los dueños con una guía de preguntas. Lo que sigue es lo que respondieron y lo que cada respuesta implica para el sistema. Cinco respuestas confirman decisiones de diseño ya tomadas; tres obligaron a modificar el modelo, y esas modificaciones ya están hechas.'),
   tabla([1750, 3700, 3910],
     ['Tema', 'Lo que respondieron', 'Qué implica'],
     [
@@ -339,15 +367,15 @@ const s2 = [
       [[fuerte('Precios')], 'Iguales en las dos tiendas, pero varían según cómo esté el precio en el mercado.',
        'Valida congelar precio y costo en cada venta (RN-10): si cambian seguido, sin eso los reportes del pasado se recalcularían solos.'],
       [[fuerte('Descuentos')], 'Sí acostumbran hacer rebajas por mayoreo.',
-       'No estaba modelado. El descuento existe como monto suelto en la venta, sin regla por cantidad.'],
+       'Incorporado: la rebaja se registra en cada línea de la venta, sobre el producto que se rebajó, y nunca puede superar el importe del renglón.'],
       [[fuerte('Crédito a clientes')], 'Sí, los negocios dan fiado.',
-       'No estaba modelado. Es el cambio más grande que exige el levantamiento.'],
+       'Incorporado: clientes con límite de crédito, abonos a la cuenta y saldo calculado. Fue el cambio más grande.'],
       [[fuerte('Formas de pago')], 'Sólo efectivo.',
        'Simplifica el modelo. El fiado no es otra forma de pago: es una venta que se cobra después, también en efectivo.'],
       [[fuerte('Cierre de caja')], 'Cuentan el dinero a mano y lo verifican contra el cuaderno.',
        'Confirma el proceso PR-05 tal como se definió, incluido el contraste entre lo esperado y lo contado.'],
       [[fuerte('Empleados')], 'No saben cuántos son. Cada tienda tiene los suyos, pero algunos trabajan en las dos.',
-       'Rompe el modelo actual, que ata cada empleado a una sola tienda.'],
+       'Incorporado: un empleado puede estar asignado a una o a las dos tiendas, y elige desde cuál opera al entrar.'],
     ]),
 
   h3('Lo que pidió el dueño'),
@@ -405,8 +433,8 @@ const s3 = [
   p('Por eso el inventario no se guarda como un total, sino como el registro de los hechos que lo modificaron. Sumar movimientos independientes da el mismo resultado sin importar en qué orden lleguen. Esa decisión es la que hace viable trabajar sin conexión, y explica buena parte de la forma del modelo entidad-relación.'),
 
   h2('Viabilidad'),
-  vineta([fuerte('Técnica.'), t(' El esquema de base de datos y la interfaz de sincronización ya están construidos y verificados con 66 pruebas automatizadas. No es una propuesta teórica.')], 5),
-  vineta([fuerte('Económica.'), t(' El hardware necesario son dos tablets de gama básica. La base de datos y el alojamiento tienen capa gratuita suficiente para dos tiendas.')], 5),
+  vineta([fuerte('Técnica.'), t(` La base de datos en SQL Server y la API que la expone (${CIFRAS.endpoints} rutas: ventas, inventario, caja, crédito, usuarios, sincronización y reportes) ya están construidas y verificadas con ${CIFRAS.pruebas} pruebas automatizadas. No es una propuesta teórica.`)], 5),
+  vineta([fuerte('Económica.'), t(' El hardware necesario son dos tablets de gama básica. SQL Server Express es gratuito y su capacidad sobra para dos tiendas.')], 5),
   vineta([fuerte('Operativa.'), t(' La pantalla de venta tiene tres pasos: buscar, agregar, cobrar. No exige capacitación técnica ni cambiar la forma de atender.')], 5),
 
   h2('El sistema tiene competencia'),
@@ -454,15 +482,15 @@ const s5 = [
       ['Inventario por tienda con historial auditable', 'Gestión de proveedores y órdenes de compra'],
       ['Punto de venta con funcionamiento sin conexión', 'Facturación electrónica'],
       ['Cierre de caja con detección de descuadre', 'Nómina, sueldos y comisiones de empleados'],
+      ['Crédito a clientes con límite y abonos', 'Intereses o recargos sobre la deuda'],
       ['Panel consolidado de las dos tiendas', 'Contabilidad general y balances'],
       ['Avisos de stock bajo', 'Venta por internet o catálogo público'],
       ['Roles diferenciados de empleado y administrador', 'Lector de código de barras (previsto, no incluido)'],
     ]),
 
   h3('Limitaciones conocidas'),
-  vineta([fuerte('El crédito a clientes está confirmado pero no construido.'), t(' Los dueños dan fiado, así que el sistema lo necesita. Hoy puede registrar que una venta fue a crédito, pero no quién debe ni cuánto. Es lo primero a incorporar tras el levantamiento.')], 6),
-  vineta([fuerte('Las rebajas por mayoreo no tienen regla.'), t(' Se hacen, y el sistema admite un descuento en la venta, pero no la regla por cantidad que lo justifica.')], 6),
-  vineta([fuerte('Un empleado sólo puede estar en una tienda.'), t(' El levantamiento reveló que algunos trabajan en las dos. El modelo actual no lo permite.')], 6),
+  vineta([fuerte('Fiar exige conexión.'), t(' Es una decisión, no un faltante. El límite de crédito se controla contra el saldo del cliente, que es uno solo para las dos tiendas. Dos tablets sin señal no ven lo que fió la otra, y entre las dos podrían fiarle a la misma persona el doble de su límite. Sin internet se vende en efectivo; el fiado espera a que vuelva la señal.')], 6),
+  vineta([fuerte('La rebaja por mayoreo no tiene tabla de precios.'), t(' Los dueños no manejan precios de mayoreo fijos: la rebaja la negocia quien atiende. El sistema la registra en cada línea y no deja que supere el importe del renglón, pero no la calcula sola.')], 6),
   vineta([fuerte('Traspasos entre tiendas sin vínculo.'), t(' Mover mercadería de una esquina a la otra se registra hoy como dos movimientos sueltos, sin relación entre ellos.')], 6),
   vineta([fuerte('Sin conexión no hay panel.'), t(' El punto de venta funciona desconectado; la supervisión consolidada requiere internet, por definición.')], 6),
   vineta([fuerte('La sincronización tiene demora.'), t(' Si una tablet pasa horas sin señal, el panel muestra datos con esa antigüedad. El sistema informa cuánto hace que cada dispositivo no sincroniza.')], 6),
@@ -490,6 +518,25 @@ const ficha = (codigo, titulo, disparador, pasos, reglas, inst) => [
   ], inst + 100)),
 ];
 
+const noExiste = (texto, rotulo = 'NO EXISTE. ', color = AMBAR) =>
+  [new TextRun({ text: rotulo, font: F_SANS, size: 16, color, bold: true }), t(texto, { size: 17 })];
+
+// [codigo, proceso, como esta hoy, que falta]
+const PROCESOS = [
+  ['PR-01', 'Registro de venta', 'Se anota en un cuaderno, sin formato fijo', 'Formato único, cálculo del total, descuento del stock'],
+  ['PR-02', 'Recepción de mercadería', 'Se guarda y se recuerda; no siempre se anota', 'Registro de entrada con costo, para valorizar el inventario'],
+  ['PR-03', 'Alta y codificación de producto', 'Cada artículo se nombra como se lo conoce', 'Código único, unidad de medida, categoría y precio'],
+  ['PR-04', 'Fijación y cambio de precio', 'El precio vive en la memoria del dueño', 'Precio registrado, y precio histórico de cada venta'],
+  ['PR-05', 'Cierre de caja', 'Se cuenta el efectivo, sin compararlo contra lo esperado', 'Monto esperado calculado y descuadre detectado'],
+  ['PR-06', 'Conteo físico y ajuste', 'Esporádico; las diferencias se asumen sin explicación', 'Ajuste registrado como movimiento, con motivo'],
+  ['PR-07', 'Registro de merma', noExiste('Lo roto o vencido se descarta sin registro'), 'Distinguir la pérdida de la venta: una es costo, la otra ingreso'],
+  ['PR-08', 'Reposición de inventario', 'Se compra cuando se nota que falta', 'Umbral mínimo por producto y aviso anticipado'],
+  ['PR-09', 'Control de acceso del personal', noExiste('Cualquiera anota en el cuaderno'), 'Identificación del responsable de cada operación, en la tienda desde la que opera'],
+  ['PR-10', 'Supervisión consolidada', 'Visitando ambas tiendas o llamando por teléfono', 'Vista única de las dos tiendas con ganancia real'],
+  ['PR-11', 'Sincronización entre tiendas', noExiste('No hay nada que sincronizar en papel', 'NO APLICA. ', T_BAJA), 'Proceso nuevo que introduce el sistema'],
+  ['PR-12', 'Crédito y cobranza', 'Se anota en el cuaderno quién debe; sin límite y sin saldo a la vista', 'Cliente identificado, límite de crédito y saldo que se calcula solo'],
+];
+
 const s6 = [
   h1(6, 'Modelo conceptual'),
   p('El punto de partida real de este proyecto: el negocio no tiene procesos definidos. Nadie escribió nunca cómo se registra una venta o qué se hace cuando llega mercadería. Antes de modelar datos hay que definir esos procesos, porque son ellos los que dictan las reglas, y las reglas las que dictan el modelo.',
@@ -500,37 +547,26 @@ const s6 = [
   p('La consecuencia práctica es que no se puede automatizar lo que no está definido. Si dos empleados anotan la venta de manera distinta, no hay forma de programar el registro de una venta. Por eso el primer trabajo del proyecto no fue técnico: fue proponer los procesos que faltaban.'),
 
   h2('6.2  Inventario de procesos'),
-  p('Se identificaron once procesos necesarios para operar las dos tiendas. Ninguno estaba formalizado; nueve existen como práctica informal y dos directamente no existen.'),
+  p(`Se identificaron ${PROCESOS.length} procesos necesarios para operar las dos tiendas. Ninguno estaba formalizado; diez existen como práctica informal y dos directamente no existen. El de crédito (PR-12) se agregó tras el levantamiento, cuando los dueños confirmaron que fían.`),
   tabla([900, 2100, 3180, 3180],
     ['N.º', 'Proceso', 'Cómo está hoy', 'Qué falta'],
-    [
-      [[cod('PR-01')], [fuerte('Registro de venta')], 'Se anota en un cuaderno, sin formato fijo', 'Formato único, cálculo del total, descuento del stock'],
-      [[cod('PR-02')], [fuerte('Recepción de mercadería')], 'Se guarda y se recuerda; no siempre se anota', 'Registro de entrada con costo, para valorizar el inventario'],
-      [[cod('PR-03')], [fuerte('Alta y codificación de producto')], 'Cada artículo se nombra como se lo conoce', 'Código único, unidad de medida, categoría y precio'],
-      [[cod('PR-04')], [fuerte('Fijación y cambio de precio')], 'El precio vive en la memoria del dueño', 'Precio registrado, y precio histórico de cada venta'],
-      [[cod('PR-05')], [fuerte('Cierre de caja')], 'Se cuenta el efectivo, sin compararlo contra lo esperado', 'Monto esperado calculado y descuadre detectado'],
-      [[cod('PR-06')], [fuerte('Conteo físico y ajuste')], 'Esporádico; las diferencias se asumen sin explicación', 'Ajuste registrado como movimiento, con motivo'],
-      [[cod('PR-07')], [fuerte('Registro de merma')], [new TextRun({ text: 'NO EXISTE. ', font: F_SANS, size: 16, color: AMBAR, bold: true }), t('Lo roto o vencido se descarta sin registro', { size: 17 })], 'Distinguir la pérdida de la venta: una es costo, la otra ingreso'],
-      [[cod('PR-08')], [fuerte('Reposición de inventario')], 'Se compra cuando se nota que falta', 'Umbral mínimo por producto y aviso anticipado'],
-      [[cod('PR-09')], [fuerte('Control de acceso del personal')], [new TextRun({ text: 'NO EXISTE. ', font: F_SANS, size: 16, color: AMBAR, bold: true }), t('Cualquiera anota en el cuaderno', { size: 17 })], 'Identificación del responsable de cada operación'],
-      [[cod('PR-10')], [fuerte('Supervisión consolidada')], 'Visitando ambas tiendas o llamando por teléfono', 'Vista única de las dos tiendas con ganancia real'],
-      [[cod('PR-11')], [fuerte('Sincronización entre tiendas')], [new TextRun({ text: 'NO APLICA. ', font: F_SANS, size: 16, color: T_BAJA, bold: true }), t('No hay nada que sincronizar en papel', { size: 17 })], 'Proceso nuevo que introduce el sistema'],
-    ]),
+    PROCESOS.map(([n, nombre, hoy, falta]) => [[cod(n)], [fuerte(nombre)], hoy, falta])),
 
   h2('6.3  Procesos definidos'),
-  p('Definición formal de los cinco procesos centrales. Cada ficha indica qué lo dispara, los pasos que lo componen y las reglas de negocio que genera. Los seis restantes siguen la misma estructura y se resumen en la tabla de reglas del apartado 6.4.'),
+  p('Definición formal de los seis procesos centrales. Cada ficha indica qué lo dispara, los pasos que lo componen y las reglas de negocio que genera. Los seis restantes siguen la misma estructura y se resumen en la tabla de reglas del apartado 6.4.'),
 
   ...ficha('PR-01', 'Registro de venta',
     'Se dispara cuando un cliente decide llevar mercadería.',
-    ['El empleado se identifica con su PIN en la tablet de su tienda.',
+    ['El empleado se identifica con su PIN; si trabaja en las dos tiendas, elige desde cuál opera.',
      'Busca cada producto por nombre o código y ve el precio y las existencias.',
-     'Arma el pedido indicando la cantidad de cada artículo.',
-     'Cobra y elige la forma de pago.',
+     'Arma el pedido indicando la cantidad de cada artículo y, si corresponde, la rebaja por mayoreo de cada uno.',
+     'Cobra en efectivo o, si es fiado, elige al cliente (ver PR-12).',
      'El sistema registra la venta, su detalle y la salida de stock, todo junto.'],
     [['RN-08', 'Una venta necesita al menos una línea de detalle.'],
      ['RN-09', 'El total es el subtotal menos el descuento, sin excepción.'],
      ['RN-10', 'El precio y el costo se copian al vender y ya no cambian.'],
      ['RN-11', 'El número de comprobante es único dentro de la tienda.'],
+     ['RN-36', 'La rebaja por mayoreo va en la línea y no puede superar su importe.'],
      ['RN-06', 'Una venta descuenta stock: nunca lo aumenta.'],
      ['RN-23', 'La venta, su detalle y el descuento de stock se guardan juntos o no se guarda nada.']], 20),
 
@@ -549,14 +585,15 @@ const s6 = [
   ...ficha('PR-05', 'Cierre de caja',
     'Se dispara al terminar el turno o la jornada.',
     ['Al abrir, se registra el monto inicial que queda en el cajón.',
-     'Durante el turno, las ventas en efectivo se asocian a esa caja.',
+     'Durante el turno, las ventas en efectivo y los abonos de clientes en efectivo se asocian a esa caja.',
      'Al cerrar, el sistema calcula cuánto efectivo debería haber.',
      'El empleado cuenta el dinero real y lo ingresa.',
      'El sistema registra la diferencia entre lo esperado y lo contado.'],
     [['RN-12', 'Una tienda no puede tener dos cajas abiertas al mismo tiempo.'],
      ['RN-13', 'El descuadre se calcula, nunca se escribe a mano.'],
      ['RN-14', 'Una caja no puede cerrarse sin declarar el efectivo contado.'],
-     ['RN-25', 'Se conservan por separado lo esperado y lo contado, para poder auditar cuál estaba mal.']], 22),
+     ['RN-25', 'Lo contado se guarda; lo esperado se recalcula, para poder auditar cuál estaba mal.'],
+     ['RN-34', 'Un abono en efectivo entra al arqueo de la caja en la que se recibió.']], 22),
 
   ...ficha('PR-06', 'Conteo físico y ajuste',
     'Se dispara al hacer inventario, o ante una diferencia detectada.',
@@ -580,7 +617,21 @@ const s6 = [
     [['RN-20', 'Reenviar una operación no la duplica: el identificador lo impide.'],
      ['RN-28', 'Un registro con error no bloquea al resto del envío.'],
      ['RN-04', 'Los movimientos se suman, así que el orden de llegada no altera el resultado.'],
-     ['RN-29', 'Se registra cuándo sincronizó cada dispositivo por última vez.']], 24),
+     ['RN-29', 'Se registra cuándo sincronizó cada dispositivo por última vez.'],
+     ['RN-35', 'Una venta a crédito no se acepta por la cola sin conexión.']], 24),
+
+  ...ficha('PR-12', 'Crédito y cobranza',
+    'Se dispara cuando un cliente se lleva mercadería sin pagar, o cuando vuelve a abonar.',
+    ['El empleado busca al cliente o, si es nuevo, lo registra con su nombre y teléfono.',
+     'El sistema muestra cuánto debe y cuánto le queda de límite.',
+     'Con conexión, se registra la venta como crédito a nombre del cliente.',
+     'Cuando el cliente abona, el monto se registra contra su cuenta, no contra una factura.',
+     'Si el abono es en efectivo, queda asociado a la caja abierta del turno.'],
+    [['RN-30', 'No se puede fiar sin indicar a quién.'],
+     ['RN-31', 'La deuda de un cliente no puede superar su límite de crédito.'],
+     ['RN-32', 'El saldo no se guarda: es lo fiado menos lo abonado.'],
+     ['RN-33', 'Un abono es mayor que cero y no se paga con otra deuda.'],
+     ['RN-35', 'Fiar exige conexión: el límite se controla contra el saldo de las dos tiendas.']], 25),
 
   h2('6.4  Reglas de negocio'),
   p('Las reglas derivadas de los procesos anteriores, con el lugar donde cada una se hace cumplir. Que una regla esté en la base de datos significa que se cumple aunque el programa tenga un error o alguien se conecte directamente a la base; que esté en la aplicación significa que depende del programa.'),
@@ -589,37 +640,50 @@ const s6 = [
 const BD  = () => [new TextRun({ text: 'BD', font: F_SANS, size: 16, color: AZUL, bold: true })];
 const APP = () => [new TextRun({ text: 'APP', font: F_SANS, size: 16, color: AMBAR, bold: true })];
 
+// El mecanismo es el nombre real del objeto en db/schema.sql, para que se
+// pueda buscar. Si se renombra una restriccion, hay que cambiarlo aca.
 const REGLAS = [
-  ['RN-01', 'Un producto pertenece al negocio, no a una tienda', 'PR-03', BD, 'productos.negocio_id'],
-  ['RN-02', 'El código de producto es único en el negocio', 'PR-03', BD, 'uq_productos_codigo'],
-  ['RN-03', 'El stock es por tienda: una sola fila por par', 'PR-02', BD, 'PK (tienda_id, producto_id)'],
-  ['RN-04', 'El stock se deduce sumando los movimientos', 'PR-06', BD, 'disparador de stock'],
-  ['RN-05', 'Todo cambio de stock queda registrado con responsable y momento', 'PR-02', BD, 'movimientos_inventario'],
-  ['RN-06', 'Una venta o merma resta; una entrada o devolución suma', 'PR-01', BD, 'chk_signo_segun_tipo'],
+  ['RN-01', 'Un producto pertenece al negocio, no a una tienda', 'PR-03', BD, 'PRODUCTO sin tienda_id; existencias en Stock'],
+  ['RN-02', 'El código de producto, si existe, es único', 'PR-03', BD, 'UX_PRODUCTO_CODIGO (índice filtrado)'],
+  ['RN-03', 'El stock es por tienda: una sola fila por par', 'PR-02', BD, 'PK_STOCK (tienda_id, producto_id)'],
+  ['RN-04', 'El stock se deduce sumando los movimientos', 'PR-06', BD, 'trg_movimiento_actualiza_stock'],
+  ['RN-05', 'Todo cambio de stock queda registrado con responsable y momento', 'PR-02', BD, 'MOVIMIENTO_INVENTARIO'],
+  ['RN-06', 'Una venta o merma resta; una entrada o devolución suma', 'PR-01', BD, 'CK_MOVIMIENTO_SIGNO'],
   ['RN-07', 'El historial de inventario es inalterable', 'PR-06', BD, 'trg_movimientos_inmutables'],
   ['RN-08', 'Una venta necesita al menos una línea', 'PR-01', APP, 'validación de la API'],
-  ['RN-09', 'Total = subtotal menos descuento', 'PR-01', BD, 'chk_total_coherente'],
-  ['RN-10', 'El precio y el costo se congelan al vender', 'PR-04', BD, 'venta_lineas'],
-  ['RN-11', 'El número de venta es único dentro de la tienda', 'PR-01', BD, 'uq_ventas_numero'],
-  ['RN-12', 'Una tienda no puede tener dos cajas abiertas', 'PR-05', BD, 'uq_caja_abierta_por_tienda'],
-  ['RN-13', 'El descuadre de caja se calcula, no se captura', 'PR-05', BD, 'columna generada'],
-  ['RN-14', 'No se cierra caja sin declarar el efectivo contado', 'PR-05', BD, 'chk_cierre_completo'],
-  ['RN-15', 'El empleado opera su tienda; el administrador ve ambas', 'PR-09', BD, 'usuarios.rol, tienda_id'],
-  ['RN-16', 'Las credenciales dependen del rol', 'PR-09', BD, 'chk_credenciales'],
-  ['RN-17', 'No se borra un producto con historial', 'PR-03', BD, 'FK RESTRICT'],
-  ['RN-18', 'Borrar una venta borra su detalle', 'PR-01', BD, 'FK CASCADE'],
-  ['RN-19', 'El dato histórico sobrevive a la baja del empleado', 'PR-09', BD, 'FK SET NULL'],
-  ['RN-20', 'Reenviar una operación no la duplica', 'PR-11', BD, 'PK del dispositivo'],
-  ['RN-21', 'Las categorías forman jerarquía', 'PR-03', BD, 'categorias.padre_id'],
-  ['RN-22', 'Se avisa cuando el stock baja del mínimo', 'PR-08', BD, 'v_alertas_stock'],
+  ['RN-09', 'Total = subtotal menos descuento', 'PR-01', BD, 'CK_VENTA_TOTAL, CK_LINEA_SUBTOTAL'],
+  ['RN-10', 'El precio y el costo se congelan al vender', 'PR-04', BD, 'VENTA_LINEA.precio_unitario, costo_unitario'],
+  ['RN-11', 'El número de venta es único dentro de la tienda', 'PR-01', BD, 'UQ_VENTA_NUMERO (lo asigna el servidor)'],
+  ['RN-12', 'Una tienda no puede tener dos cajas abiertas', 'PR-05', BD, 'UX_CAJA_ABIERTA_POR_TIENDA'],
+  ['RN-13', 'El descuadre de caja se calcula, no se captura', 'PR-05', APP, 'lo calcula el servidor al cerrar'],
+  ['RN-14', 'No se cierra caja sin declarar el efectivo contado', 'PR-05', BD, 'CK_CAJA_CIERRE_COMPLETO'],
+  ['RN-15', 'El empleado opera solo sus tiendas; el administrador ve ambas', 'PR-09', APP, 'USUARIO_TIENDA, SESION.tienda_id'],
+  ['RN-16', 'Las credenciales dependen del rol', 'PR-09', BD, 'CK_USUARIO_CREDENCIALES'],
+  ['RN-17', 'No se borra un producto con historial', 'PR-03', BD, 'claves foráneas sin cascada'],
+  ['RN-18', 'Borrar una venta borra su detalle', 'PR-01', BD, 'FK_VENTALINEA_VENTA ON DELETE CASCADE'],
+  ['RN-19', 'El dato histórico sobrevive a la baja del empleado', 'PR-09', BD, 'baja lógica: Usuario.activo'],
+  ['RN-20', 'Reenviar una operación no la duplica', 'PR-11', BD, 'UX_VENTA_UUID, UX_MOV_UUID'],
+  ['RN-21', 'Las categorías forman jerarquía', 'PR-03', BD, 'FK_CATEGORIA_PADRE'],
+  ['RN-22', 'Se avisa cuando el stock baja del mínimo', 'PR-08', BD, 'Stock.necesita_reposicion, v_alertas_stock'],
   ['RN-23', 'Venta, detalle y stock se guardan juntos o nada', 'PR-01', APP, 'transacción'],
-  ['RN-24', 'El costo se guarda al recibir la mercadería', 'PR-02', BD, 'movimientos.costo_unitario'],
-  ['RN-25', 'Se conservan por separado lo esperado y lo contado', 'PR-05', BD, 'cajas'],
-  ['RN-26', 'Los errores se corrigen con un ajuste, no reescribiendo', 'PR-06', BD, "tipo 'ajuste'"],
-  ['RN-27', 'Un movimiento de cantidad cero no se admite', 'PR-06', BD, 'chk_cantidad_no_cero'],
+  ['RN-24', 'El costo se guarda al recibir la mercadería', 'PR-02', BD, 'MOVIMIENTO_INVENTARIO.costo_unitario'],
+  ['RN-25', 'Lo contado se guarda; lo esperado se recalcula', 'PR-05', BD, 'CAJA.efectivo_contado, v_cuadre_caja'],
+  ['RN-26', 'Los errores se corrigen con un ajuste, no reescribiendo', 'PR-06', BD, "CK_MOVIMIENTO_TIPO ('ajuste')"],
+  ['RN-27', 'Un movimiento de cantidad cero no se admite', 'PR-06', BD, 'CK_MOVIMIENTO_NO_CERO'],
   ['RN-28', 'Un registro con error no bloquea el resto del envío', 'PR-11', APP, 'proceso por elemento'],
-  ['RN-29', 'Se registra la última sincronización de cada dispositivo', 'PR-11', BD, 'dispositivos, sync_log'],
+  ['RN-29', 'Se registra la última sincronización de cada dispositivo', 'PR-11', BD, 'DISPOSITIVO.ultimo_sync, SYNC_LOG'],
+  ['RN-30', 'No se fía sin indicar a quién', 'PR-12', BD, 'CK_VENTA_CLIENTE_CREDITO'],
+  ['RN-31', 'La deuda no puede superar el límite de crédito', 'PR-12', BD, 'trg_venta_credito_limite'],
+  ['RN-32', 'El saldo es lo fiado menos lo abonado', 'PR-12', BD, 'v_cuentas_por_cobrar'],
+  ['RN-33', 'Un abono es positivo y no se paga con crédito', 'PR-12', BD, 'CK_PAGO_MONTO, CK_PAGO_METODO'],
+  ['RN-34', 'El abono en efectivo entra al arqueo de su caja', 'PR-05', BD, 'PAGO_CREDITO.caja_id, v_cuadre_caja'],
+  ['RN-35', 'Fiar exige conexión', 'PR-12', APP, 'la sincronización rechaza el crédito'],
+  ['RN-36', 'La rebaja por mayoreo va en la línea y no supera su importe', 'PR-01', BD, 'CK_LINEA_DESCUENTO'],
+  ['RN-37', 'Un empleado puede trabajar en varias tiendas con un solo usuario', 'PR-09', BD, 'PK_USUARIO_TIENDA'],
+  ['RN-38', 'El ingreso se bloquea tras 5 intentos fallidos en 15 minutos', 'PR-09', APP, 'INTENTO_LOGIN'],
+  ['RN-39', 'Una sesión se puede revocar en cualquier momento', 'PR-09', BD, 'SESION.revocada_en'],
 ];
+const reglasApp = REGLAS.filter((r) => r[3] === APP).map((r) => r[0]);
 
 s6.push(
   tabla([800, 3400, 900, 900, 3360],
@@ -627,9 +691,16 @@ s6.push(
     REGLAS.map(([n, regla, proc, donde, mec]) => [
       [cod(n)], regla, [mono(proc, T_MED)], donde(), [mono(mec)],
     ])),
-  nota('Sobre las tres reglas que vive la aplicación', [
-    p('RN-08, RN-23 y RN-28 no las impone la base de datos. Es una debilidad conocida y vale reconocerla antes de que la señalen: si alguien se conectara directamente a la base podría insertar una venta sin líneas. Se podría cerrar con una restricción diferida, a costa de complicar la carga inicial de datos. Se dejó así deliberadamente, y queda anotado como una decisión, no como un descuido.',
-      { size: 20, after: 0, line: 290 }),
+  nota(`Sobre las ${reglasApp.length} reglas que vive la aplicación`, [
+    p(`${reglasApp.join(', ')} no las impone la base de datos. Conviene decirlo antes de que lo señalen, y cada una tiene su razón:`,
+      { size: 20, after: 100, line: 290 }),
+    ...[
+      [fuerte('RN-08.'), t(' Si alguien se conectara directamente a la base podría insertar una venta sin líneas. SQL Server no tiene restricciones diferidas, que es lo que haría falta para exigirlo sin impedir la carga de la cabecera antes que sus líneas.', { size: 20 })],
+      [fuerte('RN-13.'), t(' La diferencia de caja la calcula el servidor al cerrar. La base guarda lo contado y la vista v_cuadre_caja recalcula lo esperado, así que un valor mal guardado se detecta.', { size: 20 })],
+      [fuerte('RN-15.'), t(' Desde que un empleado puede estar en las dos tiendas, la pertenencia vive en otra tabla, y una restricción CHECK no puede consultar otra tabla.', { size: 20 })],
+      [fuerte('RN-23, RN-28 y RN-35.'), t(' Son reglas sobre cómo se procesa un envío, no sobre qué datos son válidos: viven donde está ese proceso.', { size: 20 })],
+      [fuerte('RN-38.'), t(' Contar intentos fallidos y bloquear es comportamiento de la puerta de entrada; la base sólo guarda el registro.', { size: 20 })],
+    ].map((v) => vineta(v, 26)),
   ]),
 );
 
@@ -642,44 +713,70 @@ const s7a = [
   p('El proceso de venta, paso a paso, con lo que cada paso lee o escribe en el modelo. Es la forma más directa de ver que el modelo conceptual y el modelo entidad-relación son la misma cosa contada de dos maneras. La figura 1 está en la página siguiente.'),
 ];
 
+// Proceso -> entidades que lo sostienen y reglas en las que interviene.
+// Al final se comprueba que la tabla cubra TODAS las entidades del modelo y
+// que cada regla aparezca al menos en el proceso que la origina: si no, el
+// documento no se genera, en vez de afirmar una trazabilidad que no cumple.
+const TRAZABILIDAD = [
+  ['PR-01 Registro de venta', ['VENTA', 'VENTA_LINEA', 'MOVIMIENTO_INVENTARIO', 'STOCK', 'PRODUCTO', 'USUARIO', 'TIENDA', 'CAJA'], [6, 8, 9, 11, 18, 23, 36]],
+  ['PR-02 Recepción de mercadería', ['MOVIMIENTO_INVENTARIO', 'STOCK', 'PRODUCTO', 'TIENDA', 'USUARIO'], [3, 5, 6, 24]],
+  ['PR-03 Alta de producto', ['PRODUCTO', 'CATEGORIA', 'NEGOCIO'], [1, 2, 17, 21]],
+  ['PR-04 Fijación de precio', ['PRODUCTO', 'VENTA_LINEA'], [10]],
+  ['PR-05 Cierre de caja', ['CAJA', 'VENTA', 'PAGO_CREDITO', 'USUARIO', 'TIENDA'], [12, 13, 14, 25, 34]],
+  ['PR-06 Conteo y ajuste', ['MOVIMIENTO_INVENTARIO', 'STOCK'], [4, 7, 26, 27]],
+  ['PR-07 Registro de merma', ['MOVIMIENTO_INVENTARIO', 'STOCK'], [5, 6]],
+  ['PR-08 Reposición', ['STOCK', 'PRODUCTO', 'TIENDA'], [22]],
+  ['PR-09 Control de acceso', ['USUARIO', 'USUARIO_TIENDA', 'SESION', 'INTENTO_LOGIN', 'TIENDA', 'NEGOCIO'], [15, 16, 19, 37, 38, 39]],
+  ['PR-10 Supervisión consolidada', ['VENTA', 'VENTA_LINEA', 'STOCK', 'PRODUCTO', 'TIENDA', 'CAJA'], [10, 22, 25]],
+  ['PR-11 Sincronización', ['DISPOSITIVO', 'SYNC_LOG', 'SESION', 'MOVIMIENTO_INVENTARIO', 'VENTA'], [4, 20, 28, 29, 35]],
+  ['PR-12 Crédito y cobranza', ['CLIENTE', 'PAGO_CREDITO', 'VENTA', 'CAJA', 'NEGOCIO'], [30, 31, 32, 33, 35]],
+];
+
+{
+  const usadas = new Set(TRAZABILIDAD.flatMap(([, ents]) => ents));
+  const faltan = RESUMEN.nombres.filter((e) => !usadas.has(e));
+  const sobran = [...usadas].filter((e) => !RESUMEN.nombres.includes(e));
+  const reglaSinProceso = REGLAS.filter(([rn, , proc]) => !TRAZABILIDAD.some(([pr, , rs]) =>
+    pr.startsWith(proc) && rs.includes(+rn.slice(3))));
+  if (faltan.length || sobran.length || reglaSinProceso.length) {
+    throw new Error(`Trazabilidad incompleta. Entidades sin proceso: ${faltan.join(', ') || '-'}. ` +
+      `Nombres que no son entidades: ${sobran.join(', ') || '-'}. ` +
+      `Reglas fuera de su proceso: ${reglaSinProceso.map((r) => r[0]).join(', ') || '-'}.`);
+  }
+}
+
+const dosDig = (n) => String(n).padStart(2, '0');
+
 const s7b = [
   h2('7.2  Trazabilidad del modelo conceptual al modelo de datos'),
   p('Proceso por proceso, las entidades que lo sostienen. Ninguna entidad del modelo existe porque sí: todas aparecen porque algún proceso las necesita.'),
   tabla([2400, 4560, 2400],
     ['Proceso', 'Entidades que intervienen', 'Reglas'],
-    [
-      [[fuerte('PR-01 Registro de venta')], [mono('VENTA, VENTA_LINEA, MOVIMIENTO_INVENTARIO, STOCK, PRODUCTO, USUARIO, TIENDA, CAJA', T_MED)], [mono('RN-06, 08, 09, 10, 11, 18, 23', T_MED)]],
-      [[fuerte('PR-02 Recepción de mercadería')], [mono('MOVIMIENTO_INVENTARIO, STOCK, PRODUCTO, TIENDA, USUARIO', T_MED)], [mono('RN-03, 05, 06, 24', T_MED)]],
-      [[fuerte('PR-03 Alta de producto')], [mono('PRODUCTO, CATEGORIA, NEGOCIO', T_MED)], [mono('RN-01, 02, 17, 21', T_MED)]],
-      [[fuerte('PR-04 Fijación de precio')], [mono('PRODUCTO, VENTA_LINEA', T_MED)], [mono('RN-10', T_MED)]],
-      [[fuerte('PR-05 Cierre de caja')], [mono('CAJA, VENTA, USUARIO, TIENDA', T_MED)], [mono('RN-12, 13, 14, 25', T_MED)]],
-      [[fuerte('PR-06 Conteo y ajuste')], [mono('MOVIMIENTO_INVENTARIO, STOCK', T_MED)], [mono('RN-04, 07, 26, 27', T_MED)]],
-      [[fuerte('PR-07 Registro de merma')], [mono('MOVIMIENTO_INVENTARIO, STOCK', T_MED)], [mono('RN-05, 06', T_MED)]],
-      [[fuerte('PR-08 Reposición')], [mono('STOCK, PRODUCTO, TIENDA', T_MED)], [mono('RN-22', T_MED)]],
-      [[fuerte('PR-09 Control de acceso')], [mono('USUARIO, TIENDA, NEGOCIO', T_MED)], [mono('RN-15, 16, 19', T_MED)]],
-      [[fuerte('PR-10 Supervisión consolidada')], [mono('VENTA, VENTA_LINEA, STOCK, PRODUCTO, TIENDA', T_MED)], [mono('RN-10, 22', T_MED)]],
-      [[fuerte('PR-11 Sincronización')], [mono('DISPOSITIVO, SYNC_LOG, MOVIMIENTO_INVENTARIO, VENTA', T_MED)], [mono('RN-04, 20, 28, 29', T_MED)]],
-    ]),
-  p('La correspondencia se cumple en los dos sentidos. Las 12 entidades del modelo aparecen al menos una vez en la columna del medio: no hay ninguna que no responda a un proceso. Y los 11 procesos tienen entidades que los sostienen: ninguno quedó sin modelar.'),
+    TRAZABILIDAD.map(([proc, ents, rs]) => [
+      [fuerte(proc)], [mono(ents.join(', '), T_MED)],
+      [mono(`RN-${rs.map(dosDig).join(', ')}`, T_MED)],
+    ])),
+  p(`La correspondencia se cumple en los dos sentidos. Las ${CIFRAS.entidades} entidades del modelo aparecen al menos una vez en la columna del medio: no hay ninguna que no responda a un proceso. Y los ${PROCESOS.length} procesos tienen entidades que los sostienen: ninguno quedó sin modelar.`),
   h2('7.3  El modelo entidad-relación'),
-  p('El modelo completo se presenta en tres figuras. La figura 2 muestra las 12 entidades y las 22 relaciones juntas; por su densidad conviene para ver la forma general. Las figuras 3 y 4 parten ese mismo modelo en dos vistas legibles: la estructura del negocio y el catálogo, y la operación de venta. Las tres están en las páginas siguientes.'),
+  p(`El modelo completo se presenta en cuatro figuras. La figura 2 muestra las ${CIFRAS.entidades} entidades y las ${CIFRAS.relaciones} relaciones juntas; por su densidad conviene para ver la forma general. Las figuras 3, 4 y 5 parten ese mismo modelo en vistas legibles: la estructura del negocio y el catálogo; la operación de venta, caja y crédito; y el acceso y la sincronización. Están en las páginas siguientes.`),
+  p('Los recorridos de las líneas no se dibujaron a mano: los calcula el script que genera los diagramas, que además verifica que ninguna línea atraviese una entidad y ningún rótulo quede encima de una línea.'),
 ];
 
 const s7c = [
-  h2('7.4  Cambios que exige el levantamiento'),
-  p('El modelo presentado hasta aquí se construyó antes de hablar con los dueños, a partir de cómo suelen funcionar negocios de este tipo. El levantamiento confirmó la mayor parte, cerró una duda y dejó tres cosas que el modelo todavía no resuelve. Reconocerlas es parte del trabajo.'),
-  tabla([2500, 3430, 3430],
-    ['Hallazgo', 'Qué exige el modelo', 'Alcance del cambio'],
+  h2('7.4  Cambios que exigió el levantamiento'),
+  p('La primera versión del modelo se construyó antes de hablar con los dueños, a partir de cómo suelen funcionar negocios de este tipo. El levantamiento confirmó la mayor parte, cerró una duda y dejó tres cosas que ese modelo no resolvía. Las tres ya están incorporadas; lo que sigue es cómo quedó cada una y qué decisión la sostiene.'),
+  tabla([2300, 3530, 3530],
+    ['Hallazgo', 'Cómo quedó en el modelo', 'La decisión que importa'],
     [
       [[fuerte('Algunos empleados trabajan en las dos tiendas')],
-       'Una relación muchos a muchos entre USUARIO y TIENDA, con una entidad intermedia de asignación.',
-       'Modificación, no adición. Hoy cada empleado cuelga de una sola tienda y la restricción de credenciales exige esa tienda. Ambas cosas dejan de valer.'],
+       [mono('USUARIO_TIENDA', T_MED), t(' resuelve el muchos a muchos entre usuario y tienda. La tienda desde la que se opera ahora se guarda en la sesión.', { size: 17 })],
+       'Pertenecer a una tienda y estar operando desde ella son dos datos distintos. Crear dos usuarios para la misma persona habría partido en dos sus ventas y le habría dado dos PIN.'],
       [[fuerte('Dan crédito a los clientes')],
-       'Una entidad CLIENTE y el registro de cobros, para saber quién debe y cuánto queda pendiente tras cada pago parcial.',
-       'La adición más grande. Sin esto el sistema registra que una venta fue fiada pero no puede decir a quién.'],
+       [mono('CLIENTE', T_MED), t(' con límite de crédito, ', { size: 17 }), mono('PAGO_CREDITO', T_MED), t(' para los abonos, y la vista ', { size: 17 }), mono('v_cuentas_por_cobrar', T_MED), t(' con el saldo.', { size: 17 })],
+       'El saldo no se guarda: se calcula. El abono va a la cuenta del cliente y no a una factura, y el que se paga en efectivo entra al arqueo de la caja.'],
       [[fuerte('Hacen rebajas por mayoreo')],
-       'Una regla de descuento por cantidad, aplicada en la línea de venta y no como monto suelto en la cabecera.',
-       'Adición acotada. El descuento ya existe; falta la regla que lo justifica y lo hace reproducible.'],
+       [t('Columna ', { size: 17 }), mono('descuento', T_MED), t(' en cada línea de venta, con la restricción ', { size: 17 }), mono('CK_LINEA_DESCUENTO', T_MED), t('.', { size: 17 })],
+       'La rebaja es sobre un producto, no sobre la boleta. En la cabecera habría que repartirla entre las líneas para saber cuánto se ganó con cada producto, y cualquier forma de repartirla sería inventada.'],
     ]),
 
   h3('Lo que el levantamiento dejó fuera de discusión'),
@@ -690,7 +787,7 @@ const s7c = [
   vineta([fuerte('Traspaso entre tiendas.'), t(' Se representa con dos movimientos sueltos, una salida y una entrada, sin vínculo entre sí. Tampoco se preguntó con qué frecuencia ocurre.')], 9),
 
   nota('Sobre el estado del modelo entidad-relación', [
-    p('Los diagramas y las tablas de este documento reflejan el modelo tal como está construido y verificado hoy. Los tres cambios de arriba están identificados pero todavía no incorporados, y así se presentan a propósito: un modelo que dice ser una cosa y es otra vale menos que uno que declara con precisión hasta dónde llega.',
+    p(`Los diagramas y las tablas de este documento reflejan el modelo tal como está construido en db/schema.sql y verificado por sus ${CIFRAS.pruebasEsquema} pruebas. Los diagramas se generan a partir de la misma lista de tablas y claves foráneas, así que no pueden describir un modelo distinto del que existe.`,
       { size: 20, after: 0, line: 290 }),
   ]),
 ];
@@ -706,27 +803,30 @@ const s8 = [
     ['Componente', 'Estado', 'Verificación'],
     [
       [[fuerte('Levantamiento de requerimientos')], 'Realizado', 'ficha de la visita incompleta'],
-      [[fuerte('Modelo conceptual y reglas')], 'Validado con los dueños', 'tres cambios pendientes (7.4)'],
-      [[fuerte('Modelo entidad-relación')], 'Completo', 'documentado y diagramado'],
-      [[fuerte('Esquema de base de datos')], 'Implementado', [mono('28 pruebas automatizadas', T_MED)]],
-      [[fuerte('Interfaz de sincronización')], 'Implementada', [mono('38 pruebas automatizadas', T_MED)]],
-      [[fuerte('Autenticación')], 'Pendiente', '—'],
-      [[fuerte('Punto de venta')], 'Pendiente', '—'],
-      [[fuerte('Panel de administración')], 'Pendiente', '—'],
+      [[fuerte('Modelo conceptual y reglas')], 'Validado con los dueños', `${PROCESOS.length} procesos, ${REGLAS.length} reglas`],
+      [[fuerte('Modelo entidad-relación')], 'Completo, con los cambios del levantamiento', `${CIFRAS.entidades} entidades, diagramas verificados`],
+      [[fuerte('Base de datos (SQL Server)')], 'Implementada', [mono(`${CIFRAS.pruebasEsquema} pruebas automatizadas`, T_MED)]],
+      [[fuerte('API')], `Implementada: ${CIFRAS.endpoints} rutas`, [mono(`${CIFRAS.pruebasApi} pruebas automatizadas`, T_MED)]],
+      [[fuerte('Autenticación y permisos')], 'Implementada', 'PIN, contraseña, sesiones revocables, límite de intentos'],
+      [[fuerte('Sincronización sin conexión')], 'Implementada', 'reenvíos sin duplicar'],
+      [[fuerte('Crédito y abonos')], 'Implementado', 'límite controlado por la base'],
+      [[fuerte('Punto de venta (tablet)')], 'Pendiente', '—'],
+      [[fuerte('Panel de administración')], 'Pendiente', 'la API de reportes ya existe'],
     ]),
 
+  p('Durante esta etapa la base de datos se migró de PostgreSQL a SQL Server. Las pruebas se portaron junto con ella y todas pasan sobre la versión actual.'),
+
   nota('Sobre la verificación', [
-    p('Las 66 pruebas no comprueban solamente que el código corra: comprueban las reglas de negocio. Que una venta no pueda aumentar el stock, que el historial no se pueda alterar, que reenviar una operación no la duplique, que una venta a medias no deje rastros. Ese enfoque ya encontró dos errores reales: un cálculo de ganancia inflado al triple por una suma mal agrupada, y una prueba que sólo fallaba entre medianoche y las dos de la madrugada.',
+    p(`Las ${CIFRAS.pruebas} pruebas no comprueban solamente que el código corra: comprueban las reglas de negocio. Que una venta no pueda aumentar el stock, que el historial no se pueda alterar, que reenviar una operación no la duplique, que no se pueda fiar por encima del límite, que una venta a medias no deje rastros. Ese enfoque ya encontró errores reales: un cálculo de ganancia inflado al triple por una suma mal agrupada, y un reporte diario que contaba las ventas de la tarde en el día siguiente, porque la base guarda la hora universal y Nicaragua está seis horas atrás.`,
       { size: 20, after: 0, line: 290 }),
   ]),
 
   h3('Próximos pasos'),
   ...[
-    'Incorporar al modelo los tres cambios del apartado 7.4: empleados en varias tiendas, clientes con crédito y descuento por mayoreo.',
-    'Completar la ficha de datos que la visita dejó sin llenar, sobre todo cómo llevan hoy la cuenta de quién debe.',
-    'Autenticación, antes de construir las pantallas: hacerlo después obliga a rehacer parte del cliente.',
-    'Punto de venta con funcionamiento sin conexión.',
-    'Panel de administración consolidado.',
+    'Completar la ficha de datos que la visita dejó sin llenar: tiendas, empleados y cómo llevan hoy la cuenta de quién debe.',
+    'Punto de venta para la tablet, con funcionamiento sin conexión.',
+    'Panel de administración consolidado, sobre los reportes que la API ya ofrece.',
+    'Carga inicial y codificación del catálogo: los dueños no saben cuántos productos manejan, y es el mayor riesgo para poner el sistema en marcha.',
     'Prueba en tienda en paralelo con el cuaderno, hasta que los dueños confíen en el sistema.',
   ].map((o) => numerada(o, 11)),
 ];
@@ -771,29 +871,33 @@ const doc = new Document({
   },
   sections: [
     { properties: { page: VERTICAL },
-      children: [...portada, ...indice, ...s1, ...s2, ...s3, ...s4, ...s5, ...s6, ...s7a] },
+      children: [...portada(), ...indice, ...s1, ...s2, ...s3, ...s4, ...s5, ...s6, ...s7a] },
 
     { properties: { page: APAISADA },
       children: figura('08-proceso-venta.svg', PX_H, Math.round(PX_H * 500 / 1140),
         epig('Figura 1 — El proceso de venta sobre el modelo. ',
-          'Los tres primeros pasos sólo leen. El paso 3 no escribe nada: hasta que no se cobra, la venta no existe. Los pasos 4 y 5 escriben, y lo hacen en una sola operación indivisible (regla RN-23). Los movimientos de inventario no los envía la tablet: los deriva el servidor de las líneas de la venta, con lo que resulta imposible que exista una venta sin su descuento de stock.'),
+          'Los dos primeros pasos sólo leen. El paso 3 no escribe nada: hasta que no se cobra, la venta no existe. Los pasos 4 y 5 escriben, y lo hacen en una sola operación indivisible (regla RN-23). Los movimientos de inventario no los envía la tablet: los deriva el servidor de las líneas de la venta, con lo que resulta imposible que exista una venta sin su descuento de stock.'),
         2200) },
 
     { properties: { page: VERTICAL }, children: [...s7b] },
 
     { properties: { page: APAISADA },
       children: [
-        ...figura('00-modelo-completo.svg', PX_H, Math.round(PX_H * 1240 / 1840),
+        ...figura('00-modelo-completo.svg', PX_H, alto('00-modelo-completo.svg'),
           epig('Figura 2 — Modelo entidad-relación completo. ',
-            'Las 12 entidades y las 22 relaciones. En ámbar, las construcciones del modelo extendido: la especialización de USUARIO, la entidad débil VENTA_LINEA, la relación recursiva de CATEGORIA y la entidad asociativa STOCK. En verde, los atributos que se calculan en lugar de capturarse. Por su densidad, esta figura sirve para ver la forma general del modelo; las dos siguientes lo presentan en detalle legible.'),
-          2400),
-        ...figura('01-vista-estructura.svg', PX_H, Math.round(PX_H * 760 / 1180),
+            `Las ${CIFRAS.entidades} entidades y las ${CIFRAS.relaciones} relaciones, una por clave foránea. En ámbar, las construcciones del modelo extendido: la especialización de USUARIO en ADMINISTRADOR y EMPLEADO, la entidad débil VENTA_LINEA, la relación recursiva de CATEGORIA y las entidades asociativas STOCK y USUARIO_TIENDA. En verde, los atributos que se calculan en lugar de capturarse. Por su densidad, esta figura sirve para ver la forma general; las tres siguientes lo presentan en detalle legible.`),
+          2600),
+        ...figura('01-vista-estructura.svg', PX_H, alto('01-vista-estructura.svg'),
           epig('Figura 3 — Vista de estructura. ',
-            'El negocio es la raíz de la que cuelgan tiendas, usuarios, categorías y productos. El catálogo es único para las dos tiendas: lo que varía por tienda es el STOCK, que en ámbar resuelve la relación muchos a muchos entre tienda y producto. La flecha que sale y vuelve a CATEGORIA es la relación recursiva que arma la jerarquía de rubros.'),
+            'El negocio es la raíz de la que cuelgan tiendas, usuarios y clientes. El catálogo es único para las dos tiendas: lo que varía por tienda es el STOCK, que resuelve la relación muchos a muchos entre tienda y producto. USUARIO_TIENDA resuelve la otra: un empleado puede trabajar en una tienda o en las dos. La flecha que sale y vuelve a CATEGORIA es la relación recursiva que arma la jerarquía de rubros.'),
           2200, true),
-        ...figura('02-vista-operacion.svg', PX_H, Math.round(PX_H * 720 / 1180),
+        ...figura('02-vista-operacion.svg', PX_H, alto('02-vista-operacion.svg'),
           epig('Figura 4 — Vista de operación. ',
-            'Las entidades punteadas ya se definieron en la figura 3 y aquí sirven de contexto. VENTA_LINEA lleva doble borde por ser entidad débil, y su relación con VENTA se dibuja con doble línea por ser identificadora. USUARIO se conecta dos veces a CAJA: son dos roles distintos de la misma entidad, no dos relaciones repetidas.'),
+            'Las entidades punteadas se definen en la figura 3 y aquí sirven de contexto. VENTA_LINEA lleva doble borde por ser entidad débil, y su relación con VENTA se dibuja con doble línea por ser identificadora. Una venta fiada apunta al CLIENTE; sus abonos van a PAGO_CREDITO y, si son en efectivo, a la CAJA del turno.'),
+          2200, true),
+        ...figura('09-vista-acceso.svg', PX_H, alto('09-vista-acceso.svg'),
+          epig('Figura 5 — Vista de acceso y sincronización. ',
+            'Cada SESION pertenece a un usuario y fija desde qué tienda opera, que es lo que decide qué datos puede tocar. INTENTO_LOGIN no tiene clave foránea al usuario a propósito: tiene que poder registrar un intento con un correo que no existe. Cada DISPOSITIVO deja en SYNC_LOG cuánto envió, cuánto se aceptó y cuánto era repetido.'),
           2200, true),
       ] },
 
@@ -801,7 +905,7 @@ const doc = new Document({
   ],
 });
 
-const salida = 'Ferreplast - Documento de presentacion.docx';
+const salida = join(AQUI, 'Ferreplast - Documento de presentacion.docx');
 const buffer = await Packer.toBuffer(doc);
 writeFileSync(salida, buffer);
 console.log(`Generado: ${salida}  (${(buffer.length / 1024).toFixed(0)} KB)`);
