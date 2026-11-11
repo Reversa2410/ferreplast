@@ -60,6 +60,20 @@ function reglasDeSincronizacion(venta) {
   return null;
 }
 
+/**
+ * El AJUSTE es la unica operacion que puede hacer desaparecer mercaderia sin
+ * una venta detras, y por eso es del administrador. POST /inventario/movimientos
+ * ya lo exigia; por aca no habia regla, y un empleado podia mandar un ajuste
+ * negativo por la cola y el servidor lo aceptaba (prueba 32). Las dos puertas
+ * tienen que tener la misma cerradura.
+ */
+function reglasDeMovimiento(movimiento, usuario) {
+  if (movimiento.tipo === 'ajuste' && usuario.rol !== ADMIN) {
+    return 'un ajuste de inventario lo registra el administrador';
+  }
+  return null;
+}
+
 // -----------------------------------------------------------------------------
 // Procesamiento del lote
 // -----------------------------------------------------------------------------
@@ -116,7 +130,7 @@ async function procesarLote(db, elementos, esquema, insertar, usuario, log, regl
       continue;
     }
 
-    const problema = reglas?.(elemento);
+    const problema = reglas?.(elemento, usuario);
     if (problema) {
       resultado.rechazados.push({
         uuid_externo: elemento.uuid_externo,
@@ -180,7 +194,7 @@ export default async function rutasSync(app, { db }) {
 
     const resMovimientos = await procesarLote(
       db, movimientos, EsquemaMovimiento, insertarMovimiento,
-      peticion.usuario, peticion.log);
+      peticion.usuario, peticion.log, reglasDeMovimiento);
 
     const resVentas = await procesarLote(
       db, ventas, EsquemaVenta, insertarVenta,

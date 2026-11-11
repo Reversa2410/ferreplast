@@ -333,6 +333,16 @@ pantalla de ingreso carga antes de tener sesión). Cómo usa la API:
 - **Respuesta de `/sync/push`**: aceptados y duplicados salen de la cola,
   `asignados` pone el número definitivo en el comprobante, y los
   `rechazados` se apartan y se muestran, sin reintentarlos.
+- **Entradas de mercadería → `/sync/push`, en `movimientos`**, por la misma cola
+  y en el mismo envío que las ventas: se pueden registrar sin señal. Una por
+  producto, de tipo `entrada`, con su costo y el proveedor o la factura en
+  `motivo`. El servidor procesa los movimientos antes que las ventas, así que
+  lo que llegó y se vendió sin señal suma antes de descontarse. Los movimientos
+  no vuelven en `asignados`: con una respuesta 200, lo que no está en
+  `rechazados` entró o ya estaba.
+- **El ajuste es del administrador también por la cola.** Antes, por
+  `/sync/push` un empleado podía mandar un ajuste y se aceptaba; ahora se
+  rechaza con `motivo: "regla"`, igual que en `POST /inventario/movimientos`.
 - **Caja**: abrir y cerrar exigen señal. No se deja cerrar con ventas en la
   cola, porque el arqueo quedaría corto.
 
