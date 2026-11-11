@@ -6,10 +6,13 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "node db/test-esquema.mjs && node src/test-api.mjs",
-    "db:test": "node db/test-esquema.mjs",
+    "test": "npm run db:test && npm run test:api",
+    "db:crear": "sqlcmd -S localhost -E -C -f 65001 -b -i db/schema.sql",
+    "db:datos": "sqlcmd -S localhost -E -C -f 65001 -b -i db/seed.sql",
+    "db:test": "sqlcmd -S localhost -E -C -f 65001 -b -i db/test-esquema.sql",
+    "db:reset": "npm run db:crear && npm run db:datos && npm run db:test",
     "test:api": "node src/test-api.mjs",
-    "dev": "node --env-file=.env src/servidor.mjs",
+    "dev": "node --env-file-if-exists=.env src/servidor.mjs",
     "diagramas": "node docs/diagramas/_generar.mjs && node docs/diagramas/_verificar.mjs",
     "word": "node docs/word/construir.mjs"
   },
@@ -26,7 +29,8 @@
   "dependencies": {
     "@fastify/cors": "^11.3.0",
     "fastify": "^5.12.1",
-    "pg": "^8.23.0",
+    "msnodesqlv8": "^6.2.2",
+    "mssql": "^12.7.14",
     "zod": "^4.5.2"
   }
 }

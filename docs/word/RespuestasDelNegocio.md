@@ -36,3 +36,14 @@ la duena me comento que tambien les llama la atencion comprar un gestor de inven
 si nuestro objetivo es poder venderles nuestro sistema, entonces ese seria nuestro mayor inconveniente, pues en teoria les sale mas barato comprar un sistema ya existente y verificado por varios negocios sobre lo seguro y versatil que es, ademas este no cuenta con fallos ni errores como los que seguro nos iremos encontrando nosotros en el desarrollo de este sistema.
 
 Pero igual, en todo caso de que no quieran el sistema, al final nos dejaran usar el negocio para nuestro proyecto de Bases de datos.
+## contexto del entorno (observado, no preguntado)
+
+Las tiendas están en un pueblo donde la señal se cae con frecuencia y los
+apagones dejan al local sin internet por ratos. No es un caso excepcional: es
+la condición normal de trabajo.
+
+Por eso el sistema tiene que seguir vendiendo con la conexión caída y
+sincronizar cuando vuelva. Esto no salió de una pregunta del levantamiento,
+sino de conocer el lugar, y es el requisito que justifica `DISPOSITIVO`,
+`SYNC_LOG`, los `uuid_externo` de `VENTA` y `MOVIMIENTO_INVENTARIO`, y que el
+stock se derive de movimientos en vez de guardarse como un total que se pisa.

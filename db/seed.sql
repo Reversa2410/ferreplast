@@ -1,161 +1,561 @@
 -- =============================================================================
--- FERREPLAST -- Datos de prueba (desarrollo)
+-- FERREPLAST -- Datos de prueba
 --
--- Requiere que schema.sql ya se haya ejecutado.
--- Los UUID son fijos y legibles a proposito, para poder referenciarlos a mano
--- durante el desarrollo. En produccion los genera la base o el dispositivo.
+-- Ejecutar DESPUES de schema.sql:
+--   sqlcmd -S localhost -E -C -f 65001 -i db/seed.sql
+--
+-- SOBRE EL STOCK INICIAL
+-- No se insertan filas en Stock directamente. Se registran movimientos de
+-- 'entrada' y el trigger construye el stock a partir de ellos.
+--
+-- Es a proposito: Stock es un cache, no la verdad. Sembrarlo a mano produciria
+-- justo lo que el modelo quiere evitar -- un inventario que nadie puede
+-- explicar, porque no hay ningun hecho registrado que justifique esos numeros.
+-- Asi, cada unidad en el estante tiene un movimiento que la puso ahi.
+--
+-- CANTIDADES REPRODUCIBLES
+-- Se calculan con una formula sobre el id del producto en lugar de usar
+-- RAND(). Los datos tienen que dar siempre lo mismo: hay pruebas automaticas
+-- que verifican totales concretos, y con cantidades al azar fallarian a veces.
 -- =============================================================================
 
-BEGIN;
+USE FerreplastDB;
+GO
+
+SET QUOTED_IDENTIFIER ON;
+SET ANSI_NULLS ON;
+GO
+
+-- Se borra en orden inverso al de las dependencias.
+DELETE FROM INTENTO_LOGIN;
+DELETE FROM SESION;
+DELETE FROM USUARIO_TIENDA;
+DELETE FROM PAGO_CREDITO;
+DELETE FROM VENTA_LINEA;
+-- Los movimientos apuntan a ventas: hay que soltarlos antes de borrar VENTA.
+-- Es la unica excepcion permitida al trigger de inmutabilidad, y se consigue
+-- desactivandolo explicitamente: una limpieza de datos de prueba no es una
+-- correccion de historial.
+DISABLE TRIGGER trg_movimientos_inmutables ON MOVIMIENTO_INVENTARIO;
+DELETE FROM MOVIMIENTO_INVENTARIO;
+ENABLE TRIGGER trg_movimientos_inmutables ON MOVIMIENTO_INVENTARIO;
+DELETE FROM VENTA;
+DELETE FROM CLIENTE;
+DELETE FROM CAJA;
+DELETE FROM SYNC_LOG;
+DELETE FROM DISPOSITIVO;
+DELETE FROM Stock;
+DELETE FROM Usuario;
+DELETE FROM PRODUCTO;
+DELETE FROM CATEGORIA;
+DELETE FROM TIENDA;
+DELETE FROM NEGOCIO;
+GO
+
+-- -----------------------------------------------------------------------------
+-- Reinicia los contadores IDENTITY para que los ids sean los mismos en cada
+-- carga. Sin esto, recargar los datos empezaria en 101, 201... y las pruebas
+-- que nombran productos por id dejarian de encontrarlos.
+--
+-- CUIDADO -- TRAMPA DOCUMENTADA DE DBCC CHECKIDENT:
+-- Si la tabla NUNCA tuvo filas, un RESEED a 0 hace que la primera insercion
+-- tome el 0 como id, no el 1. Es decir que correr esto sobre una base recien
+-- creada por schema.sql deja al negocio con id = 0, y todas las claves
+-- foraneas que apuntan al 1 fallan.
+--
+-- Por eso solo se reinicia cuando la tabla YA tuvo filas (last_value no es
+-- nulo). Si nunca las tuvo, el contador ya arranca en 1 y no hay nada que
+-- hacer.
+-- -----------------------------------------------------------------------------
+DECLARE @tabla SYSNAME, @sql NVARCHAR(400);
+
+DECLARE cur CURSOR LOCAL FAST_FORWARD FOR
+    SELECT nombre FROM (VALUES
+        ('NEGOCIO'), ('TIENDA'), ('CATEGORIA'), ('PRODUCTO'), ('Usuario'),
+        ('CLIENTE'), ('PAGO_CREDITO'),
+        ('DISPOSITIVO'), ('SYNC_LOG'), ('CAJA'), ('VENTA'),
+        ('MOVIMIENTO_INVENTARIO'), ('INTENTO_LOGIN')
+    ) AS t(nombre);
+
+OPEN cur;
+FETCH NEXT FROM cur INTO @tabla;
+
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    IF EXISTS (SELECT 1 FROM sys.identity_columns
+                WHERE object_id = OBJECT_ID(@tabla) AND last_value IS NOT NULL)
+    BEGIN
+        SET @sql = N'DBCC CHECKIDENT (''' + @tabla + N''', RESEED, 0) WITH NO_INFOMSGS;';
+        EXEC sp_executesql @sql;
+    END
+    FETCH NEXT FROM cur INTO @tabla;
+END
+
+CLOSE cur;
+DEALLOCATE cur;
+GO
 
 -- -----------------------------------------------------------------------------
 -- Negocio y tiendas
 -- -----------------------------------------------------------------------------
-INSERT INTO negocios (id, nombre, propietario, telefono, moneda) VALUES
-('11111111-0000-0000-0000-000000000001', 'Comercial Familia', 'Familia propietaria', '70000000', 'BOB');
+INSERT INTO NEGOCIO (nombre, propietario, moneda) VALUES
+('Ferreplast', 'Familia propietaria', 'NIO');
 
-INSERT INTO tiendas (id, negocio_id, nombre, tipo, direccion, prefijo) VALUES
-('22222222-0000-0000-0000-000000000001', '11111111-0000-0000-0000-000000000001',
- 'Ferreteria La Esquina',   'ferreteria',   'Calle Principal, esquina norte', 'FER'),
-('22222222-0000-0000-0000-000000000002', '11111111-0000-0000-0000-000000000001',
- 'Plastiqueria El Pueblo',  'plastiqueria', 'Calle Principal, esquina sur',   'PLA');
+INSERT INTO TIENDA (negocio_id, nombre, tipo, direccion, prefijo) VALUES
+(1, 'Ferreplast - Ferreteria',   'ferreteria',   'Modulo Principal',   'FER'),
+(1, 'Ferreplast - Plastiqueria', 'plastiqueria', 'Modulo Secundario',  'PLA');
+GO
+
+-- -----------------------------------------------------------------------------
+-- Categorias (1-5 ferreteria, 6-10 plastiqueria)
+-- -----------------------------------------------------------------------------
+INSERT INTO CATEGORIA (nombre, padre_id) VALUES
+('Herramientas Manuales', NULL),      -- 1
+('Materiales de Construccion', NULL), -- 2
+('Plomeria', NULL),                   -- 3
+('Pinturas y Solventes', NULL),       -- 4
+('Electrico', NULL),                  -- 5
+('Hogar y Cocina', NULL),             -- 6
+('Limpieza', NULL),                   -- 7
+('Jardineria', NULL),                 -- 8
+('Desechables', NULL),                -- 9
+('Organizacion', NULL);               -- 10
+GO
+
+-- =============================================================================
+-- PRODUCTOS -- 50 de ferreteria (1-50) y 50 de plastiqueria (51-100)
+--
+-- Los precios son de venta, en cordobas. El COSTO se calcula abajo.
+-- =============================================================================
+INSERT INTO PRODUCTO (codigo, nombre, precio_venta, unidad_medida, categoria_id) VALUES
+-- Herramientas Manuales (1)
+('FER-001', 'Martillo de una Truper', 250.00, 'Unidad', 1),
+('FER-002', 'Martillo de goma', 180.00, 'Unidad', 1),
+('FER-003', 'Destornillador Plano 1/4"', 85.00, 'Unidad', 1),
+('FER-004', 'Destornillador Phillips 1/4"', 85.00, 'Unidad', 1),
+('FER-005', 'Alicate Universal 8"', 190.00, 'Unidad', 1),
+('FER-006', 'Alicate de presion 10"', 210.00, 'Unidad', 1),
+('FER-007', 'Llave ajustable (Cangreja) 10"', 220.00, 'Unidad', 1),
+('FER-008', 'Cinta metrica 5m', 120.00, 'Unidad', 1),
+('FER-009', 'Nivel de burbuja 24"', 150.00, 'Unidad', 1),
+('FER-010', 'Serrucho para madera 20"', 195.00, 'Unidad', 1),
+-- Materiales de Construccion (2)
+('FER-011', 'Clavos de acero 2"', 45.00, 'Libra', 2),
+('FER-012', 'Clavos de acero 3"', 45.00, 'Libra', 2),
+('FER-013', 'Cemento Canal', 380.00, 'Bolsa', 2),
+('FER-014', 'Arena fina', 600.00, 'Metro Cubico', 2),
+('FER-015', 'Grava triturada', 650.00, 'Metro Cubico', 2),
+('FER-016', 'Varilla de hierro 3/8"', 160.00, 'Varilla', 2),
+('FER-017', 'Alambre de amarre', 35.00, 'Libra', 2),
+('FER-018', 'Tornillo para madera 1" (100 und)', 60.00, 'Caja', 2),
+('FER-019', 'Tuercas hexagonales 1/4" (50 und)', 40.00, 'Caja', 2),
+('FER-020', 'Arandelas planas 1/4" (50 und)', 35.00, 'Caja', 2),
+-- Plomeria (3)
+('FER-021', 'Tubo PVC 1/2" SDR-26', 95.00, 'Tramo', 3),
+('FER-022', 'Tubo PVC 3/4" SDR-26', 140.00, 'Tramo', 3),
+('FER-023', 'Codo PVC 1/2"', 15.00, 'Unidad', 3),
+('FER-024', 'Tee PVC 1/2"', 18.00, 'Unidad', 3),
+('FER-025', 'Adaptador macho PVC 1/2"', 12.00, 'Unidad', 3),
+('FER-026', 'Pegamento para PVC 1/4 Galon', 150.00, 'Unidad', 3),
+('FER-027', 'Cinta Teflon 1/2"', 15.00, 'Unidad', 3),
+('FER-028', 'Llave de pase bronce 1/2"', 145.00, 'Unidad', 3),
+('FER-029', 'Grifo para lavandero', 110.00, 'Unidad', 3),
+('FER-030', 'Sifon de acordeon plastico', 85.00, 'Unidad', 3),
+-- Pinturas y Solventes (4)
+('FER-031', 'Pintura Acrilica Blanca', 450.00, 'Galon', 4),
+('FER-032', 'Pintura Acrilica Negra', 450.00, 'Galon', 4),
+('FER-033', 'Pintura Anticorrosiva Gris', 520.00, 'Galon', 4),
+('FER-034', 'Thinner Corriente', 65.00, 'Litro', 4),
+('FER-035', 'Brocha de cerda natural 2"', 45.00, 'Unidad', 4),
+('FER-036', 'Brocha de cerda natural 3"', 65.00, 'Unidad', 4),
+('FER-037', 'Rodillo para pintar 9"', 90.00, 'Unidad', 4),
+('FER-038', 'Bandeja plastica para pintura', 75.00, 'Unidad', 4),
+('FER-039', 'Lija de agua #150', 10.00, 'Hoja', 4),
+('FER-040', 'Espatula metalica 3"', 55.00, 'Unidad', 4),
+-- Electrico (5)
+('FER-041', 'Cable electrico #12 AWG', 12.00, 'Metro', 5),
+('FER-042', 'Cable electrico #14 AWG', 9.00, 'Metro', 5),
+('FER-043', 'Toma corriente doble', 65.00, 'Unidad', 5),
+('FER-044', 'Apagador sencillo', 55.00, 'Unidad', 5),
+('FER-045', 'Cinta aislante negra (Super 33)', 80.00, 'Unidad', 5),
+('FER-046', 'Bombillo LED 9W', 45.00, 'Unidad', 5),
+('FER-047', 'Socate de porcelana', 35.00, 'Unidad', 5),
+('FER-048', 'Breaker 20A', 140.00, 'Unidad', 5),
+('FER-049', 'Caja termica para 2 breakers', 250.00, 'Unidad', 5),
+('FER-050', 'Tubo Conduit PVC 1/2"', 65.00, 'Tramo', 5);
+
+INSERT INTO PRODUCTO (codigo, nombre, precio_venta, unidad_medida, categoria_id) VALUES
+-- Hogar y Cocina (6)
+('PLA-001', 'Silla plastica con brazos (Blanca)', 350.00, 'Unidad', 6),
+('PLA-002', 'Mesa plastica cuadrada (Blanca)', 850.00, 'Unidad', 6),
+('PLA-003', 'Plato hondo de plastico grueso', 35.00, 'Unidad', 6),
+('PLA-004', 'Plato plano de plastico grueso', 35.00, 'Unidad', 6),
+('PLA-005', 'Vaso plastico reutilizable 250ml', 15.00, 'Unidad', 6),
+('PLA-006', 'Jarra plastica para jugo 2L', 70.00, 'Unidad', 6),
+('PLA-007', 'Cucharon de plastico', 25.00, 'Unidad', 6),
+('PLA-008', 'Contenedor hermetico 1 Litro', 65.00, 'Unidad', 6),
+('PLA-009', 'Contenedor hermetico 2.5 Litros', 110.00, 'Unidad', 6),
+('PLA-010', 'Escurridor de platos plastico', 220.00, 'Unidad', 6),
+-- Limpieza (7)
+('PLA-011', 'Balde plastico 10 Litros', 75.00, 'Unidad', 7),
+('PLA-012', 'Balde plastico 20 Litros', 120.00, 'Unidad', 7),
+('PLA-013', 'Basurero con pedal mediano', 250.00, 'Unidad', 7),
+('PLA-014', 'Basurero de vaiven grande', 320.00, 'Unidad', 7),
+('PLA-015', 'Recogedor de basura con mango', 45.00, 'Unidad', 7),
+('PLA-016', 'Cepillo de lavar ropa', 20.00, 'Unidad', 7),
+('PLA-017', 'Huacal plastico grande', 90.00, 'Unidad', 7),
+('PLA-018', 'Cesto canasta para ropa sucia', 280.00, 'Unidad', 7),
+('PLA-019', 'Dispensador de jabon liquido', 55.00, 'Unidad', 7),
+('PLA-020', 'Balde escurridor para trapeador', 450.00, 'Unidad', 7),
+-- Jardineria (8)
+('PLA-021', 'Macetera plastica pequena', 40.00, 'Unidad', 8),
+('PLA-022', 'Macetera plastica mediana', 85.00, 'Unidad', 8),
+('PLA-023', 'Macetera plastica grande', 160.00, 'Unidad', 8),
+('PLA-024', 'Macetera rectangular tipo jardinera', 130.00, 'Unidad', 8),
+('PLA-025', 'Regadera plastica 5L', 140.00, 'Unidad', 8),
+('PLA-026', 'Manguera plastica verde 15m', 350.00, 'Unidad', 8),
+('PLA-027', 'Aspersor plastico de estaca', 80.00, 'Unidad', 8),
+('PLA-028', 'Rastrillo plastico para hojas', 110.00, 'Unidad', 8),
+('PLA-029', 'Mini cerca plastica decorativa', 45.00, 'Unidad', 8),
+('PLA-030', 'Base con ruedas para maceta', 190.00, 'Unidad', 8),
+-- Desechables (9)
+('PLA-031', 'Vasos desechables 8oz (100 und)', 75.00, 'Paquete', 9),
+('PLA-032', 'Platos desechables #9 (100 und)', 110.00, 'Paquete', 9),
+('PLA-033', 'Cucharas desechables (100 und)', 50.00, 'Paquete', 9),
+('PLA-034', 'Tenedores desechables (100 und)', 50.00, 'Paquete', 9),
+('PLA-035', 'Pajillas plasticas (100 und)', 35.00, 'Paquete', 9),
+('PLA-036', 'Bolsas de basura pequenas (50 und)', 40.00, 'Paquete', 9),
+('PLA-037', 'Bolsas de basura grandes (50 und)', 90.00, 'Paquete', 9),
+('PLA-038', 'Envases Clamshell p/comida (50 und)', 160.00, 'Paquete', 9),
+('PLA-039', 'Tapas planas para vasos (100 und)', 45.00, 'Paquete', 9),
+('PLA-040', 'Platos termicos de poroplast (50 und)', 80.00, 'Paquete', 9),
+-- Organizacion (10)
+('PLA-041', 'Organizador de gavetas 3 niveles', 320.00, 'Unidad', 10),
+('PLA-042', 'Caja plastica organizadora 10L c/tapa', 150.00, 'Unidad', 10),
+('PLA-043', 'Caja plastica organizadora 20L c/tapa', 280.00, 'Unidad', 10),
+('PLA-044', 'Caja plastica organizadora 50L c/ruedas', 650.00, 'Unidad', 10),
+('PLA-045', 'Estante plastico de 3 niveles', 580.00, 'Unidad', 10),
+('PLA-046', 'Estante plastico de 4 niveles', 750.00, 'Unidad', 10),
+('PLA-047', 'Perchas plasticas para ropa (12 und)', 85.00, 'Docena', 10),
+('PLA-048', 'Cesto organizador pequeno calado', 35.00, 'Unidad', 10),
+('PLA-049', 'Zapatera plastica armable', 240.00, 'Unidad', 10),
+('PLA-050', 'Mini gavetero de escritorio', 180.00, 'Unidad', 10);
+GO
+
+-- -----------------------------------------------------------------------------
+-- Costo de cada producto
+--
+-- El margen varia por rubro, como en la realidad: el cemento y la arena se
+-- venden con margen fino porque el precio lo fija el mercado y el cliente lo
+-- conoce; los plasticos de organizacion y la loza aguantan mas.
+--
+-- Son valores inventados para poder probar los reportes de ganancia. Al cargar
+-- datos reales hay que reemplazarlos por los costos de factura del proveedor.
+-- -----------------------------------------------------------------------------
+UPDATE PRODUCTO
+   SET precio_costo = ROUND(precio_venta * CASE categoria_id
+        WHEN 1  THEN 0.60   -- Herramientas Manuales
+        WHEN 2  THEN 0.80   -- Materiales de Construccion
+        WHEN 3  THEN 0.65   -- Plomeria
+        WHEN 4  THEN 0.70   -- Pinturas y Solventes
+        WHEN 5  THEN 0.68   -- Electrico
+        WHEN 6  THEN 0.58   -- Hogar y Cocina
+        WHEN 7  THEN 0.60   -- Limpieza
+        WHEN 8  THEN 0.62   -- Jardineria
+        WHEN 9  THEN 0.75   -- Desechables
+        WHEN 10 THEN 0.57   -- Organizacion
+       END, 2);
+GO
 
 -- -----------------------------------------------------------------------------
 -- Usuarios
 --
--- Los hash son de relleno: la aplicacion los reemplaza al crear usuarios de
--- verdad. NUNCA guardar un PIN o contrasenia en texto plano.
--- -----------------------------------------------------------------------------
-INSERT INTO usuarios (id, negocio_id, tienda_id, nombre, email, password_hash, pin_hash, rol) VALUES
-('33333333-0000-0000-0000-000000000001', '11111111-0000-0000-0000-000000000001',
- NULL, 'Administrador', 'admin@ferreplast.test', '$2b$10$placeholder', NULL, 'admin'),
-('33333333-0000-0000-0000-000000000002', '11111111-0000-0000-0000-000000000001',
- '22222222-0000-0000-0000-000000000001', 'Empleado Ferreteria', NULL, NULL, '$2b$10$placeholder', 'empleado'),
-('33333333-0000-0000-0000-000000000003', '11111111-0000-0000-0000-000000000001',
- '22222222-0000-0000-0000-000000000002', 'Empleado Plastiqueria', NULL, NULL, '$2b$10$placeholder', 'empleado');
-
--- -----------------------------------------------------------------------------
--- Categorias
--- -----------------------------------------------------------------------------
-INSERT INTO categorias (id, negocio_id, padre_id, nombre) VALUES
-('44444444-0000-0000-0000-000000000001', '11111111-0000-0000-0000-000000000001', NULL, 'Fijaciones'),
-('44444444-0000-0000-0000-000000000002', '11111111-0000-0000-0000-000000000001', NULL, 'Herramientas'),
-('44444444-0000-0000-0000-000000000003', '11111111-0000-0000-0000-000000000001', NULL, 'Pinturas'),
-('44444444-0000-0000-0000-000000000004', '11111111-0000-0000-0000-000000000001', NULL, 'Contenedores'),
-('44444444-0000-0000-0000-000000000005', '11111111-0000-0000-0000-000000000001', NULL, 'Utensilios'),
-('44444444-0000-0000-0000-000000000006', '11111111-0000-0000-0000-000000000001', NULL, 'Mangueras y tuberias');
-
--- -----------------------------------------------------------------------------
--- Productos
+-- NUNCA se guarda un PIN o contrasenia en texto plano: lo que va en la base es
+-- el hash scrypt, con su sal y sus parametros adentro (ver src/auth/password.mjs).
 --
--- Mezcla deliberada de casos: articulos que se venden por unidad, por metro y
--- por kilo, con precios desde centavos hasta cientos. El modelo tiene que
--- aguantar tanto un tornillo como un barril de 200 litros.
--- -----------------------------------------------------------------------------
-INSERT INTO productos (id, negocio_id, categoria_id, codigo, nombre, unidad_medida, precio_costo, precio_venta) VALUES
--- Ferreteria
-('55555555-0000-0000-0000-000000000001', '11111111-0000-0000-0000-000000000001', '44444444-0000-0000-0000-000000000001',
- 'FER-TOR-038', 'Tornillo autorroscante 3/8" x 2"', 'unidad',  0.40,   1.00),
-('55555555-0000-0000-0000-000000000002', '11111111-0000-0000-0000-000000000001', '44444444-0000-0000-0000-000000000001',
- 'FER-CLA-250', 'Clavo de acero 2 1/2"',            'kg',     18.00,  26.00),
-('55555555-0000-0000-0000-000000000003', '11111111-0000-0000-0000-000000000001', '44444444-0000-0000-0000-000000000002',
- 'FER-MAR-016', 'Martillo carpintero 16 oz',        'unidad', 45.00,  75.00),
-('55555555-0000-0000-0000-000000000004', '11111111-0000-0000-0000-000000000001', '44444444-0000-0000-0000-000000000003',
- 'FER-PIN-LAT', 'Pintura latex blanca 1 galon',     'unidad', 85.00, 130.00),
-('55555555-0000-0000-0000-000000000005', '11111111-0000-0000-0000-000000000001', '44444444-0000-0000-0000-000000000006',
- 'FER-MAN-050', 'Manguera jardin 1/2"',             'metro',   6.50,  11.00),
--- Plastiqueria
-('55555555-0000-0000-0000-000000000006', '11111111-0000-0000-0000-000000000001', '44444444-0000-0000-0000-000000000004',
- 'PLA-BAL-020', 'Balde plastico 20 litros',         'unidad', 22.00,  38.00),
-('55555555-0000-0000-0000-000000000007', '11111111-0000-0000-0000-000000000001', '44444444-0000-0000-0000-000000000004',
- 'PLA-BAR-200', 'Barril plastico 200 litros',       'unidad', 320.00, 480.00),
-('55555555-0000-0000-0000-000000000008', '11111111-0000-0000-0000-000000000001', '44444444-0000-0000-0000-000000000005',
- 'PLA-CUC-STD', 'Cuchara plastica descartable',     'unidad',  0.15,   0.50),
-('55555555-0000-0000-0000-000000000009', '11111111-0000-0000-0000-000000000001', '44444444-0000-0000-0000-000000000004',
- 'PLA-TAC-100', 'Tacho con tapa 100 litros',        'unidad', 110.00, 175.00),
-('55555555-0000-0000-0000-000000000010', '11111111-0000-0000-0000-000000000001', '44444444-0000-0000-0000-000000000005',
- 'PLA-VAS-500', 'Vaso plastico 500 ml',             'unidad',   0.25,   0.80);
-
--- -----------------------------------------------------------------------------
--- Dispositivos (las tablets de cada mostrador)
--- -----------------------------------------------------------------------------
-INSERT INTO dispositivos (id, tienda_id, nombre) VALUES
-('66666666-0000-0000-0000-000000000001', '22222222-0000-0000-0000-000000000001', 'Tablet mostrador ferreteria'),
-('66666666-0000-0000-0000-000000000002', '22222222-0000-0000-0000-000000000002', 'Tablet mostrador plastiqueria');
-
--- -----------------------------------------------------------------------------
--- Umbrales de reposicion
+-- CREDENCIALES DE PRUEBA -- solo para desarrollo local.
+-- Son publicas a proposito: estan en el repositorio para que cualquiera pueda
+-- levantar el proyecto y entrar. Al cargar datos reales hay que crear los
+-- usuarios de verdad y borrar estas tres filas.
 --
--- Se insertan primero para fijar el minimo de cada producto por tienda. El
--- trigger de stock hara UPSERT sobre estas filas cuando lleguen los
--- movimientos, conservando la cantidad_minima ya definida.
--- -----------------------------------------------------------------------------
-INSERT INTO stock (tienda_id, producto_id, cantidad, cantidad_minima) VALUES
-('22222222-0000-0000-0000-000000000001', '55555555-0000-0000-0000-000000000001', 0, 200),
-('22222222-0000-0000-0000-000000000001', '55555555-0000-0000-0000-000000000002', 0,  10),
-('22222222-0000-0000-0000-000000000001', '55555555-0000-0000-0000-000000000003', 0,   3),
-('22222222-0000-0000-0000-000000000001', '55555555-0000-0000-0000-000000000004', 0,   5),
-('22222222-0000-0000-0000-000000000001', '55555555-0000-0000-0000-000000000005', 0,  20),
-('22222222-0000-0000-0000-000000000002', '55555555-0000-0000-0000-000000000006', 0,  15),
-('22222222-0000-0000-0000-000000000002', '55555555-0000-0000-0000-000000000007', 0,   2),
-('22222222-0000-0000-0000-000000000002', '55555555-0000-0000-0000-000000000008', 0, 500),
-('22222222-0000-0000-0000-000000000002', '55555555-0000-0000-0000-000000000009', 0,   4),
-('22222222-0000-0000-0000-000000000002', '55555555-0000-0000-0000-000000000010', 0, 300);
-
--- -----------------------------------------------------------------------------
--- Carga inicial de inventario
+--   Carlos Admin          admin@ferreplast.com   contrasenia: ferreplast2026
+--   Juan Ferreteria       (PIN en la tablet)     PIN: 1234
+--   Maria Plastiqueria    (PIN en la tablet)     PIN: 5678
 --
--- Es una 'entrada': la mercaderia que ya estaba en las tiendas al arrancar el
--- sistema. El trigger actualiza la tabla stock solo.
+-- Para regenerar estos hash:
+--   node --input-type=module -e "import {hashear} from './src/auth/password.mjs'; console.log(await hashear('loquesea'))"
+--
+-- El administrador no tiene filas en USUARIO_TIENDA: ver las dos tiendas es
+-- justamente no pertenecer a ninguna.
 -- -----------------------------------------------------------------------------
-INSERT INTO movimientos_inventario
-    (id, tienda_id, producto_id, usuario_id, tipo, cantidad, costo_unitario, motivo, ocurrido_en) VALUES
-('77777777-0000-0000-0000-000000000001', '22222222-0000-0000-0000-000000000001', '55555555-0000-0000-0000-000000000001',
- '33333333-0000-0000-0000-000000000001', 'entrada', 1500,  0.40, 'Carga inicial de inventario', NOW() - INTERVAL '7 days'),
-('77777777-0000-0000-0000-000000000002', '22222222-0000-0000-0000-000000000001', '55555555-0000-0000-0000-000000000002',
- '33333333-0000-0000-0000-000000000001', 'entrada',   45, 18.00, 'Carga inicial de inventario', NOW() - INTERVAL '7 days'),
-('77777777-0000-0000-0000-000000000003', '22222222-0000-0000-0000-000000000001', '55555555-0000-0000-0000-000000000003',
- '33333333-0000-0000-0000-000000000001', 'entrada',   12, 45.00, 'Carga inicial de inventario', NOW() - INTERVAL '7 days'),
-('77777777-0000-0000-0000-000000000004', '22222222-0000-0000-0000-000000000001', '55555555-0000-0000-0000-000000000004',
- '33333333-0000-0000-0000-000000000001', 'entrada',   20, 85.00, 'Carga inicial de inventario', NOW() - INTERVAL '7 days'),
-('77777777-0000-0000-0000-000000000005', '22222222-0000-0000-0000-000000000001', '55555555-0000-0000-0000-000000000005',
- '33333333-0000-0000-0000-000000000001', 'entrada',  200,  6.50, 'Carga inicial de inventario', NOW() - INTERVAL '7 days'),
-('77777777-0000-0000-0000-000000000006', '22222222-0000-0000-0000-000000000002', '55555555-0000-0000-0000-000000000006',
- '33333333-0000-0000-0000-000000000001', 'entrada',   80, 22.00, 'Carga inicial de inventario', NOW() - INTERVAL '7 days'),
-('77777777-0000-0000-0000-000000000007', '22222222-0000-0000-0000-000000000002', '55555555-0000-0000-0000-000000000007',
- '33333333-0000-0000-0000-000000000001', 'entrada',   10, 320.00, 'Carga inicial de inventario', NOW() - INTERVAL '7 days'),
-('77777777-0000-0000-0000-000000000008', '22222222-0000-0000-0000-000000000002', '55555555-0000-0000-0000-000000000008',
- '33333333-0000-0000-0000-000000000001', 'entrada', 5000,  0.15, 'Carga inicial de inventario', NOW() - INTERVAL '7 days'),
-('77777777-0000-0000-0000-000000000009', '22222222-0000-0000-0000-000000000002', '55555555-0000-0000-0000-000000000009',
- '33333333-0000-0000-0000-000000000001', 'entrada',   18, 110.00, 'Carga inicial de inventario', NOW() - INTERVAL '7 days'),
-('77777777-0000-0000-0000-000000000010', '22222222-0000-0000-0000-000000000002', '55555555-0000-0000-0000-000000000010',
- '33333333-0000-0000-0000-000000000001', 'entrada', 2000,  0.25, 'Carga inicial de inventario', NOW() - INTERVAL '7 days');
+INSERT INTO Usuario (negocio_id, nombre, rol, email, password_hash, pin_hash) VALUES
+(1, 'Carlos Admin', 'administrador', 'admin@ferreplast.com',
+ 'scrypt$16384$8$1$Dqh3JaASO5NwNKaI+I+eLA==$8ZUSwEVybue0Y/N0wAERopYhTm3W5sW1fgO0wMMrB89pM2eOZ6u/GKjhGulYkauyTquCLDrhweYayJW0aYzg2w==',
+ NULL),
+(1, 'Juan Ferreteria', 'empleado', NULL, NULL,
+ 'scrypt$16384$8$1$DHu4I9gFIz+AdUtwPFQUlw==$bsVbQh6U3xMTPdarVYh0maBnL2r86B2ZMfxbeofAJqfS7D+L2OVGQ+gdt+LORTZdKuFc+Ua7LkA3Mnt6w/zpsQ=='),
+(1, 'Maria Plastiqueria', 'empleado', NULL, NULL,
+ 'scrypt$16384$8$1$3ddyfhlIMTmV6/jby6EbCQ==$S9Fmbw2PrI9yYuSOIIVguivm9myNBVBIw29hjDn3Aw5rDr5asRtDtdz3K/Nrrjkh7tamdWkEtbecoVzlc/A2QQ==');
+GO
 
 -- -----------------------------------------------------------------------------
--- Una caja abierta y una venta de ejemplo en la ferreteria
+-- En que tienda trabaja cada empleado
+--
+-- Juan figura en LAS DOS a proposito: el levantamiento dice que algunos
+-- empleados cubren ambos locales, y este es el caso que el modelo viejo no
+-- podia representar. Maria solo en la plastiqueria.
 -- -----------------------------------------------------------------------------
-INSERT INTO cajas (id, tienda_id, usuario_apertura_id, monto_inicial, estado) VALUES
-('88888888-0000-0000-0000-000000000001', '22222222-0000-0000-0000-000000000001',
- '33333333-0000-0000-0000-000000000002', 200.00, 'abierta');
+INSERT INTO USUARIO_TIENDA (usuario_id, tienda_id) VALUES
+(2, 1),   -- Juan  -> ferreteria
+(2, 2),   -- Juan  -> plastiqueria (el empleado compartido)
+(3, 2);   -- Maria -> plastiqueria
+GO
 
-INSERT INTO ventas (id, tienda_id, usuario_id, caja_id, numero, subtotal, descuento, total, metodo_pago, ocurrido_en) VALUES
-('99999999-0000-0000-0000-000000000001', '22222222-0000-0000-0000-000000000001',
- '33333333-0000-0000-0000-000000000002', '88888888-0000-0000-0000-000000000001',
- 'FER-2026-000001', 125.00, 0.00, 125.00, 'efectivo', NOW() - INTERVAL '2 hours');
+-- -----------------------------------------------------------------------------
+-- Clientes con credito
+--
+-- Don Pedro queda con el limite por omision (1000) y sin deuda: muestra el
+-- cupo completo disponible. La constructora tiene el limite subido a mano,
+-- que es el caso para el que limite_credito es una columna y no una constante.
+-- -----------------------------------------------------------------------------
+INSERT INTO CLIENTE (negocio_id, nombre, telefono, identificacion, limite_credito) VALUES
+(1, 'Pedro Gonzalez',            '8555-1122', '001-010180-1001A', 1000.00),
+(1, 'Constructora El Progreso',  '8555-3344', 'J0310000012345',   5000.00);
+GO
 
-INSERT INTO venta_lineas (venta_id, producto_id, cantidad, precio_unitario, costo_unitario, subtotal) VALUES
-('99999999-0000-0000-0000-000000000001', '55555555-0000-0000-0000-000000000001', 50, 1.00,  0.40,  50.00),
-('99999999-0000-0000-0000-000000000001', '55555555-0000-0000-0000-000000000003',  1, 75.00, 45.00, 75.00);
+-- -----------------------------------------------------------------------------
+-- Dispositivos y bitacora de sincronizacion
+-- -----------------------------------------------------------------------------
+INSERT INTO DISPOSITIVO (tienda_id, nombre, ultimo_sync) VALUES
+(1, 'Caja Principal - Ferreteria',   SYSUTCDATETIME()),
+(2, 'Caja Principal - Plastiqueria', SYSUTCDATETIME()),
+(1, 'Tablet Inventario Bodega',      DATEADD(HOUR, -5, SYSUTCDATETIME()));
 
--- La venta descuenta stock mediante movimientos de tipo 'venta' (cantidad negativa),
--- enlazados a la venta que los origino.
-INSERT INTO movimientos_inventario
-    (id, tienda_id, producto_id, usuario_id, tipo, cantidad, costo_unitario, venta_id, ocurrido_en) VALUES
-('77777777-0000-0000-0000-000000000011', '22222222-0000-0000-0000-000000000001', '55555555-0000-0000-0000-000000000001',
- '33333333-0000-0000-0000-000000000002', 'venta', -50, 0.40,
- '99999999-0000-0000-0000-000000000001', NOW() - INTERVAL '2 hours'),
-('77777777-0000-0000-0000-000000000012', '22222222-0000-0000-0000-000000000001', '55555555-0000-0000-0000-000000000003',
- '33333333-0000-0000-0000-000000000002', 'venta', -1, 45.00,
- '99999999-0000-0000-0000-000000000001', NOW() - INTERVAL '2 hours');
+INSERT INTO SYNC_LOG (dispositivo_id, registros_enviados, registros_aceptados, registros_duplicados) VALUES
+(1, 150, 150, 0),
+(2,  85,  83, 2),
+(3,  40,  40, 0);
+GO
 
-COMMIT;
+-- =============================================================================
+-- INVENTARIO INICIAL
+--
+-- Una entrada de mercaderia por producto. El trigger trg_movimiento_actualiza_stock
+-- crea las filas de Stock a partir de estos movimientos: no se tocan a mano.
+--
+-- Cada tienda recibe solo su rubro (1-50 ferreteria, 51-100 plastiqueria), que
+-- es lo que define el catalogo de cada local.
+-- =============================================================================
+INSERT INTO MOVIMIENTO_INVENTARIO
+       (tienda_id, producto_id, usuario_id, tipo, cantidad, costo_unitario, motivo, ocurrido_en)
+SELECT 1, p.id, 2, 'entrada',
+       50 + (p.id % 11) * 10,          -- entre 50 y 150, reproducible
+       p.precio_costo,
+       'Inventario inicial',
+       DATEADD(DAY, -30, SYSUTCDATETIME())
+  FROM PRODUCTO p
+ WHERE p.id BETWEEN 1 AND 50;
+
+INSERT INTO MOVIMIENTO_INVENTARIO
+       (tienda_id, producto_id, usuario_id, tipo, cantidad, costo_unitario, motivo, ocurrido_en)
+SELECT 2, p.id, 3, 'entrada',
+       50 + (p.id % 11) * 10,
+       p.precio_costo,
+       'Inventario inicial',
+       DATEADD(DAY, -30, SYSUTCDATETIME())
+  FROM PRODUCTO p
+ WHERE p.id BETWEEN 51 AND 100;
+GO
+
+-- Punto de reposicion. Se deja alto en tres articulos para que la pantalla de
+-- alertas tenga algo que mostrar en la demostracion.
+UPDATE Stock SET cantidad_minima = 10;
+
+UPDATE Stock SET cantidad_minima = 200
+ WHERE producto_id IN (13, 51)          -- Cemento Canal, Silla plastica
+    OR (tienda_id = 1 AND producto_id = 41);   -- Cable electrico #12
+GO
+
+-- =============================================================================
+-- OPERACION DEL DIA
+-- =============================================================================
+
+-- -----------------------------------------------------------------------------
+-- Cajas (turnos)
+--
+-- Caja 1: Juan en ferreteria. Abrio con 1000, vendio 880 en efectivo, conto
+--         1880 al cerrar. Cuadre perfecto.
+-- Caja 2: Maria en plastiqueria. Abrio con 500, su unica venta fue con tarjeta
+--         (no entra efectivo), conto 450. Faltan 50 cordobas.
+--
+-- La columna 'diferencia' guarda lo que se anoto al arquear. La vista
+-- v_cuadre_caja recalcula lo esperado desde las ventas y permite comprobar si
+-- ese numero sigue siendo cierto.
+-- -----------------------------------------------------------------------------
+INSERT INTO CAJA (tienda_id, usuario_id, monto_inicial, efectivo_contado, diferencia,
+                  estado, abierta_en, cerrada_en) VALUES
+(1, 2, 1000.00, 1880.00,   0.00, 'cerrada',
+ DATEADD(HOUR, -9, SYSUTCDATETIME()), DATEADD(HOUR, -1, SYSUTCDATETIME())),
+(2, 3,  500.00,  450.00, -50.00, 'cerrada',
+ DATEADD(HOUR, -9, SYSUTCDATETIME()), DATEADD(HOUR, -1, SYSUTCDATETIME()));
+GO
+
+-- -----------------------------------------------------------------------------
+-- Ventas
+--
+-- El numero es correlativo POR TIENDA; el comprobante legible se arma con el
+-- prefijo ('FER-1001', 'PLA-2001').
+-- -----------------------------------------------------------------------------
+INSERT INTO VENTA (uuid_externo, tienda_id, usuario_id, caja_id, numero,
+                   subtotal, descuento, total, metodo_pago, ocurrido_en) VALUES
+('11111111-1111-1111-1111-000000001001', 1, 2, 1, 1001,
+  880.00,  0.00,  880.00, 'efectivo', DATEADD(HOUR, -4, SYSUTCDATETIME())),
+('11111111-1111-1111-1111-000000002001', 2, 3, 2, 2001,
+ 1200.00, 50.00, 1150.00, 'tarjeta',  DATEADD(HOUR, -3, SYSUTCDATETIME()));
+GO
+
+-- -----------------------------------------------------------------------------
+-- Venta a credito
+--
+-- Lleva cliente_id porque CK_VENTA_CLIENTE_CREDITO lo exige: no se puede fiar
+-- al aire. Tiene caja_id (ocurrio durante el turno de Juan) pero NO entra al
+-- efectivo esperado, porque no entro plata al cajon.
+--
+-- No lleva uuid_externo a proposito: el credito es solo online, asi que esta
+-- venta no pudo haber salido de una tablet desconectada.
+-- -----------------------------------------------------------------------------
+INSERT INTO VENTA (tienda_id, usuario_id, caja_id, cliente_id, numero,
+                   subtotal, descuento, total, metodo_pago, ocurrido_en) VALUES
+(1, 2, 1, 2, 1002, 0.00, 0.00, 0.00, 'credito', DATEADD(HOUR, -2, SYSUTCDATETIME()));
+GO
+
+-- -----------------------------------------------------------------------------
+-- Lineas de venta
+--
+-- El costo se toma del producto EN ESTE MOMENTO y queda congelado en la linea.
+-- Si manana sube el costo del cemento, esta venta sigue mostrando lo que de
+-- verdad se gano el dia que ocurrio.
+-- -----------------------------------------------------------------------------
+INSERT INTO VENTA_LINEA (venta_id, numero, producto_id, cantidad, precio_unitario, costo_unitario, subtotal)
+SELECT 1, 1, p.id, 2.000, p.precio_venta, p.precio_costo, ROUND(2 * p.precio_venta, 2)
+  FROM PRODUCTO p WHERE p.id = 1;      -- 2 martillos
+INSERT INTO VENTA_LINEA (venta_id, numero, producto_id, cantidad, precio_unitario, costo_unitario, subtotal)
+SELECT 1, 2, p.id, 1.000, p.precio_venta, p.precio_costo, ROUND(1 * p.precio_venta, 2)
+  FROM PRODUCTO p WHERE p.id = 13;     -- 1 bolsa de cemento
+
+-- La rebaja de 50 va en la silla, no en la boleta: asi el reporte sabe que
+-- producto dejo menos margen. Antes era un monto suelto en la cabecera y no
+-- habia forma de atribuirlo sin prorratear a ojo.
+INSERT INTO VENTA_LINEA (venta_id, numero, producto_id, cantidad, precio_unitario, costo_unitario, descuento, subtotal)
+SELECT 2, 1, p.id, 1.000, p.precio_venta, p.precio_costo,
+       50.00, ROUND(1 * p.precio_venta, 2) - 50.00
+  FROM PRODUCTO p WHERE p.id = 51;     -- 1 silla con rebaja
+INSERT INTO VENTA_LINEA (venta_id, numero, producto_id, cantidad, precio_unitario, costo_unitario, subtotal)
+SELECT 2, 2, p.id, 1.000, p.precio_venta, p.precio_costo, ROUND(1 * p.precio_venta, 2)
+  FROM PRODUCTO p WHERE p.id = 52;     -- 1 mesa
+
+-- La venta a credito: una docena de bolsas de cemento con rebaja por mayoreo.
+-- 12 x 380 = 4560, menos 300 de rebaja = 4260. Entra en el cupo de 5000 de la
+-- constructora; con el limite por omision de 1000 esta venta seria rechazada
+-- por trg_venta_credito_limite, que es justamente lo que tiene que pasar.
+--
+-- El descuento va EN LA LINEA, que es donde ocurre la rebaja: es sobre el
+-- cemento, no sobre la boleta.
+INSERT INTO VENTA_LINEA (venta_id, numero, producto_id, cantidad, precio_unitario, costo_unitario, descuento, subtotal)
+SELECT 3, 1, p.id, 12.000, p.precio_venta, p.precio_costo,
+       300.00, ROUND(12 * p.precio_venta, 2) - 300.00
+  FROM PRODUCTO p WHERE p.id = 13;     -- 12 bolsas de cemento
+GO
+
+-- -----------------------------------------------------------------------------
+-- La cabecera se DERIVA de las lineas
+--
+-- Asi el subtotal, el descuento y el total no pueden contradecir a los
+-- renglones: el descuento de la venta es la suma de las rebajas otorgadas,
+-- nada mas. Es tambien lo que dispara trg_venta_credito_limite sobre la venta
+-- a credito, ahora que ya tiene su importe real.
+-- -----------------------------------------------------------------------------
+UPDATE v
+   SET subtotal  = x.bruto,
+       descuento = x.rebaja,
+       total     = x.bruto - x.rebaja
+  FROM VENTA v
+  JOIN (
+      SELECT venta_id,
+             SUM(ROUND(cantidad * precio_unitario, 2)) AS bruto,
+             SUM(descuento)                            AS rebaja
+        FROM VENTA_LINEA
+       GROUP BY venta_id
+  ) x ON x.venta_id = v.id;
+GO
+
+-- -----------------------------------------------------------------------------
+-- Movimientos derivados de las ventas
+--
+-- Se generan DESDE las lineas, no se escriben a mano: asi es imposible que una
+-- venta exista sin su descuento de stock.
+--
+-- La cantidad va en NEGATIVO. La restriccion CK_MOVIMIENTO_SIGNO lo exige, y
+-- es lo que hace que sumar los movimientos de un producto de el stock correcto.
+-- -----------------------------------------------------------------------------
+INSERT INTO MOVIMIENTO_INVENTARIO
+       (tienda_id, producto_id, usuario_id, venta_id, tipo, cantidad, costo_unitario, motivo, ocurrido_en)
+SELECT v.tienda_id, l.producto_id, v.usuario_id, v.id, 'venta',
+       -l.cantidad, l.costo_unitario,
+       CONCAT('Salida por comprobante ', t.prefijo, '-', v.numero),
+       v.ocurrido_en
+  FROM VENTA_LINEA l
+  JOIN VENTA  v ON v.id = l.venta_id
+  JOIN TIENDA t ON t.id = v.tienda_id;
+GO
+
+-- -----------------------------------------------------------------------------
+-- Otros movimientos sueltos
+-- -----------------------------------------------------------------------------
+INSERT INTO MOVIMIENTO_INVENTARIO
+       (tienda_id, producto_id, usuario_id, tipo, cantidad, costo_unitario, motivo, ocurrido_en)
+VALUES
+-- Compra a proveedor
+(1, 11, 2, 'entrada',  50.000, 36.00, 'Ingreso de mercaderia - Proveedor X', DATEADD(HOUR, -6, SYSUTCDATETIME())),
+-- Rotura en bodega
+(2, 55, 3, 'merma',    -1.000,  8.70, 'Vaso plastico roto en bodega',        DATEADD(HOUR, -2, SYSUTCDATETIME())),
+-- Correccion tras conteo fisico: el historial no se edita, se compensa
+(1,  3, 2, 'ajuste',   -2.000, 51.00, 'Faltante detectado en conteo fisico', DATEADD(HOUR, -1, SYSUTCDATETIME()));
+GO
+
+-- -----------------------------------------------------------------------------
+-- Abono a cuenta
+--
+-- La constructora pasa a abonar 200 en efectivo durante el turno de Juan. El
+-- abono va contra la CUENTA, no contra una factura: por eso no tiene venta_id.
+-- -----------------------------------------------------------------------------
+INSERT INTO PAGO_CREDITO (cliente_id, caja_id, usuario_id, monto, metodo_pago, observaciones, ocurrido_en) VALUES
+(2, 1, 2, 200.00, 'efectivo', 'Abono a cuenta', DATEADD(HOUR, -1, SYSUTCDATETIME()));
+GO
+
+-- -----------------------------------------------------------------------------
+-- Cierre real de la caja de Juan
+--
+-- El arqueo se recalcula AHORA que ya existen el abono y la venta a credito.
+-- Es la prueba viva de que v_cuadre_caja cuenta los abonos: los 200 que dejo
+-- la constructora estan en el cajon sin que haya una venta detras. Si alguien
+-- sacara los abonos de la vista, esta caja dejaria de cuadrar.
+--
+-- La venta a credito NO suma: no entro plata.
+-- -----------------------------------------------------------------------------
+UPDATE c
+   SET efectivo_contado = q.esperado,
+       diferencia       = 0.00
+  FROM CAJA c
+  CROSS APPLY (
+      SELECT c.monto_inicial
+           + ISNULL((SELECT SUM(v.total) FROM VENTA v
+                      WHERE v.caja_id = c.id AND v.metodo_pago = 'efectivo' AND v.anulada = 0), 0)
+           + ISNULL((SELECT SUM(p.monto) FROM PAGO_CREDITO p
+                      WHERE p.caja_id = c.id AND p.metodo_pago = 'efectivo'), 0) AS esperado
+  ) q
+ WHERE c.id = 1;
+GO
+
+PRINT 'Datos de prueba cargados.';
+GO
