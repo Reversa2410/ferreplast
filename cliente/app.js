@@ -39,6 +39,10 @@ const estado = {
   caja: guardado.leer('caja', null),              // respuesta de /caja/actual
   cola: guardado.leer('cola', []),                // ventas por mandar
   apartadas: guardado.leer('apartadas', []),      // rechazadas por el servidor
+  colaMov: guardado.leer('colaMov', []),          // entradas de mercaderia por mandar
+  movApartados: guardado.leer('movApartados', []),// entradas rechazadas por el servidor
+  entradas: guardado.leer('entradas', []),        // ultimas entradas registradas aca
+  entrada: { lineas: [], motivo: '', buscar: '' },// la que se esta armando
   historial: guardado.leer('historial', []),      // ultimas ventas, con su numero
   carrito: [],
   metodo: 'efectivo',
@@ -180,7 +184,7 @@ function cerrarSesionLocal(mensaje) {
 }
 
 async function salir() {
-  if (estado.cola.length && !confirm(`Hay ${estado.cola.length} venta(s) sin enviar. Se van a mandar cuando alguien vuelva a entrar en esta tablet. ¿Salir igual?`)) return;
+  if (pendientes() && !confirm(`Hay ${pendientes()} operación(es) sin enviar (ventas o entradas). Se van a mandar cuando alguien vuelva a entrar en esta tablet. ¿Salir igual?`)) return;
   try { await api('POST', '/auth/salir'); } catch { /* sin senial: la sesion vence sola */ }
   cerrarSesionLocal();
 }
@@ -247,7 +251,7 @@ async function refrescarCatalogo(forzar = false) {
   // Mientras haya ventas sin mandar, el stock del servidor esta atrasado
   // respecto del de la tablet: traerlo ahora "devolveria" lo ya vendido.
   // Salvo que no haya ningun catalogo: sin el no se puede vender nada.
-  if (estado.cola.length && estado.catalogo) return;
+  if (pendientes() && estado.catalogo) return;
   if (!forzar && Date.now() - ultimoCatalogo < 120000) return;
   try {
     const { status, datos } = await api('GET', `/sync/catalogo/${estado.tienda.id}`);
@@ -293,17 +297,36 @@ function descontarStockLocal(lineas) {
 // =============================================================================
 // SINCRONIZACION
 // =============================================================================
+/** Ventas y movimientos que todavia no llegaron al servidor. */
+const pendientes = () => estado.cola.length + estado.colaMov.length;
+
 async function sincronizar() {
-  if (estado.sincronizando || !estado.sesion || !estado.cola.length) return;
+  if (estado.sincronizando || !estado.sesion || !pendientes()) return;
   estado.sincronizando = true;
   dibujarBarra();
   try {
     const lote = estado.cola.slice(0, 500);
-    const { status, datos } = await api('POST', '/sync/push', { ventas: lote });
+    const loteMov = estado.colaMov.slice(0, 500);
+    // Las entradas van en el mismo envio que las ventas: el servidor procesa
+    // primero los movimientos, asi que la mercaderia que llego y se vendio
+    // sin senial suma antes de que la venta la descuente.
+    const { status, datos } = await api('POST', '/sync/push', { ventas: lote, movimientos: loteMov });
     if (status !== 200) {
       if (status !== 401) avisar(`El servidor no aceptó el envío (${status}). Se reintenta.`, true);
       return;
     }
+    const m = L.aplicarRespuestaMovimientos(loteMov, datos);
+    const salieron = new Set(loteMov.map((x) => x.uuid_externo));
+    estado.colaMov = estado.colaMov.filter((x) => !salieron.has(x.uuid_externo));
+    for (const e of estado.entradas) {
+      if (e.movimientos.some((u) => m.confirmados.includes(u))) e.enviada = true;
+    }
+    if (m.apartados.length) {
+      estado.movApartados.push(...m.apartados.map((a) => ({ ...a, cuando: new Date().toISOString() })));
+      avisar(`${m.apartados.length} producto(s) de una entrada rechazado(s) por el servidor. Revise "Rechazadas".`, true);
+    }
+    persistir('colaMov', 'movApartados', 'entradas');
+
     const r = L.aplicarRespuestaSync(lote, datos);
     const enviados = new Set(lote.map((v) => v.uuid_externo));
     // Lo que no estaba en el lote (vendido mientras se mandaba) se conserva.
@@ -324,7 +347,7 @@ async function sincronizar() {
       avisar(`${r.apartadas.length} venta(s) rechazada(s) por el servidor. Revise "Rechazadas".`, true);
     }
     persistir('cola', 'apartadas', 'historial');
-    if (!estado.cola.length) { refrescarCatalogo(true); refrescarCaja(); }
+    if (!pendientes()) { refrescarCatalogo(true); refrescarCaja(); }
   } catch { /* sin senial: la cola sigue */ }
   finally {
     estado.sincronizando = false;
@@ -680,7 +703,7 @@ function abrirCaja(motivo) {
     return;
   }
   const k = c.caja;
-  const pendientes = estado.cola.length;
+  const sinEnviar = estado.cola.length;
   abrirModal(`<h2>Caja abierta</h2>
     <p class="tenue">Desde ${new Date(k.abierta_en).toLocaleString('es-NI')} · ${esc(k.usuario ?? '')}</p>
     <table class="tabla-datos">
@@ -689,13 +712,13 @@ function abrirCaja(motivo) {
       <tr><td>Abonos en efectivo</td><td>${L.dinero(k.abonado_efectivo)}</td></tr>
       <tr><td><strong>Debería haber</strong></td><td><strong>${L.dinero(k.esperado)}</strong></td></tr>
     </table>
-    ${pendientes ? `<p class="nota">Hay ${pendientes} venta(s) sin enviar: no están en estas cuentas.
+    ${sinEnviar ? `<p class="nota">Hay ${sinEnviar} venta(s) sin enviar: no están en estas cuentas.
       Para cerrar la caja hay que enviarlas primero.</p>` : ''}
     <div class="campo"><label for="contado">Efectivo contado en el cajón</label>
       <input id="contado" type="number" inputmode="decimal" min="0" step="any" placeholder="0.00"></div>
     <div class="acciones">
       <button class="btn" data-accion="cerrar-modal">Volver</button>
-      <button class="btn btn-peligro" data-accion="confirmar-cierre" ${pendientes || !estado.enLinea ? 'disabled' : ''}>Cerrar caja</button>
+      <button class="btn btn-peligro" data-accion="confirmar-cierre" ${sinEnviar || !estado.enLinea ? 'disabled' : ''}>Cerrar caja</button>
     </div>`);
 }
 
@@ -868,8 +891,14 @@ function abrirHistorial() {
       <table class="tabla-datos">${estado.apartadas.map((a) => `<tr>
         <td>${new Date(a.venta.ocurrido_en).toLocaleString('es-NI')} · ${esc(a.motivo)}<br>
           <span class="tenue">${esc(a.detalles ?? '')}</span></td><td>${L.dinero(a.venta.total)}</td></tr>`).join('')}</table>` : ''}
+    ${estado.movApartados.length ? `<h2 style="margin-top:20px">Entradas rechazadas por el servidor</h2>
+      <p class="tenue">Esa mercadería no se sumó al inventario. Avise al administrador con este detalle.</p>
+      <table class="tabla-datos">${estado.movApartados.map((a) => `<tr>
+        <td>${new Date(a.movimiento.ocurrido_en).toLocaleString('es-NI')} · ${esc(productoDe(a.movimiento.producto_id)?.nombre ?? `#${a.movimiento.producto_id}`)}
+          · ${esc(a.motivo)}<br><span class="tenue">${esc(a.detalles ?? '')}</span></td>
+        <td>+${L.cantidadTexto(a.movimiento.cantidad)}</td></tr>`).join('')}</table>` : ''}
     <div class="acciones">
-      ${estado.cola.length && estado.enLinea ? '<button class="btn btn-primario" data-accion="sincronizar">Enviar ahora</button>' : ''}
+      ${pendientes() && estado.enLinea ? '<button class="btn btn-primario" data-accion="sincronizar">Enviar ahora</button>' : ''}
       <button class="btn" data-accion="cerrar-modal">Cerrar</button>
     </div>`);
 }
@@ -960,11 +989,190 @@ function mostrarFactura(f, { pendiente = false, oficial = false } = {}) {
 }
 
 // =============================================================================
+// ENTRADA DE MERCADERIA
+//
+// Lo que llega del proveedor. Va por la misma cola que las ventas, asi que se
+// puede registrar sin senial: el camion no espera a que vuelva internet. El
+// stock de la tablet sube en el momento, para poder vender lo que acaba de
+// llegar; el del servidor, cuando la cola se envia.
+// =============================================================================
+function abrirEntrada() {
+  const ent = estado.entrada;
+  abrirModal(`<h2>Entrada de mercadería</h2>
+    <p class="tenue">Lo que llega del proveedor a ${esc(estado.tienda?.nombre ?? 'esta tienda')}.
+      Se suma al inventario${estado.enLinea ? '' : ' y se envía cuando vuelva la señal'}.</p>
+    <div class="campo"><label for="entrada-motivo">Proveedor o número de factura</label>
+      <input id="entrada-motivo" data-campo="entrada-motivo" maxlength="255" autocomplete="off"
+        placeholder="Ej.: Factura 0451, Distribuidora Central" value="${esc(ent.motivo)}"></div>
+    <div class="campo"><label for="entrada-buscar">Agregar producto</label>
+      <input id="entrada-buscar" data-campo="entrada-buscar" type="search" autocomplete="off"
+        placeholder="Buscar por nombre o código" value="${esc(ent.buscar)}"></div>
+    <div class="resultados-entrada" id="entrada-resultados"></div>
+    <div id="entrada-lineas"></div>
+    <div class="acciones">
+      <button class="btn" data-accion="cerrar-modal">Cancelar</button>
+      <button class="btn btn-exito" data-accion="registrar-entrada" id="entrada-registrar">Registrar entrada</button>
+    </div>
+    ${htmlUltimasEntradas()}`);
+  // El foco va al proveedor si esta vacio: es lo primero que se copia de la
+  // factura que trae el chofer.
+  document.getElementById(ent.motivo ? 'entrada-buscar' : 'entrada-motivo')?.focus();
+  dibujarResultadosEntrada();
+  dibujarLineasEntrada();
+}
+
+function dibujarResultadosEntrada() {
+  const caja = document.getElementById('entrada-resultados');
+  if (!caja) return;
+  const q = sinTildes(estado.entrada.buscar.trim());
+  if (!q) { caja.innerHTML = ''; return; }
+  const ps = (estado.catalogo?.productos ?? [])
+    .filter((p) => sinTildes(p.nombre).includes(q) || sinTildes(p.codigo).includes(q)).slice(0, 8);
+  caja.innerHTML = ps.map((p) => `<button class="resultado-entrada" data-accion="entrada-agregar" data-id="${p.id}">
+      <span><strong>${esc(p.nombre)}</strong>${p.codigo ? ` <span class="tenue">${esc(p.codigo)}</span>` : ''}</span>
+      <span class="tenue num">hay ${L.cantidadTexto(p.stock)} ${esc(p.unidad_medida ?? '')}</span>
+    </button>`).join('') || '<p class="vacio">Ningún producto con ese nombre o código.</p>';
+}
+
+function agregarAEntrada(id) {
+  const p = productoDe(id);
+  if (!p) return;
+  const ent = estado.entrada;
+  const i = ent.lineas.findIndex((l) => l.producto_id === id);
+  // El mismo producto dos veces se suma en una linea: dos lineas del mismo
+  // articulo en una entrada solo sirven para equivocarse al revisarla.
+  if (i >= 0) ent.lineas[i].cantidad = L.r2(ent.lineas[i].cantidad + 1);
+  else {
+    ent.lineas.push({ producto_id: p.id, nombre: p.nombre, unidad: p.unidad_medida ?? '',
+                      cantidad: 1, costo_unitario: Number(p.precio_costo ?? 0),
+                      costo_catalogo: Number(p.precio_costo ?? 0) });
+  }
+  ent.buscar = '';
+  const b = document.getElementById('entrada-buscar');
+  if (b) b.value = '';
+  dibujarResultadosEntrada();
+  dibujarLineasEntrada();
+  // Se salta a la cantidad del producto recien agregado: casi nunca llega uno solo.
+  const fila = ent.lineas.findIndex((l) => l.producto_id === id);
+  const campo = document.querySelector(`[data-campo="entrada-cantidad"][data-i="${fila}"]`);
+  campo?.focus();
+  campo?.select();
+}
+
+function dibujarLineasEntrada() {
+  const caja = document.getElementById('entrada-lineas');
+  if (!caja) return;
+  const ls = estado.entrada.lineas;
+  const boton = document.getElementById('entrada-registrar');
+  if (boton) boton.textContent = ls.length ? `Registrar entrada (${ls.length} producto${ls.length === 1 ? '' : 's'})` : 'Registrar entrada';
+  if (!ls.length) { caja.innerHTML = '<p class="vacio">Busque un producto y tóquelo para agregarlo.</p>'; return; }
+  caja.innerHTML = `<table class="detalle entrada">
+    <thead><tr><th>Producto</th><th>Cantidad</th><th>Costo unitario</th><th>Importe</th><th></th></tr></thead>
+    <tbody>${ls.map((l, i) => `<tr>
+      <td>${esc(l.nombre)}<br><span class="tenue">hay ${L.cantidadTexto(productoDe(l.producto_id)?.stock ?? 0)} ${esc(l.unidad)}</span></td>
+      <td><input type="number" inputmode="decimal" min="0" step="any" value="${l.cantidad}"
+        data-campo="entrada-cantidad" data-i="${i}" aria-label="Cantidad de ${esc(l.nombre)}"></td>
+      <td><input type="number" inputmode="decimal" min="0" step="any" value="${l.costo_unitario}"
+        data-campo="entrada-costo" data-i="${i}" aria-label="Costo de ${esc(l.nombre)}">
+        <span class="aviso-costo tenue" data-aviso-costo="${i}">${avisoCosto(l)}</span></td>
+      <td class="num" data-importe="${i}">${L.dinero(L.r2(l.cantidad * l.costo_unitario))}</td>
+      <td><button class="quitar" data-accion="entrada-quitar" data-i="${i}" aria-label="Quitar ${esc(l.nombre)}">Quitar</button></td>
+    </tr>`).join('')}</tbody>
+  </table>
+  <p class="total-entrada">Costo total: <strong class="num" id="entrada-total">${L.dinero(totalEntrada())}</strong></p>`;
+}
+
+const totalEntrada = () => estado.entrada.lineas.reduce((a, l) => L.r2(a + L.r2(l.cantidad * l.costo_unitario)), 0);
+
+/**
+ * Si el costo de la factura no es el del catalogo, se avisa. No se corrige
+ * solo: el costo de cada entrada queda guardado tal cual (es lo que se pago),
+ * pero el precio de costo del catalogo -- con el que se calcula la ganancia de
+ * las ventas -- lo cambia el administrador.
+ */
+function avisoCosto(l) {
+  if (l.costo_catalogo == null || L.r2(l.costo_unitario) === L.r2(l.costo_catalogo)) return '';
+  return `en el catálogo: ${L.dinero(l.costo_catalogo)}`;
+}
+
+function cambioEnEntrada(campo, el) {
+  const ent = estado.entrada;
+  if (campo === 'entrada-motivo') { ent.motivo = el.value; return; }
+  if (campo === 'entrada-buscar') { ent.buscar = el.value; dibujarResultadosEntrada(); return; }
+  const i = Number(el.dataset.i);
+  if (!ent.lineas[i]) return;
+  const valor = el.value === '' ? null : Number(el.value);
+  if (campo === 'entrada-cantidad') ent.lineas[i].cantidad = valor ?? 0;
+  if (campo === 'entrada-costo') ent.lineas[i].costo_unitario = valor;
+  // Se actualizan importe, aviso y total en su lugar, sin redibujar la fila:
+  // redibujarla le quitaria el foco al campo a mitad de la cifra.
+  const l = ent.lineas[i];
+  const importe = document.querySelector(`[data-importe="${i}"]`);
+  if (importe) importe.textContent = L.dinero(L.r2((l.cantidad || 0) * (l.costo_unitario || 0)));
+  const aviso = document.querySelector(`[data-aviso-costo="${i}"]`);
+  if (aviso) aviso.textContent = avisoCosto(l);
+  const total = document.getElementById('entrada-total');
+  if (total) total.textContent = L.dinero(totalEntrada());
+}
+
+function registrarEntrada() {
+  const ent = estado.entrada;
+  const problemas = L.problemasDeEntrada(ent.lineas);
+  if (problemas.length) return avisar(problemas[0], true);
+  const movimientos = L.armarEntrada({
+    lineas: ent.lineas, tienda_id: estado.tienda.id, usuario_id: estado.sesion.usuario.id, motivo: ent.motivo,
+  });
+  estado.colaMov.push(...movimientos);
+  // El stock de la tablet sube ya: lo que acaba de llegar se puede vender.
+  for (const m of movimientos) {
+    const p = productoDe(m.producto_id);
+    if (p) p.stock = L.r2(Number(p.stock) + m.cantidad);
+  }
+  const resumen = {
+    hora: movimientos[0].ocurrido_en, motivo: ent.motivo.trim() || null, enviada: false,
+    movimientos: movimientos.map((m) => m.uuid_externo), total: totalEntrada(),
+    tienda_id: estado.tienda.id,
+    lineas: ent.lineas.map((l) => ({ nombre: l.nombre, unidad: l.unidad, cantidad: l.cantidad, costo_unitario: l.costo_unitario })),
+  };
+  estado.entradas.unshift(resumen);
+  estado.entradas = estado.entradas.slice(0, 30);
+  estado.entrada = { lineas: [], motivo: '', buscar: '' };
+  persistir('colaMov', 'entradas', 'catalogo');
+  dibujarCatalogo();
+  dibujarBarra();
+  abrirModal(`<h2>Entrada registrada</h2>
+    <p>${resumen.lineas.length} producto${resumen.lineas.length === 1 ? '' : 's'} sumado${resumen.lineas.length === 1 ? '' : 's'}
+      al inventario de ${esc(estado.tienda.nombre)}${resumen.motivo ? ` · ${esc(resumen.motivo)}` : ''}.</p>
+    <table class="tabla-datos">${resumen.lineas.map((l) => `<tr>
+      <td>+${L.cantidadTexto(l.cantidad)} ${esc(l.unidad)} · ${esc(l.nombre)}</td>
+      <td>${L.dinero(L.r2(l.cantidad * l.costo_unitario))}</td></tr>`).join('')}
+      <tr><td><strong>Costo total</strong></td><td><strong>${L.dinero(resumen.total)}</strong></td></tr></table>
+    <p class="tenue">${estado.enLinea ? 'Enviando al servidor…' : 'Sin señal: se envía cuando vuelva.'}</p>
+    <div class="acciones">
+      <button class="btn" data-accion="entrada">Otra entrada</button>
+      <button class="btn btn-primario" data-accion="cerrar-modal">Listo</button>
+    </div>`);
+  sincronizar();
+}
+
+function htmlUltimasEntradas() {
+  const propias = estado.entradas.filter((e) => e.tienda_id === estado.tienda?.id).slice(0, 5);
+  if (!propias.length) return '';
+  return `<h3 class="subtitulo-entrada">Últimas entradas en esta tablet</h3>
+    <table class="tabla-datos">${propias.map((e) => `<tr>
+      <td>${new Date(e.hora).toLocaleString('es-NI', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+        · ${e.lineas.length} producto${e.lineas.length === 1 ? '' : 's'}${e.motivo ? ` · ${esc(e.motivo)}` : ''}
+        ${e.enviada ? '' : ' · <span class="chip chip-sin">sin enviar</span>'}</td>
+      <td>${L.dinero(e.total)}</td></tr>`).join('')}</table>`;
+}
+
+// =============================================================================
 // DIBUJO
 // =============================================================================
 function htmlBarra() {
   const u = estado.sesion?.usuario;
-  const cola = estado.cola.length;
+  const cola = pendientes();
+  const rechazadas = estado.apartadas.length + estado.movApartados.length;
   const conexion = estado.sincronizando ? '<span class="chip chip-neutro">Enviando…</span>'
     : estado.enLinea ? '<span class="chip chip-ok">En línea</span>'
     : '<span class="chip chip-sin">Sin señal</span>';
@@ -976,8 +1184,9 @@ function htmlBarra() {
     <span class="espacio"></span>
     ${conexion}
     <button class="chip ${cola ? 'chip-sin' : 'chip-neutro'}" data-accion="historial">${
-      cola ? `${cola} sin enviar` : 'Ventas'}${estado.apartadas.length ? ` · ${estado.apartadas.length} rechazadas` : ''}</button>
+      cola ? `${cola} sin enviar` : 'Ventas'}${rechazadas ? ` · ${rechazadas} rechazadas` : ''}</button>
     ${caja}
+    <button class="btn btn-chico" data-accion="entrada">Entrada</button>
     <button class="btn btn-chico" data-accion="clientes">Clientes</button>
     <button class="btn btn-chico" data-accion="salir">Salir</button>`;
 }
@@ -1070,6 +1279,10 @@ const acciones = {
   imprimir: () => window.print(),
   sincronizar: () => sincronizar().then(abrirHistorial),
   'cerrar-modal': () => { cerrarModal(); dibujarCarrito(); },
+  entrada: () => abrirEntrada(),
+  'entrada-agregar': (d) => agregarAEntrada(Number(d.id)),
+  'entrada-quitar': (d) => { estado.entrada.lineas.splice(Number(d.i), 1); dibujarLineasEntrada(); },
+  'registrar-entrada': () => registrarEntrada(),
   salir: () => salir(),
 };
 
@@ -1089,6 +1302,7 @@ document.addEventListener('input', (e) => {
   if (campo === 'busqueda') { estado.busqueda = e.target.value; dibujarCatalogo(); return; }
   if (campo === 'pago-recibido') { actualizarVuelto(); return; }
   if (campo === 'buscar-cliente') { buscarClientes(e.target.value.trim()); return; }
+  if (campo.startsWith('entrada-')) { cambioEnEntrada(campo, e.target); return; }
   const i = Number(e.target.dataset.i);
   if (!estado.carrito[i]) return;
   let valor = e.target.value === '' ? 0 : Number(e.target.value);
@@ -1120,6 +1334,14 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !document.getElementById('modal').hidden) cerrarModal();
   if (e.key === 'Enter' && e.target.id === 'pago-recibido') { confirmarPago(); return; }
   if (e.key === 'Enter' && e.target.id === 'monto-inicial') { confirmarApertura(); return; }
+  // En la entrada, Enter agrega el primer resultado: con el lector de codigos
+  // la mercaderia se va cargando escaneando caja por caja.
+  if (e.key === 'Enter' && e.target.id === 'entrada-buscar') {
+    e.preventDefault();
+    const primero = document.querySelector('#entrada-resultados [data-accion="entrada-agregar"]');
+    if (primero) agregarAEntrada(Number(primero.dataset.id));
+    return;
+  }
   if (e.key !== 'Enter' || e.target.dataset?.campo !== 'busqueda') return;
   const vis = productosVisibles();
   const exacto = vis.find((p) => p.codigo && sinTildes(p.codigo) === sinTildes(estado.busqueda.trim()));
